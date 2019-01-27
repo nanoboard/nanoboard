@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{BBA65BCC-FE6A-4D2F-9670-69C4AE69F815}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>nbpack</RootNamespace>
+    <AssemblyName>nanodb</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Externalconsole>true</Externalconsole>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <DebugType>full</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Externalconsole>true</Externalconsole>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>bin\Debug\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="Chaos.NaCl">
+      <HintPath>bin\Debug\Chaos.NaCl.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Database\DbPostRef.cs" />
+    <Compile Include="Database\HashCalculator.cs" />
+    <Compile Include="Database\Index.cs" />
+    <Compile Include="Database\Post.cs" />
+    <Compile Include="Database\PostsReader.cs" />
+    <Compile Include="Database\PostsValidator.cs" />
+    <Compile Include="Database\FileUtil.cs" />
+    <Compile Include="Database\GZipUtil.cs" />
+    <Compile Include="Server\TcpServer.cs" />
+    <Compile Include="Server\HttpConnection.cs" />
+    <Compile Include="Server\IRequestHandler.cs" />
+    <Compile Include="Server\ErrorHandler.cs" />
+    <Compile Include="Server\StatusCode.cs" />
+    <Compile Include="Server\Configurator.cs" />
+    <Compile Include="Server\HttpServer.cs" />
+    <Compile Include="Server\HttpRequest.cs" />
+    <Compile Include="Server\HttpResponse.cs" />
+    <Compile Include="Database\PostDb.cs" />
+    <Compile Include="Server\HttpServerBuilder.cs" />
+    <Compile Include="Server\FileHandler.cs" />
+    <Compile Include="Server\MimeType.cs" />
+    <Compile Include="Server\DbApiHandler.cs" />
+    <Compile Include="Server\ActionHandler.cs" />
+    <Compile Include="PngTransport\NBPack.cs" />
+    <Compile Include="PngTransport\Aggregator.cs" />
+    <Compile Include="PngTransport\ByteEncryptionUtil.cs" />
+    <Compile Include="PngTransport\GZipUtil.cs" />
+    <Compile Include="PngTransport\HashCalculator.cs" />
+    <Compile Include="PngTransport\NanoPost.cs" />
+    <Compile Include="PngTransport\NanoPostPackUtil.cs" />
+    <Compile Include="PngTransport\PngStegoUtil.cs" />
+    <Compile Include="PngTransport\PngUtils.cs" />
+    <Compile Include="PngTransport\Post.cs" />
+    <Compile Include="PngTransport\Posts.cs" />
+    <Compile Include="PngTransport\Salsa20.cs" />
+    <Compile Include="Server\StylesHandler.cs" />
+    <Compile Include="Captcha\Captcha.cs" />
+    <Compile Include="Captcha\BitmapConvert.cs" />
+    <Compile Include="Captcha\PostSignatureExt.cs" />
+    <Compile Include="Captcha\ByteStringExt.cs" />
+    <Compile Include="Server\CaptchaTracker.cs" />
+    <Compile Include="Server\GetCaptchaTokenHandler.cs" />
+    <Compile Include="Server\GetCaptchaImageHandler.cs" />
+    <Compile Include="Server\SolveCaptchaAndAddPostHandler.cs" />
+    <Compile Include="PngTransport\CurlWebClient.cs" />
+    <Compile Include="PngTransport\WebClientX.cs" />
+    <Compile Include="Server\NotificationHandler.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Folder Include="Database\" />
+    <Folder Include="Server\" />
+    <Folder Include="PngTransport\" />
+    <Folder Include="Captcha\" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <MonoDevelop>
+      <Properties>
+        <Policies>
+          <TextStylePolicy inheritsSet="VisualStudio" inheritsScope="text/plain" scope="text/x-csharp" />
+          <CSharpFormattingPolicy IndentSwitchBody="True" AnonymousMethodBraceStyle="NextLine" PropertyBraceStyle="NextLine" PropertyGetBraceStyle="NextLine" PropertySetBraceStyle="NextLine" EventBraceStyle="NextLine" EventAddBraceStyle="NextLine" EventRemoveBraceStyle="NextLine" StatementBraceStyle="NextLine" ElseNewLinePlacement="NewLine" CatchNewLinePlacement="NewLine" FinallyNewLinePlacement="NewLine" WhileNewLinePlacement="DoNotCare" ArrayInitializerWrapping="DoNotChange" ArrayInitializerBraceStyle="NextLine" BeforeMethodDeclarationParentheses="False" BeforeMethodCallParentheses="False" BeforeConstructorDeclarationParentheses="False" BeforeDelegateDeclarationParentheses="False" NewParentheses="False" SpacesBeforeBrackets="False" inheritsSet="Mono" inheritsScope="text/x-csharp" scope="text/x-csharp" />
+          <TextStylePolicy FileWidth="120" TabsToSpaces="False" inheritsSet="VisualStudio" inheritsScope="text/plain" scope="text/plain" />
+        </Policies>
+      </Properties>
+    </MonoDevelop>
+  </ProjectExtensions>
+</Project>

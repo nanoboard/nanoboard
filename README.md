@@ -82,3 +82,20 @@ console.log(answer2) // результат: 77bb9e5d1a64facc551210862e2c6536Вт
         initVec = initVec.Crop(8);
 ```
 На этом пока что всё. Напомню, что PNG-контейнеры - не единственный возможный способ обмена нанопостами и различные АИБ - не единственное возможное место для паразитирования. Одна из экстремальных идей - запихивание нанопостов в QR-коды и разбрасывание/расклеивание этих QR-кодов в местах где их будет удобно считывать (и, собственно, наклеивать/разбрасывать). Так Наноборда сможет продолжить существование даже без интернета. Разумеется, вариант почти фантастический, но пример демонстрирует гибкость и ту самую неубиваемость Наноборды.
+
+__________________
+ nanodb.exe-source from nanoboard-restore.zip
+
+nanodb.exe-source from https://github.com/nanoboard/nanoboard/releases/download/0/nanoboard-restore.zip
+nanoboard-restore\nanodb.exe-source
+Version: Client 3.0
+Language: C#
+
+Q: How to compile nanodb.exe?
+A:
+1. Win+R
+2. cmd, enter.
+3. disk:\Path_to_.NET_Framework\MSBuild.exe /property:Configuration=Release nanodb.csproj
+
+Q: Is nanodb.exe portable?
+A: No, this working with files from restore-archive.

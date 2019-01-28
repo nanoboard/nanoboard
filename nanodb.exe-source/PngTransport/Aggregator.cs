@@ -194,6 +194,47 @@ namespace nboard
             AddProxy(client);
             client.Headers = _headers;
 
+			//calculate host once from address, not for each picture
+			//this code calculating host with folder for images relative pathways.
+			//		__BEGIN__
+			string[] items = address.Split('/');	//split address from settings by slash
+			string host_and_folder = "";			//empty string
+			string item = "";						//empty temp item
+			int len = items.Length;					//array length
+			int last = len-1;						//last element index.
+			string host = "";						//host (IP:PORT only)
+			string picture_host = "";				//temp empty variable to save picture host.
+			string protocol_host_port = "";         //protocol://(domain/IP):PORT - without slash in the end
+			
+			for(int i = 0; i<len; i++){				//check all items
+//				Console.WriteLine("item: {0}, value: '{1}'", i, items[i]);	//show item, value
+				item = items[i];											//write item to temp string
+
+				if(
+						(i==0 && item.IndexOf(".")!=-1)						//if first item contains dot ("www.domain.com:1234/folder")
+					|| 	i==2												//or if this is next item, after protocol
+				){
+					host = item;											//save this item as host.
+				}
+
+				if(
+						i!=last												//if this is not last item
+					|| 	(i==2 && len==3)									//or if domain/IP(+port) only, without slash
+				){
+					item = item+'/';										//add slash
+				}
+				if(
+						(len!=3 && i==last)									//if last item
+					&& 	item.IndexOf('.')!=-1								//and if dot found
+				){//maybe, this is filename. If not - add slash in the end...
+					//do not add this file to path
+				}else{
+					host_and_folder = String.Concat(host_and_folder, item);	//if not last item or if dot not found, add this as folder.
+				}
+			}
+            protocol_host_port = Regex.Match(address, @"^(?<proto>\w+)://+?(?<host>[A-Za-z0-9\-\.]+)+?(?<port>:\d+)?/", RegexOptions.None).Result("${proto}://${host}${port}");
+			//		__END__
+
             client.DownloadDataCompleted += bytes => 
             {
                 if (bytes == null) {
@@ -208,7 +249,8 @@ namespace nboard
                 try
                 {
                     string text = Encoding.UTF8.GetString(bytes);
-                    string host = Regex.Match(address, "https?://[A-z\\.0-9-]*").Value;
+                    //string host = Regex.Match(address, "https?://[A-z\\.0-9-]*").Value;	//original code, commented.
+					//return protocol://(IP/domain) only, without PORT, folder, and slash.
 
                     var images = Regex.Matches(text, ImgPattern);
 
@@ -216,13 +258,35 @@ namespace nboard
                     {
                         imageAddress = im.Value.Replace("href=", "").Trim('"');
 
-                        if (imageAddress.Contains("http://") || imageAddress.Contains("https://"))
+                        if (imageAddress.Contains("http://") || imageAddress.Contains("https://"))//if link in href not relative and contains "http://" or "https://"
                         {
-                        }
+							//get host for picture
+							//Warning, IP-loggers can working on another PORTS and PROTOCOLS!
 
-                        else
-                        {
-                            imageAddress = host + imageAddress;
+							//picture_host = Regex.Match(imageAddress, "[^https?://][A-z\\.0-9:0-9]*").Value; //host+port - without protocol
+
+							//another regular expressions:
+								//protocol://(ip/domain):port
+							//picture_host = Regex.Match(imageAddress, @"^(?<proto>\w+)://+?(?<host>[A-Za-z0-9\-\.]+)+?(?<port>:\d+)?/", RegexOptions.None, TimeSpan.FromMilliseconds(150)).Result("${proto}://${host}${port}");
+								//(ip/domain):port only - without protocol.
+							picture_host = Regex.Match(imageAddress, @"^(?<proto>\w+)://+?(?<host>[A-Za-z0-9\-\.]+)+?(?<port>:\d+)?/", RegexOptions.None).Result("${host}${port}");
+								//If HTTPS board loading images from HTTP host no any difference in protocol...
+								//But... IP-loggers on another protocol not excluded.
+
+							//Console.WriteLine("---> picture_host:{0}", picture_host); //just write this
+						}
+						/*
+						else if("ftp://" and another protocols...){}//do something...
+						*/
+						else if(imageAddress.Contains("://")){//if not http or https, but something://blah-blah...
+							Console.WriteLine("Starting download: {0}\nUnknown protocol.",imageAddress); //just write this
+							continue;
+						}else if(imageAddress[0]=='/'){										//if relative path "/img/pic.png"
+							imageAddress = protocol_host_port+imageAddress;						//add to protocol_host_port
+						}else if(imageAddress[0]=='.' && imageAddress[1]=='/'){				//if relative path "./img/pic.png"
+							imageAddress = protocol_host_port+imageAddress.Substring(1); 		//add to protocol_host_port without dot.
+						}else{
+                            imageAddress = host_and_folder + imageAddress; 						//add relative pathway for picture, to the board host_and_folder.
                         }
 
                         if (IsUriValid(imageAddress))
@@ -232,7 +296,37 @@ namespace nboard
                                 Thread.Sleep(4000);
                             }
 
-                            ParseImage(imageAddress);
+							//Console.WriteLine("address: "+address+"\nimageAddress: "+imageAddress+"\n"); //show image address and picture address.
+                            
+							//IP-logging attempt prevention
+							if (
+									imageAddress.Contains("logger")		//iploggers by keyword "logger"
+								||	imageAddress.Contains("bit.ly")		//some url shorters
+								||	imageAddress.Contains("goo.gl")
+							)
+							{
+								Console.WriteLine(	"Starting download: {0}\n"+	//show imageURL
+													"Logging attempt prevented.",
+													imageAddress
+								);
+								//and do nothing...
+							}else if( //block all pictures from another hosts
+									host_and_folder.IndexOf(picture_host)==-1				//picture host not founded in host_and_folder
+							){
+								//don't download this picture.
+								//show message in console:
+								Console.WriteLine(
+													"Starting download: {0}\n"+
+													"IP-log block: picHost('{1}') != boardHost('{2}')",
+													imageAddress,
+													picture_host,
+													host
+													//host is the part of host_and_folder and this must be founded (host_and_folder.indexOf(host)!=-1)
+								);
+								//and do nothing...
+							}else{//else, download and parse image from this imageAddress.
+								ParseImage(imageAddress);
+							}
                         }
                     }
                 }
@@ -326,7 +420,9 @@ namespace nboard
             };
 
             InProgress += 1;
-            address = address.Replace("2ch.hk", "m2-ch.ru");
+            //address = address.Replace("2ch.hk", "m2-ch.ru");		//m2-ch.ru not working.
+            address = address.Replace("2ch.hk", "m2ch.hk");			//m2ch.hk working. See also the exception at line 265 with condition (picture_host!="2ch.hk" && host!="m2ch.hk")
+            address = address.Replace("mm2ch.hk", "m2ch.hk");		//m2ch.hk contains 2ch.hk, and replaced to mm2ch.hk. Turn it back.
             Console.WriteLine("Starting download: " + address);
             client.DownloadDataAsync(new Uri(address));
         }

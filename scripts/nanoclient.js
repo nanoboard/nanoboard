@@ -114,7 +114,8 @@ function addPost(post, appendFunc, hasShowButton, short) {
 	for(i=1;i<files_array.length;i++){													//for each element up to array length
 		//console.log('files_array[i]', files_array[i]);									//show element
 		var maybe_base = files_array[i].split('"]')[1].split('[/file]')[0];					//split by '"]', and "[/file]" to get base64
-		if(isBase64(maybe_base)){																//check is base64
+		//console.log('i == ', i);
+		if(isBase64(maybe_base.trim())){																//check is base64
 			//console.log('base64!');																//if yes - show notification in console
 			//console.log('base64! maybe_base: ', maybe_base);										//with base64
 																										//and try to replace file to download link...
@@ -124,7 +125,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
 
 			var check_filename_regexp = /^[-\w^&'@{}[\],$=!#().%+~ ]+$/;							//regexp to test is filename correct?
 
-			var part = 1;																			//first part of array is 1 must contains filename and filetype
+			var part = i;																			//first part of array is 1 must contains filename and filetype
 			var filename = split_by_file[part].split('name="')[1].split('"')[0];						//set filename by splitting this by 'name="' and '"'
 			//console.log('filename', filename);														//show this
 			var filetype = split_by_file[part].split('type="')[1].split('"')[0];						//set filetype by splitting this by 'type="' and '"'
@@ -132,7 +133,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
 
 			
 			while(true){																			//cycle without end
-				//if(typeof split_by_file[part+1]=='undefined'){break;}									//if no any element - break
+				if(typeof split_by_file[part]=='undefined'){break;}									//if no any element - break
 				if(!check_filename_regexp.test(filename)){												//if no filename there
 					part++;																					//check next part of splitted post
 					filename = split_by_file[part].split('name="')[1].split('"')[0];						//get filename
@@ -141,17 +142,6 @@ function addPost(post, appendFunc, hasShowButton, short) {
 					//console.log('filetype', filetype);														//show this.
 					continue;																				//and continue cycle without running next code...
 				}
-				
-				//exception for post 946d50e33c413a93d7c963424e0846d9, where is code contains "[file"
-				if(filename==="'+file.name+'" && filetype === "'+file.type+'"){ 					//if filename and filetype as in the code
-					part++;																				//check next part of splitted string
-					filename = split_by_file[part].split('name="')[1].split('"')[0];					//get filename
-					//console.log('filename', filename);													//show this
-					filetype = split_by_file[part].split('type="')[1].split('"')[0];					//get filetype
-					//console.log('filetype', filetype);													//show this
-					continue;																			//and continue cycle, without running next code...
-				}
-				
 				else{																				//else, if not code and filename exist and valid...
 				//	console.log(																		//show checking results
 				//		"(check_filename_regexp.test(filename))",

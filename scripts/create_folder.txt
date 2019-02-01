@@ -1,3 +1,0 @@
-This file need to creat folder scripts for uploading scripts
-from [restore archive](https://github.com/nanoboard/nanoboard/releases/download/0/nanoboard-restore.zip)
-and future modification this scripts.

@@ -60,7 +60,7 @@ var _loader=$('#inputFileToLoad')[0];
 
 function updateImage(loader) {
   _loader = loader;
-  var file = _loader.files[0];
+  var file = _loader.files[0];			//After selection file, the filename available in - file.name; filetype in - file.type.
   var reader = new FileReader();
   reader.onloadend = function() {
     var res = reader.result;
@@ -72,7 +72,8 @@ function updateImage(loader) {
           $('.output').find('img').attr('src', 'error');
           $('#info').css('color','red');
         } else {
-          $('#result').text('[xmg='+res.substring(res.indexOf(',')+1)+']');
+//          $('#result').text('[xmg='+res.substring(res.indexOf(',')+1)+']');			//old code with bb-code xmg
+          $('#result').text('[file name="'+file.name+'" type="'+file.type+'"]'+res.substring(res.indexOf(',')+1)+'[/file]'); //bb-code file, with filename and mime-type, like in karasiq-nanoboard.
           $('.output').find('img').attr('src', res);
           $('#info').css('color','black');
         }
@@ -118,7 +119,7 @@ function updateImage(loader) {
           $('#result').text('error');
         } else {
           $('#info').css('color','black');
-          $('#result').text('[xmg='+dataURL.substring(dataURL.indexOf(',')+1)+']');
+          $('#result').text('[xmg='+dataURL.substring(dataURL.indexOf(',')+1)+']');		//saving backward compatibility with old zipJPEGs and bb-code xmg.
         }
       };
       var shrd = canvas.toDataURL();

@@ -1,0 +1,68 @@
+<h1>Download base64 or dataURL - as binary file.</h1>
+Base64 or dataURL:<br>
+<textarea id="base64" rows="5" cols="50" placeholder="Paste here the base64 or dataURL"></textarea>
+<br>
+filename.extension: <input id="filename" type="text" placeholder="filename.extension" onclick="this.focus();this.select();">
+<button onclick="download_as_binary()">Download as binary...</button>
+<br>
+<br>
+<div id="download_link"></div>
+<script>
+//Function for checking, without throw error, is str base64-encoded or not. return true/false.
+function isBase64(str) {
+    try {
+        return btoa(atob(str)) == str;
+    } catch (err) {
+        return false;
+    }
+}
+
+function is_dataURL(str){
+	return (str.indexOf('data:')!==-1 && str.indexOf('base64,')!==-1 && isBase64(str.split('base64,')[1]));
+}
+
+function download_as_binary(){
+	var result_div = document.getElementById('download_link');						//get div with result link
+	result_div.innerHTML = '';														//clear this
+	
+	var textarea = document.getElementById('base64');								//get textarea
+	var maybe_base = textarea.value;												//get value from this
+	var filename = document.getElementById('filename').value || undefined;			//set filename or undefined
+	if(typeof filename==='undefined'){												//if still undefined
+		//generate random filename
+		var len = 20;/*<--String Length ...*/for(var s = "", rem = 100000000, n = Math.random()*10*rem; s.length < len;){rem=10*rem%n; s+= (rem%10!==0)?rem.toString(36).replace(".", "").substr(0, len-s.length):"";}//document.write("<br>", 's.length: ', s.length, 's: ', s);
+		filename = s;
+	}
+	filename = filename+((filename.indexOf('.')==-1)?'.bin':'');					//if filename was generated
+	
+	if(maybe_base===''){
+		result_div.innerHTML = 'Empty textarea';
+		return false;
+	}else if(maybe_base.trim()===''){
+		result_div.innerHTML = 'Empty trimmed textarea';
+		return false;		
+	}
+	if(is_dataURL(maybe_base)){
+		maybe_base = maybe_base.split(',')[1];
+	}
+	var attempt = 0;
+	
+	while(true){
+		if(attempt>=2){					//trimmed textarea value - not base64
+			//break;					//exit from cycle
+			result_div.innerHTML = 'Trimmed textarea value - not base64.';
+			return false;				//exit from function
+		}else if(isBase64(maybe_base) && attempt<2){	//try without trim textarea value
+			var result = 'Download <a href="data:application/octet-stream;base64,'+maybe_base+'" download="'+filename+'">'+filename+'</a>';
+			result_div.innerHTML = result;
+			break;
+		}else if(is_dataURL(maybe_base)){
+			maybe_base = maybe_base.split(',')[1];
+		}else{
+			result_div.innerHTML = 'Base64 not found in textarea value. Try trim this...';
+			maybe_base = maybe_base.trim();
+			attempt++;
+		}
+	}
+}
+</script>

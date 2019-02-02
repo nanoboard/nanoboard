@@ -105,27 +105,40 @@ function addPost(post, appendFunc, hasShowButton, short) {
   
   //This code need function isBase64(str), and this function in beginning of this script
   var post_content = escapeTags(Base64.decode(post.message));
-  //console.log(post_content);
+  //console.log('At beginning, post_content was been: \n', post_content);				//Value of post_content at beginning, with description
 
   //detect files
+  var not_a_files = 0;																	//increment this, when not a file and no need to replace this...
   if(post_content.indexOf('[file')!==-1){												//if bb-code "file" found
 	var files_array = post_content.split('[file');										//split by file
-	//console.log('files_array', files_array);											//show array in console
+	//console.log('files_array, after splitting by \'[file\' = ', files_array);			//show array in console, with description
 	for(i=1;i<files_array.length;i++){													//for each element up to array length
-		//console.log('files_array[i]', files_array[i]);									//show element
-		var maybe_base = files_array[i].split('"]')[1].split('[/file]')[0];					//split by '"]', and "[/file]" to get base64
-		//console.log('i == ', i);
+		//console.log(
+		//				'files_array[i]', files_array[i],								//show array element
+		//		'\n'+	'array length: ', files_array.length							//and array length
+		//);
+		var maybe_base = 	(
+									files_array[i].split('"]')[1]						//split by '"]' if name/type exists
+								|| 	files_array[i].split(']')[1]						//or if prefious value is undefined, and [file] (without name/type) - then split by ']' to get base64
+							)
+							.split('[/file')[0];										//split by "[/file", not by "[/file]" to get base64, because by ']' this can be already splitted.
+
+		//console.log('i = ', i, 'maybe_base', maybe_base);								//show i value too.
+
 		if(isBase64(maybe_base.trim())){																//check is base64
 			//console.log('base64!');																//if yes - show notification in console
-			//console.log('base64! maybe_base: ', maybe_base);										//with base64
+			//console.log('base64! trimmed maybe_base: ', maybe_base.trim().substring(0,40));			//with part of base64, not full value.
 																										//and try to replace file to download link...
-			var split_by_base = post_content.split(maybe_base);										//split post by this base64
+			//var split_by_base = post_content.split(maybe_base);									//split post by this base64 (old code)
+			var split_by_base = post_content.split(']'+maybe_base+'[');								//now split post by this base64, but in the middle of ']BASE64[' - if many links for the same file was been replaced. And don't split replaced HTML-links, by this base64.
 			var before_base = split_by_base[0];														//here contains previous part of post and filename with filetype
 			var split_by_file = before_base.split('[file');											//split by '[file'. In the second element must be filename and filetype.
 
-			var check_filename_regexp = /^[-\w^&'@{}[\],$=!#().%+~ ]+$/;							//regexp to test is filename correct?
+			var check_filename_regexp = /^[-\wёЁА-я^&'@{}[\],$=!#().%+~]+$/;								//regexp to test is filename correct? Latin and Cyrillic characters in filename.extension
+			//	console.log(/^[-\w^&'@{}[\],$=!#().%+~]+$/.test("test1_FiLEнёЁйМ.tИкСt") === true); 		//old regexp - FALSE, because ciryllic characters inside the string...
+			//	console.log(/^[-\wёЁА-я^&'@{}[\],$=!#().%+~]+$/.test("test1_FiLEнёЁйМ.tИкСt") === true); 	//TRUE
 
-			var part = i;																			//first part of array is 1 must contains filename and filetype
+			var part = not_a_files+1;																	//first part of array must contains filename and filetype
 			var filename = split_by_file[part].split('name="')[1].split('"')[0];						//set filename by splitting this by 'name="' and '"'
 			//console.log('filename', filename);														//show this
 			var filetype = split_by_file[part].split('type="')[1].split('"')[0];						//set filetype by splitting this by 'type="' and '"'
@@ -146,8 +159,6 @@ function addPost(post, appendFunc, hasShowButton, short) {
 				//	console.log(																		//show checking results
 				//		"(check_filename_regexp.test(filename))",
 				//		(check_filename_regexp.test(filename)),
-				//		"(filename==='+file.name+' && filetype === '+file.type+')",
-				//		(filename==='+file.name+' && filetype === '+file.type+'),
 				//		'part', part
 				//	);
 					break;																				//and break from cycle...
@@ -158,20 +169,26 @@ function addPost(post, appendFunc, hasShowButton, short) {
 			//build link to download this file.
 			var html_link = '<a href="data:'+filetype+';base64,'+maybe_base+'" download="'+filename+'">['+filename+']</a>'
 			//and add link to download this as binary,
-			//with green base64 encoded PNG image to this link.
-			+'<a href="/pages/download_as_binary.html" target="_blank"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/\
-			9hAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABCElEQVQ4jZ3TMUoDQRjF8V+SRURExQN4Ai+gFkkjegqxsQwSQcQiMGgrIugJvEB6beIRcgUPIBoExSJY7MRk\
-			18kG/WBZ9r3v/75hZqcmVcEBLrESlSG6gvtyay0BL+ANiyXnE6uCr2mxnpifJWBRy8piKiClzfSqmv8d8KcVTDYx2MBafJ5mBDTxilfBcznxEIMKWPQGOE\
-			ot6QLXFfC47tAdfzR+5D5aHuQ/z1YF3BYmQqNgT0KWsT0PzgOCfS0v+j6mQh6xhJ3Yd4PjAhysa2nW0cNmITZvPMMpztEpT45ML8NI6uxz4OqXXqxRJr9p\
-			u/GSjMbGDKA+9d7DMEMHtziZM61c72h/A3foMuoBqRh/AAAAAElFTkSuQmCC"></a>';
+			//with green button as base64 encoded PNG image to this link - without tab symbols.
+			+'<a href="/pages/download_as_binary.html" target="_blank">\
+<img src="\
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/\
+9hAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABCElEQVQ4jZ3TMUoDQRjF8V+SRURExQN4Ai+gFkkjegqxsQwSQcQiMGgrIugJvEB6beIRcgUPIBoExSJY7MRk\
+18kG/WBZ9r3v/75hZqcmVcEBLrESlSG6gvtyay0BL+ANiyXnE6uCr2mxnpifJWBRy8piKiClzfSqmv8d8KcVTDYx2MBafJ5mBDTxilfBcznxEIMKWPQGOE\
+ot6QLXFfC47tAdfzR+5D5aHuQ/z1YF3BYmQqNgT0KWsT0PzgOCfS0v+j6mQh6xhJ3Yd4PjAhysa2nW0cNmITZvPMMpztEpT45ML8NI6uxz4OqXXqxRJr9p\
+u/GSjMbGDKA+9d7DMEMHtziZM61c72h/A3foMuoBqRh/AAAAAElFTkSuQmCC\">'
+			+'</a>';
 
-			//console.log('html_link', html_link);																				//show this link...
+			//console.log('link - generated sucessfully...\n', 'html_link: ', html_link);																//show stage and this link...
+
+			//console.log('replace bb-code to link...\n', post_content.split('[file name="'+filename+'" type="'+filetype+'"]'+maybe_base+'[/file]'));	//show stage and splitted array...
 			
-			post_content = post_content.split('[file name="'+filename+'" type="'+filetype+'"]'+maybe_base+'[/file]').join(html_link);	//and replace bb-code file to this link.
+			post_content = post_content.split('[file name="'+filename+'" type="'+filetype+'"]'+maybe_base+'[/file]').join(html_link);	//and replace bb-code [file] - to this link.
 
 			//console.log('post_content: ', post_content);																				//show results...
 		}else{																								//not base64 in the middle of [file][/file]
-			//console.log('not base64', maybe_base);															//do nothing
+			//console.log('not base64', maybe_base);														//show notification in console
+			not_a_files++;																					//and do not extract info about this file, after next splitting by "[file"...
 		}
 		//and continue replace files to links in all post, splitted by file-tag, again and again...
 	}

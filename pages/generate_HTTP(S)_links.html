@@ -1,1 +1,84 @@
-﻿<html>	<body>		<meta charset="utf-8">		Text from "Places"-area:<br>		<textarea id="settings" rows="5" cols="150" placeholder="Paste here text from Settings..."></textarea>		<br><button onclick="generate();">Generate http and https-links...</button>		<br><br>Result: unique and sorted HTTP and HTTPS links...<br>		<textarea rows="5" cols="150" id="result" onclick="this.focus();this.select();" title="HTTP and HTTPS, unique, sorted...">Result: unique and sorted HTTP and HTTPS links...</textarea>	<script type="text/javascript">function onlyUnique(value, index, self) {     return self.indexOf(value) === index;}// usage example://var a = ['a', 1, 'a', 2, '1'];//var unique = a.filter( onlyUnique ); // returns ['a', 1, 2, '1']function generate(){	var textarea_element = document.getElementById("settings");	var textarea_value = textarea_element.value;	//console.log(textarea_value);	var rows = textarea_value.split('\n');		var result = [];	for(i=0;i<rows.length;i++){		if(rows[i][0]==='#' || rows[i].trim()===''){			continue;		}else{																										//check http or https for not trimmed row			//console.log('not_commented_string: ', rows[i]);			if(rows[i].substring(0,8)==='https://'){																//if https://				//console.log('https......', rows[i].substring(8,rows[i].length));				result.push(rows[i].substring(8,rows[i].length));														//delete https:// and push to array			}else if(rows[i].substring(0,7)==='http://'){															//if http://				//console.log('http.......', rows[i].substring(7,rows[i].length));				result.push(rows[i].substring(7,rows[i].length));														//delete http:// and push to array			}else{																											//else, maybe need trim... check trimmed value				if(rows[i].trim().substring(0,8)==='https://'){														//if https://					//console.log('https......', rows[i].trim().substring(8,rows[i].trim().length));					result.push(rows[i].trim().substring(8,rows[i].trim().length));										//delete https:// and push to array				}else if(rows[i].trim().substring(0,7)==='http://'){												//if http://					//console.log('http.......', rows[i].trim().substring(7,rows[i].trim().length));					result.push(rows[i].trim().substring(7,rows[i].trim().length));										//delete http:// and push to array				}else{																								//else					//console.log('another protocol');					result.push(rows[i].trim());																	//maybe another protocol... Just leave this row...				}			}		}			}		//console.log('result', result);	result = result.filter( onlyUnique );																			//leave only unique values...		var http = [];																									//array for http links	var https = [];																									//array for https links	var others = [];	for(i=0;i<result.length;i++){		if(result[i].indexOf('://')!==-1){																			//if another protocol			others.push(result[i]);																					//just push as is		}else{																										//else			http.push('http://'+result[i]);																			//push http link			https.push('https://'+result[i]);																		//push https link		}	}			document.getElementById("result").value =																		//join arrays and display result...												(													(		https.length!==0														&& 	http.length!==0		)														?	"#HTTP:\n"+http.join('\n')		+						//add http links															'\n\n#HTTPS:\n'+https.join('\n')						//add https links														:	"Empty list with links..."												)+												((others.length!==0)?'\n\n#Others:\n'+others.join('\n'):'')			//add others links...	;	//The end.}</script></body></html>
+<!DOCTYPE html>
+<html>
+	<body>
+		<meta charset="utf-8">
+		Text from "Places"-area:<br>
+		<textarea id="settings" rows="5" cols="150" placeholder="Paste here text from Settings..."></textarea>
+		<br><button onclick="generate();">Generate http and https-links...</button>
+		<br><br>Result: unique and sorted HTTP and HTTPS links...<br>
+		<textarea rows="5" cols="150" id="result" onclick="this.focus();this.select();" title="HTTP and HTTPS, unique, sorted...">Result: unique and sorted HTTP and HTTPS links...</textarea>
+	
+<script type="text/javascript">
+function onlyUnique(value, index, self) { 
+    return self.indexOf(value) === index;
+}
+
+// usage example:
+//var a = ['a', 1, 'a', 2, '1'];
+//var unique = a.filter( onlyUnique ); // returns ['a', 1, 2, '1']
+
+function generate(){
+	var textarea_element = document.getElementById("settings");
+	var textarea_value = textarea_element.value;
+	//console.log(textarea_value);
+	var rows = textarea_value.split('\n');
+	
+	var result = [];
+	for(i=0;i<rows.length;i++){
+		if(rows[i][0]==='#' || rows[i].trim()===''){
+			continue;
+		}else{																										//check http or https for not trimmed row
+			//console.log('not_commented_string: ', rows[i]);
+			if(rows[i].substring(0,8)==='https://'){																//if https://
+				//console.log('https......', rows[i].substring(8,rows[i].length));
+				result.push(rows[i].substring(8,rows[i].length));														//delete https:// and push to array
+			}else if(rows[i].substring(0,7)==='http://'){															//if http://
+				//console.log('http.......', rows[i].substring(7,rows[i].length));
+				result.push(rows[i].substring(7,rows[i].length));														//delete http:// and push to array
+			}else{																											//else, maybe need trim... check trimmed value
+				if(rows[i].trim().substring(0,8)==='https://'){														//if https://
+					//console.log('https......', rows[i].trim().substring(8,rows[i].trim().length));
+					result.push(rows[i].trim().substring(8,rows[i].trim().length));										//delete https:// and push to array
+				}else if(rows[i].trim().substring(0,7)==='http://'){												//if http://
+					//console.log('http.......', rows[i].trim().substring(7,rows[i].trim().length));
+					result.push(rows[i].trim().substring(7,rows[i].trim().length));										//delete http:// and push to array
+				}else{																								//else
+					//console.log('another protocol');
+					result.push(rows[i].trim());																	//maybe another protocol... Just leave this row...
+				}
+			}
+		}		
+	}
+	
+	//console.log('result', result);
+	result = result.filter( onlyUnique );																			//leave only unique values...
+	
+	var http = [];																									//array for http links
+	var https = [];																									//array for https links
+	var others = [];
+	for(i=0;i<result.length;i++){
+		if(result[i].indexOf('://')!==-1){																			//if another protocol
+			others.push(result[i]);																					//just push as is
+		}else{																										//else
+			http.push('http://'+result[i]);																			//push http link
+			https.push('https://'+result[i]);																		//push https link
+		}
+	}	
+	
+	document.getElementById("result").value =																		//join arrays and display result...
+												(
+													(		https.length!==0
+														&& 	http.length!==0		)
+														?	"#HTTP:\n"+http.join('\n')		+						//add http links
+															'\n\n#HTTPS:\n'+https.join('\n')						//add https links
+														:	"Empty list with links..."
+												)+
+												((others.length!==0)?'\n\n#Others:\n'+others.join('\n'):'')			//add others links...
+	;
+	//The end.
+}
+
+</script>
+
+</body>
+</html>

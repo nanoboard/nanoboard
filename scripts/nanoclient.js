@@ -304,7 +304,7 @@ function loadThread(hash, highlight) {
 
                 posts = $('.post');
                 for (var i = 1; i < posts.length; i++) {
-                  $(posts[i]).prepend("<span style=font-size:75% class=separat>#"+(i+1)+"</span>&nbsp;");
+                  $(posts[i]).prepend("<span style=font-size:75% class=separat>#"+(i+1)+"</span>");
                   var href = $(posts[i]).find('a')[0].href;
                   href = href.split('#')[1];
                   var parent = $('#' + href);

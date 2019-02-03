@@ -123,7 +123,26 @@ $(function(){
                     });
                 } else {
 				cont.append('<br/>');
+
+				var title = '';	//define variable for title tooltip
+				switch(par) {//set title tooltips for different textareas
+					case 'ip': title = 'IP address to bind...'; break;
+					case 'password': title = 'Your password...'; break;
+					case 'port': title = 'PORT to listen...'; break;
+					case 'places': title = "# put URLs here, one per line. Use \'#\' to comment the line.\nhttp(s)://imageboard.com:443/thread/number.php?ports=50&sort=date\nhttp://my_server.local/pngLinks.html\n#etc..."; break;
+					case 'skins': title = 'Available skins...'; break;
+					case 'skin': title = 'Current skin...'; break;
+					case 'post_delete_timeout': title = 'Timeout to delete post...'; break;
+					case 'post_count_notification_time': title = 'Hide notification, after [x] milliseconds...'; break;
+					case 'post_offset_in_tree_px': title = 'Offset for post in the tree...'; break;
+					case 'spam_filter': title = 'Spam keywords...'; break;
+					case 'captcha_pack_file': title = 'filename.extension'; break;
+					case 'Download_Timeout_Sec': title = 'Timeout to download containers...'; break;
+					default: title = ''; break;
+				}				
+				
                 $('<textarea>')
+                  .attr('title', title)		//add title tooltip to the textarea.
                   .attr('id', par)
                   .val(val)
                   .css('height', val.split('\n').length * 17 + 'px')
@@ -148,12 +167,16 @@ $(function(){
   showParams();
 
   $('#restartb').click(function(){
+	var ip = $('#ip').val();
+	var port = $('#port').val();
+	var after = 1000;	//milliseconds
+	console.log('Restart, and redirect to '+('http://' + ip + ':' + port)+' after '+after+' milliseconds');
     $('textarea').blur();
     $('body').empty();
     $.get('../restart');
     setTimeout(function(){
-      location.href = 'http://' + $('#ip').val() + ':' + $('#port').val();
-    }, 1000);
+      location.href = 'http://' + ip + ':' + port;
+    }, after);
   });
 });
 </script>

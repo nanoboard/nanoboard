@@ -1,0 +1,86 @@
+<body onload="get_version();">
+Just reload page to get date and time...<br>
+<textarea rows="3" cols="30" id="version" onclick="this.focus();this.select();"></textarea>
+<br>
+
+<script>
+var DateFormatter = {
+  monthNames: [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ],
+  dayNames: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  formatDate: function (date, format) {
+    var self = this;
+    format = self.getProperDigits(format, /d+/gi, date.getDate());
+    format = self.getProperDigits(format, /M+/g, date.getMonth() + 1);
+    format = format.replace(/y+/gi, function (y) {
+      var len = y.length;
+      var year = date.getFullYear();
+      if (len == 2)
+        return (year + "").slice(-2);
+      else if (len == 4)
+        return year;
+      return y;
+    })
+    format = self.getProperDigits(format, /H+/g, date.getHours());
+    format = self.getProperDigits(format, /h+/g, self.getHours12(date.getHours()));
+    format = self.getProperDigits(format, /m+/g, date.getMinutes());
+    format = self.getProperDigits(format, /Z+/gi, date.getTimezoneOffset());
+    format = self.getProperDigits(format, /s+/gi, date.getSeconds());
+    format = format.replace(/a/ig, function (a) {
+      var amPm = self.getAmPm(date.getHours())
+      if (a === 'A')
+        return amPm.toUpperCase();
+      return amPm;
+    })
+    format = self.getFullOr3Letters(format, /d+/gi, self.dayNames, date.getDay())
+    format = self.getFullOr3Letters(format, /M+/g, self.monthNames, date.getMonth())
+    return format;
+  },
+  getProperDigits: function (format, regex, value) {
+    return format.replace(regex, function (m) {
+      var length = m.length;
+      if (length == 1)
+        return value;
+      else if (length == 2)
+        return ('0' + value).slice(-2);
+      return m;
+    })
+  },
+  getHours12: function (hours) {
+    // https://stackoverflow.com/questions/10556879/changing-the-1-24-hour-to-1-12-hour-for-the-gethours-method
+    return (hours + 24) % 12 || 12;
+  },
+  getAmPm: function (hours) {
+    // https://stackoverflow.com/questions/8888491/how-do-you-display-javascript-datetime-in-12-hour-am-pm-format
+    return hours >= 12 ? 'pm' : 'am';
+  },
+  getFullOr3Letters: function (format, regex, nameArray, value) {
+    return format.replace(regex, function (s) {
+      var len = s.length;
+      if (len == 3)
+        return nameArray[value].substr(0, 3);
+      else if (len == 4)
+        return nameArray[value];
+      return s;
+    })
+  }
+}
+
+function get_version(){
+	var now = new Date();
+	var now_as_string = (
+					(DateFormatter.formatDate(now, 'DDD MMM  d HH:mm:ss'))+
+					' EST '+
+					(DateFormatter.formatDate(now, 'YYYY'))
+	);				
+/*
+	console.log(
+		//'Wed Dec  7 20:14:15 EST 2016\n'+
+		now_as_string
+	);
+*/	
+	document.getElementById("version").value = now_as_string+'\n';
+}
+</script>

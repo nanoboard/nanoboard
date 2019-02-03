@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Nanoboard</title>
+<link rel="shortcut icon" href="/images/favicon.ico" />
+<meta charset="UTF-8"> 
+<script src='../scripts/jquery.min.js'> </script>
+<script src='../scripts/base64.js'> </script>
+<script src='../scripts/notif.js'> </script>
+<script src='../scripts/bootstrap.min.js'></script>
+<link rel='stylesheet' type='text/css' href='../styles/bootstrap.min.css'>
+<link rel='stylesheet' type='text/css' href='../styles/nano.css'>
+<link rel='stylesheet' type='text/css' href='../styles/notif.css'>
+<style>
+h1 {
+  font-size: 200%;
+  margin-left: 50px;
+}
+p {
+  margin-left: 50px;
+}
+.checkbox {
+  margin-left: 50px;
+  width: 20px;
+  height: 20px;
+  outline: 0;
+  margin: 5px;
+  position: absolute;
+  left: 300px;
+  padding-left: 4px;
+  display:inline;
+}
+textarea {
+  font-style: normal;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 12px;
+  margin-left: 50px;
+  width: 500px;
+  height:30px;
+  margin-left: 5px;
+  outline: 0;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+}
+body {
+  margin-bottom: 100px;
+}
+.parname {
+  margin-left: 50px;
+  font-size: 120%;
+  font-style: italic;
+  line-height: 180%;
+}
+</style>
+<script>
+function closure(func) {
+  var x = function(args1) {
+    func(args1);
+  }
+  x(args.slice(1,args.length-1));
+}
+
+function toCamelCase(str) {
+  if (str.length <= 3) return str.toUpperCase();
+  return str
+      .replace(/\s(.)/g, function($1) { return $1.toUpperCase(); })
+      //.replace(/\s/g, '')
+      .replace(/^(.)/, function($1) { return $1.toUpperCase(); });
+}
+
+function beautifyParamName(txt) {
+  return toCamelCase(txt.split('_').join(' '));
+}
+
+$(function(){
+  $.get('../api/paramget/skins')
+    .done(function(skins){
+      skins = JSON.parse(skins);
+      for (var i = 0; i < skins.length; i++) {
+        $('#skin-sel').append('<option>' + skins[i] + '</option>');
+      }
+      $.get('../api/paramget/skin')
+        .done(function(skin){
+          if (skin == '') skin = 'None';
+          $('#skin-sel').val(skin).change();
+          $('#skin-sel').change(function(){
+            var newSkin = $(this).val();
+            if (newSkin == 'None') newSkin = '';
+            $.post('../api/paramset/skin', newSkin);
+            location.reload();
+          });
+        });
+     });
+
+  function showParams() {
+    $.get('../api/params')
+      .done(function(arr){
+        arr = JSON.parse(arr);
+        for (var i = 0; i < arr.length; i++) {
+          var param = arr[i];
+          if (param == '') continue;
+          var parcont = $('<div>').addClass('parname');
+          parcont.appendTo($('body'));
+          var x = function(cont,par) {
+            $.get('../api/paramget/' + par)
+              .done(function(val) {
+                cont.text(beautifyParamName(par) + ':');
+                if (val == 'true' || val == 'false') {
+                  $('<input>')
+                    .addClass('checkbox')
+                    .attr('type', 'checkbox')
+                    .attr('checked', val == 'true')
+                    .appendTo(cont)
+                    .change(function(){
+                      var elem = $(this);
+                      var new_val = elem.is(":checked").toString();
+                      $.post('../api/paramset/'+par, new_val)
+                        .done(function(){
+                          elem.attr('checked', new_val == 'true');
+                          pushNotification('Autosaved.');
+                        });
+                    });
+                } else {
+				cont.append('<br/>');
+                $('<textarea>')
+                  .attr('id', par)
+                  .val(val)
+                  .css('height', val.split('\n').length * 17 + 'px')
+                  .appendTo(cont)
+                  .change(function(){
+                    var elem = $(this);
+                    var new_val = elem.val();
+                    $.post('../api/paramset/'+par, new_val)
+                      .done(function(){
+                        elem.val(new_val);
+                        pushNotification('Autosaved.');
+                      });
+                  });
+				}
+              });
+          };
+          x(parcont,param);
+        };
+      });
+  }
+
+  showParams();
+
+  $('#restartb').click(function(){
+    $('textarea').blur();
+    $('body').empty();
+    $.get('../restart');
+    setTimeout(function(){
+      location.href = 'http://' + $('#ip').val() + ':' + $('#port').val();
+    }, 1000);
+  });
+});
+</script>
+</head>
+
+<body>
+<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.0</sup></span>
+<div id="head-panel" class="container-fluid">
+    <div id="navrow" class="row no-gutter">
+        <nav class="navbar navbar-default">
+                <div class="col-md-3 col-sm-3 col-xs-5">
+                    <ul id="navs"class="nav nav-pills">
+                      <div class="row">
+                      <li role="presentation" id="mainli" class="active col-xs-4"><a id='maina' href='/pages/index.html'><span class='glyphicon glyphicon-home'></span><span class="hidden-xs">&thinsp;Main</span></a></li>
+                      <li role="presentation" id="lastli" class="dropdown col-xs-4">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                          <span class='glyphicon glyphicon-bell'></span><span class="hidden-xs">&thinsp;Last</span><span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                          <li role="presentation"><a id='last10a' href='/pages/index.html#last10'>10</a></li>
+                          <li role="presentation"><a id='last50a' href='/pages/index.html#last50'>50</a></li>
+                          <li role="presentation"><a id='last100a' href='/pages/index.html#last100'>100</a></li>
+                          <li role="presentation"><a id='last200a' href='/pages/index.html#last200'>200</a></li>
+                          <li role="presentation"><a id='last500a' href='/pages/index.html#last500'>500</a></li>
+                        </ul>
+                      </li>
+                      <li role="presentation" class="col-xs-4" id="paramsli"><a href='params.html'><span class='glyphicon glyphicon-cog'></span><span class="hidden-xs">&thinsp;Settings</span></a></li>
+                      </div>
+                    </ul>
+                </div>
+                <form id="search" class="col-md-7 col-sm-7 col-xs-5 pull-left" role="search">
+                    <div class="form-group" >
+                      <div class="input-group">
+                        <span class="input-group-btn">
+                            <button type="submit" id="searchbtn" class="btn btn-default hidden-xs"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+                        </span>
+                        <input type="text" class="form-control searchfield" placeholder="Search">
+                      </div>
+                    </div>
+                </form>
+                <form id="actions" class="col-md-2 col-sm-2 col-xs-2 pull-right" >
+                    <div class="row">
+                    <a type="button" href="/shutdown" id="shutdownbtn" class="col-xs-12 btn btn-danger"><span class="glyphicon glyphicon-off" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Shutdown</span></a>
+                    </div>
+                </form>
+        </nav>
+    </div>
+</div>
+<hr>
+<h1>Settings</h1>
+<p>Some parameters may require thread page refresh, some (like IP/port) – server <button id='restartb' class="btn btn-warning">restart</button>.</p>
+<p>If you did something wrong with port/ip and server is not accessible, change port/ip in config.json manually.</p>
+<p>Default values for IP/port are 127.0.0.1 and 7346</p>
+<div class="parname">
+Skin:
+<select class="black-text" id='skin-sel'>
+<option>None</option>
+</select>
+<br><a href="./generate_HTTP(S)_links.html" target="_blank">Generate HTTP and HTTPS links for places...</a>
+</div>
+</body>
+</html>

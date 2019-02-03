@@ -310,8 +310,13 @@ namespace nboard
 													imageAddress
 								);
 								//and do nothing...
-							}else if( //block all pictures from another hosts
-									host_and_folder.IndexOf(picture_host)==-1				//picture host not founded in host_and_folder
+							}else if( //block all pictures from another hosts, if...
+									host_and_folder.IndexOf(picture_host)==-1				//picture_host not founded in host_and_folder
+									//(https://someIPLOGGER.com/collectIP.png) loading from (https://wowchan.net/thread/res/1565/?search=png&timesorting=50)
+									//true in this case								
+								&&	picture_host.IndexOf(host)==-1
+									//and if host not founded in picture_host (https://media.8ch.net/folder/pic.png loaded from https://8ch.net/)
+									//false in this case, and true in prefious case.
 							){
 								//don't download this picture.
 								//show message in console:

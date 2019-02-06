@@ -126,12 +126,29 @@ namespace NServer
             return new HttpResponse(StatusCode.Ok, "");
         }
 
+		//int.Parse and Int32.Parse working bad for me.		See issue: https://github.com/nanoboard/nanoboard/issues/5
+		//So this function was been writed, to make this code more independent...
+        public static int parse_number(string string_number)//this function return (int)number from (string)"number". Negative numbers supporting too.
+        {
+			string test = string_number;
+            int test_length = test.Length;
+            int number = 0;
+            for(int i = ((char)test[0]=='-')?1:0; i < test_length; i++){
+                number += ((int)Char.GetNumericValue((char)test[i])*(int)Math.Pow(10,test_length-i-1));
+			}
+            number = ((char)test[0]=='-'?(0-number):(number));
+            return number;
+        }
+
         // example: prange/90-10 - gets not deleted posts from 91 to 100 (skip 90, take 10)
         private HttpResponse GetPresentRange(string fromto, string notUsed = null)
         {
             var spl = fromto.Split('-');
-            int skip = int.Parse(spl[0]);
-            int count = int.Parse(spl[1]);
+            //int skip = int.Parse(spl[0]);
+            //int count = int.Parse(spl[1]);					//<--- THIS OLD CODE INCORRECT FOR MY "Microsoft.NET\Framework\v4.0.30319\MSBuild.exe"
+				//replace this, using previous function
+            int skip = parse_number(spl[0]);
+            int count = parse_number(spl[1]);					//NOW - OK...
             var posts = _db.RangePresent(skip, count);
             return new HttpResponse(StatusCode.Ok, JsonConvert.SerializeObject(posts));
         }

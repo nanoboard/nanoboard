@@ -1,0 +1,41 @@
+Changes:
+File .../nanoboard-restore/nanodb.exe-source/PngTransport/Aggregator.cs:
+	-	Add code to get the "host_and_folder" "protocol://(domain/IP):PORT/folder"
+		and get this from the thread links, like this: "https://0chan.ml/_frct/res/1.html?query=some_query&parameter=value"
+	
+	-	Get (domain/IP):PORT only (variable "host"), and protocol://(domain/IP):PORT/ without folder (variable "protocol_host_port") - too.
+		Now IP:port can be used for threads in "Settings". This will be parsed correctly, if path of PNG is relative, in the response from server.
+	
+	-	Do this once for each thread, not for each picture.
+	
+	-	Add regular expression to get picture_host from imageAddress(url in parsed "href") if this contains "http://" or "https://"
+	
+	-	Block downloading pictures using unknown protocol. For example, "ftp://domain.com/picture.png" in "href" - will be blocked.
+	
+	-	Change imageAddress by adding pictures relative path from href:
+		to "protocol_host_port" (if in href "/images/pic.png" or "./images/pic.png")
+		to "host_and_folder" (if in href "../images/pic.png" or "images/pic.png").
+	
+	-	Add IP-logging attempt prevention:
+		if imageAddress contains keyword "logger", or URL shotrers "bit.ly" and "goo.gl" - picture downloading blocked.
+		if picture host not thie host of the thread (hard prevention).
+		There is possible to comparing protocols+host, because IP-loggers can working on another protocols,
+		but if HTTPS board load images using HTTP, this prevention not good.
+	
+	-	Change m-2ch.ru to m2ch.hk.
+	
+	-	Add description and second condition as operand for prevent IP-logging, but load pictures from "8ch.net (board)" -> "media.8ch.net (images)".
+	
+	-	At line 298: Add re-calculating the picture_host for each imageAddress, because many png's from dobrochan
+		was been blocked, after downloading PNG from iplogger.org - blocked...
+
+File: .../nanoboard-restore/nanodb.exe-source/Server/DbApiHandler.cs
+	-	At line 131: the function was been added parse_number(string string_number), because int.Parse and Int32.Parse not working correctly for me.
+	-	At line 150-151: replaced using this. Now last 50 and las 500 messages working good.
+	
+
+
+Code commented. See source code.
+
+Compiled version of all project - is the file "nanodb.exe"
+See changes in other commits - here: https://github.com/username1565/nanoboard/network

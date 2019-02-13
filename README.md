@@ -3,12 +3,12 @@ nanoboard client + sources in a single zip: https://github.com/nanoboard/nanoboa
 
 Внимание! Статья устарела и нуждается в обновлении
 За время существования статьи спецификации поменялись и дополнились такими элементами как капча и Proof Of Work
-##Причина создания
+## Причина создания
 
  - Модераторский произвол
  - Мечта о неубиваемой борде
 
-##Ценности Наноборды
+## Ценности Наноборды
 
  - простота формата нанопостов: хэш + текст сообщения = хэш (на который могут ссылаться другие нанопосты)
  - отсутствие владельца, прав, уровней доступа, невозможность централизованной модерации или отключения наноборды
@@ -20,7 +20,7 @@ nanoboard client + sources in a single zip: https://github.com/nanoboard/nanoboa
  - клиенты для просмотра облегчают участнику распространение своих и чужих нанопостов (кроме мусора)
  - клиенты для просмотра ограничивают распространение слишком огромных чужих нанопостов, чтобы пресекать злоупотребление "трафиком" наноборды
 
-##Спецификации
+## Спецификации
 
 Каждый нанопост обязательно ссылается на другой нанопост поредством хэш-кода.
 
@@ -84,10 +84,9 @@ _______
 где вместо точек - base64 несжатого файла.
 
 Когда скрипт борды находит тег xmg, он автоматически добавляет ссылку на закачку zip-архива, превращая её в dataURL.
-_______
 
-##PNG-контейнеры
-_______
+## PNG-контейнеры
+
 На АИБ обычно можно свободно постить PNG-картинки. А в PNG-картинку можно вшить данные.
 
 В nboard используется подход (и, собственно, код) из этой статьи: http://blog.andersen.im/2014/11/hiding-your-bits-in-the-bytes/ 
@@ -189,8 +188,8 @@ Tox (а там - [ассиметричная криптография](https://u
 p2p (тотальная децентрализация пиринговых сетей же), 
 
 и многое другое... 
-__________________
- nanodb.exe-source from nanoboard-restore.zip
+
+## nanodb.exe-source from nanoboard-restore.zip
 
 nanodb.exe-source from https://github.com/nanoboard/nanoboard/releases/download/0/nanoboard-restore.zip
 nanoboard-restore\nanodb.exe-source
@@ -205,7 +204,9 @@ A:
 
 Q: Is nanodb.exe portable?
 A: No, this working with files from restore-archive.
-_________________
+
+## Updates
+
 See updates here: https://github.com/username1565/nanoboard/releases/
 
 Commits: here: https://github.com/username1565/nanoboard/network

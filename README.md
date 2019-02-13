@@ -181,7 +181,7 @@ _______
 
 Алсо, может быть привинчена - IRC-координация (а это технология, она неубиваема, ага),
 
-Tox (а там - [ассиметричная криптография](https://username1565.github.io/js-nacl/generate_keypair_and_crypt.html) на библиотеке [NaCl](https://username1565.github.io/js-nacl/)),
+[Tox](https://tox.chat/download.html) (а там - [ассиметричная криптография](https://username1565.github.io/js-nacl/generate_keypair_and_crypt.html) на библиотеке [NaCl](https://username1565.github.io/js-nacl/)),
 
 p2p (а там вообще - тотальная децентрализация пиринговых сетей же), 
 

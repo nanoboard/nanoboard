@@ -129,11 +129,19 @@ $(function(){
 					case 'ip': title = 'IP address to bind...'; break;
 					case 'password': title = 'Your password...'; break;
 					case 'port': title = 'PORT to listen...'; break;
-					case 'places': title = "# put URLs here, one per line. Use \'#\' to comment the line.\nhttp(s)://imageboard.com:443/thread/number.php?ports=50&sort=date\nhttp://my_server.local/pngLinks.html\n#etc..."; break;
+					case 'places':
+						title = "# put URLs here, one per line. Use \'#\' to comment the line.\n"+
+								'http(s)://imageboard.com:443/thread/number.php?ports=50&sort=date\n'+
+								"http://my_server.local/pngLinks.html\n"+
+								"#etc...";
+						break;
 					case 'skins': title = 'Available skins...'; break;
 					case 'skin': title = 'Current skin...'; break;
 					case 'post_delete_timeout': title = 'Timeout to delete post...'; break;
-					case 'post_count_notification_time': title = 'Hide notification, after [x] milliseconds...'; break;
+					case 'post_count_notification_time':
+						title = 'Hide notification, after [x] milliseconds...\n'+
+								'Also, try to change the parameter "var _post_count_notification_time" in scripts/params.js';
+						break;
 					case 'post_offset_in_tree_px': title = 'Offset for post in the tree...'; break;
 					case 'spam_filter': title = 'Spam keywords...'; break;
 					case 'captcha_pack_file': title = 'filename.extension'; break;

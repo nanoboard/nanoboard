@@ -112,6 +112,11 @@ function detectPlacesCommands(obj) {
     });
 }
 
+//function to get link from text (+hash)
+var get_link = function (value, post){
+	return '<a target="_blank" href="'+value+((typeof post!=='undefined')?post:'')+'">'+value+'</a>';
+}
+
 function detectURLs(text) {
   var matches = text.match(/https?:\/\/[A-Za-z%&\?\-=_\.0-9\/:#]+/g);
   var you_re=new RegExp(".*youtube\.com.*")
@@ -126,8 +131,44 @@ function detectURLs(text) {
       }
       else
       {
-        value = '<a target=_blank href="'+value+'">'+value+'</a>';
-        text = replaceAll(text, matches[i], value);
+		//current element - to link
+        //value = '<a target=_blank href="'+value+'">'+value+'</a>';
+        //replace in text current element to link
+        //text = replaceAll(text, matches[i], value);
+				//in this case, substrings replaced in replased strings.
+			
+			//do not do the double replace...
+			//value = matches[i].toString();									//value for finding and replace. (defined earlier)
+			var link = get_link(value);		//the link from value to insert
+			var start_index = 0;												//increment start_index to search substrings, from this start_index
+			
+			for(j=0; j<matches.length; j++){									//for each url in array
+				var next_url_index = text.indexOf(matches[j], start_index);		//search this url in text from start_index.
+				if(next_url_index==-1){											//if this this url not founded
+					continue;													//continue find next url
+				}																//else...
+																			//continue the code...
+				start_index = next_url_index; 									//else, if founded, make this as start index.
+				var maybe_href = text.substring(start_index-6, start_index);	//copy previous 6 symbols
+				if(maybe_href==='href="'){										//if previous 6 symbols === 'href="' - do not replace text_link to link, this already replaced.
+					var next_quote = text.indexOf('"', start_index);				//find next quote index.
+					var url_length = next_quote-start_index;						//get length of URL
+					start_index += url_length*2+6;									//move start_index 'url_length">url_length</a>'.length = url_length*2+6
+				}else{															//if not href - then replace.
+					var maybe_post = text.substring(start_index+matches[i].length+59, start_index+matches[i].length+59+32);
+					if(
+							typeof maybe_post !== 'undefined'
+						&& 	(/[A-Fa-f0-9]{32}/g.test(maybe_post))
+					){
+						link = get_link(value, maybe_post);		//using post number inside the link, but leave link text.
+					}
+					text = 
+							text.substring(0, start_index)									//substring by start_index
+							+link															//insert link with link to first part
+							+text.substring(start_index+matches[i].length, text.length);	//add second part
+					break;
+				}
+			}
       }
     }
   }
@@ -140,7 +181,7 @@ var matches = text.match(/&gt;&gt;[a-f0-9]{32}/g);
     for (var i = 0; i < matches.length; i++) {
       var value = matches[i].toString();
       value = value.substring(8, value.length);
-      value = '<a href="javascript:void(0);" onclick=_depth=2;loadThread("'+value+'")>&gt;&gt;' + value + '</a>';
+      value = '<a href="javascript:void(0);" onclick=_depth=2;loadThread("'+value+'") title="Click to open post/thread/category...">&gt;&gt;' + value + '</a>';
       text = replaceAll(text, matches[i], value);
     }
   }
@@ -148,6 +189,9 @@ var matches = text.match(/&gt;&gt;[a-f0-9]{32}/g);
 }
 
 function applyFormatting(text) {
+	if(text.trim()===''){	//if empty post, from notif
+		return false;			//do not do nothing...
+	}
   text = text.replace(/&gt;(.*)/gi, "<gr>&gt;$1</gr>")
   text = text.replace(/\[sign=[a-f0-9]{128}\]/gim, '');
   text = text.replace(/\[pow=[a-f0-9]{256}\]/gim, '');

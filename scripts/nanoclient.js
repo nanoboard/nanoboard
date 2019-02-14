@@ -1,7 +1,9 @@
 //Function for checking, without throw error, is str base64-encoded or not. return true/false.
-function isBase64(str) {
+//check is base64 without throw error
+function isBase64(str) {//return true, or false
+    if(str===''){return false;}//if string is empty and not contains base64 characters
     try {
-        return btoa(atob(str)) == str;
+        return btoa(atob(str)) == str; //true if base64
     } catch (err) {
         return false;
     }
@@ -107,6 +109,121 @@ function addPost(post, appendFunc, hasShowButton, short) {
   var post_content = escapeTags(Base64.decode(post.message));
   //console.log('At beginning, post_content was been: \n', post_content);				//Value of post_content at beginning, with description
 
+	function replace_local_quotes(str){
+		//replace posts to local-links
+		
+		/*
+		//var extract_urls = /(https?:\/\/[^\s]+)/g;	//regular expression to get array with urls from string, or multistring
+		var extract_urls = /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g;	//regular expression to get array with urls from string, or multistring
+		var test_hex = /^[0-9a-fA-F]+$/;			//regular expression to test is the string hex or not
+
+		//cases of quoting the post, thread or category
+		var cases = [
+			//http(s):
+			//Nanoboard client 3.0:
+			'/pages/index.html#category',
+			'/pages/index.html#thread',
+			'/pages/index.html#',
+			//karasiq nanoboard
+			'/#category',	
+			'/#thread',		
+			'/#'			
+		];
+		var url_arr = str.match(extract_urls);
+		console.log('url_arr', url_arr);
+		var index = 0;															//increment index to search from this
+		for(i=0; i<url_arr.length; i++){
+			for(j = 0; j<cases.length; j++){
+				console.log('cases[j]', cases[j], 'j', j);
+				if(url_arr[i].indexOf(cases[j])!==-1){
+					index = str.indexOf(cases[j], index)+cases[j].length; 		//find case from previous index
+					var maybe_hex = str.substring(index, index+32);
+					if(test_hex.test(maybe_hex)===true){
+						str = str.split(url_arr[i]).join('>>'+maybe_hex);
+						//str = str.split(maybe_hex).join('>>'+maybe_hex);
+					}
+					break;
+				}
+			}
+		}
+		return str;
+		//this script replace only URL's.
+		*/
+		
+		//next script replace all 32 byte hashes in posts.
+		var extract_16bytes_hex = 	/[A-Fa-f0-9]{32}/g;			//Regular Expression to extract 32 hex symbols (16 bytes) from string. 
+		var test_hex_char = 		/[A-Fa-f0-9]/;				//Regular Expression to test one char. Is hex or not...
+		var hex_array = str.match(extract_16bytes_hex);			//array with hex strings...
+
+		var index = 0;											//start index is 0
+		var temp_index = 0;										//index in the string, where current array element (hex) was been founded
+		var start_hex;											//start position of real hex
+		var position;											//end_position of real hex
+		var real_hex;											//real hex
+		//var qoute_prefix = ' >>';
+		//var qoute_prefix = ' &gt;&gt;';
+		var qoute_prefix = function(value){return '<a href="javascript:void(0);" onclick=_depth=2;loadThread("'+value+'") title="Click to open post/thread/category...">'+value+'</a>';}
+
+		for(
+			i=0;								//from 0
+					hex_array!==null			//if hex_array not null
+				&& 	i<hex_array.length;			//up to hex_array.length
+			i++									//for each hex strings in hex_array
+		){
+			temp_index = str.indexOf(hex_array[i], temp_index+1);			//find and save the index of current hex substring in the string,
+																		//and find this from previous index, saved in var temp_index
+			//console.log('temp_index', temp_index);						//show this...
+			if(str.substring(temp_index-8, temp_index)==='category'){		//if before this hex, in the string founded 'category'
+				start_hex = temp_index;										//set current index for first char in real_hex
+			}else if(str.substring(temp_index-3, temp_index+3)==='thread'){	//if 'thread' before hex, 'ead' is a part of hex, because this is hex symbols.
+				start_hex = temp_index+3;									//shift index for first char in real_hex
+			}else if(str.substring(temp_index-2, temp_index)==='/#'){		//if '/#'
+				start_hex = temp_index;										//current index
+			}else if(str.substring(temp_index-1, temp_index)==='#'){		//if '#'
+				start_hex = temp_index;										//current index
+			}else if(
+					str.substring(temp_index-2, temp_index)==='>>'			//if this was been a post
+				||	str.substring(temp_index-8, temp_index)==='&gt;&gt;'
+			){		//if this was been a post
+				//console.log('continue1');									//test
+				continue;													//just leave this and continue
+			}else if(
+					str.substring(temp_index-1, temp_index)==='>'			//if this was been quote
+				||	str.substring(temp_index-4, temp_index)==='&gt;'
+			){
+				start_hex = temp_index;										//current index
+			}else if(
+					typeof str.substring[temp_index-1] === 'undefined'				//if no any symbol
+				||	!test_hex_char.test(str.substring(temp_index-1, temp_index))	//or not hex char
+			){
+				start_hex = temp_index;													//current index
+			}else{																		//else
+				//console.log('continue2');													//test
+				continue;																	//continue
+			}
+
+			if(																			//if
+					typeof str[start_hex+32] === 'undefined'							//last char undefined
+				||																		//or
+					(
+							!test_hex_char.test(str[start_hex+32])						//not hex
+						&&	str[start_hex+32] !== ']'									//and not ']'
+					)
+			){																			//replace this
+				real_hex = str.substring(start_hex, start_hex+32);						//get real hex
+				str = str.substring(0, start_hex) + qoute_prefix(real_hex) + str.substring(start_hex+32, str.length);	//add quote
+				temp_index+=(qoute_prefix(real_hex).length-32);							//move index to search from this
+			}
+			else{																		//else, if hex char
+				//console.log('last char is hex symbol, previous hex is not a hash from post. Do not replace...');  //do not replace.
+			}
+		}
+		return str;
+	}//end replace function
+	//run this:
+	post_content = replace_local_quotes(post_content);	//replace posts to local links.
+
+  
   //detect files
   var not_a_files = 0;																	//increment this, when not a file and no need to replace this...
   if(post_content.indexOf('[file')!==-1){												//if bb-code "file" found

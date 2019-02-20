@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Nanoboard</title>
+<link rel="shortcut icon" href="/images/favicon.ico" />
+<script src='../scripts/jquery.min.js'> </script>
+<script src='../scripts/base64.js'> </script>
+<script src='../scripts/notif.js'> </script>
+<script src='../scripts/on_add.js'> </script>
+<script src='../scripts/params.js'> </script>
+<script src='../scripts/post.js'> </script>
+<script src='../scripts/api.js'> </script>
+<script src='../scripts/reply.js'> </script>
+<script src='../scripts/nanoclient.js'> </script>
+<script src='../scripts/last.js'> </script>
+<script src='../scripts/search.js'> </script>
+<script src='../scripts/retranslate.js'> </script>
+<script src='../scripts/checkver.js'> </script>
+<script src='../scripts/init.js'> </script>
+<script src='../scripts/bootstrap.min.js'></script>
+<script src='../scripts/ui-functions.js'></script>
+<script src='../scripts/img2base64.js'></script>
+
+<style>
+.pow_modal, .captcha_modal {
+  position: fixed;
+  left: 40%;
+  width: 20%;
+  top: 40%;
+  height: 130px;
+  background: #fff;
+  padding: 10px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0px 0px 0px 1000px rgba(0,0,0,0.3);
+}
+
+.captcha_answer {
+  width: 60px;
+  height: 22px;
+}
+
+.captcha_image {
+  width: 100px;
+  height: 40px;
+}
+</style>
+
+<link rel='stylesheet' type='text/css' href='../styles/notif.css'>
+<link rel='stylesheet' type='text/css' href='../styles/bootstrap.min.css'>
+<link rel='stylesheet' type='text/css' href='../styles/nano.css'>
+</head>
+<body>
+<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.0</sup></span>
+<div id="head-panel" class="container-fluid">
+    <div id="navrow" class="row no-gutter">
+        <nav class="navbar navbar-default">
+                <div class="col-md-3 col-sm-3 col-xs-5">
+                    <ul id="navs"class="nav nav-pills">
+                      <div class="row">
+                      <li role="presentation" id="mainli" class="active col-xs-4"><a id='maina' href='#'><span class='glyphicon glyphicon-home'></span><span class="hidden-xs">&thinsp;Main</span></a></li>
+                      <li role="presentation" id="lastli" class="dropdown col-xs-4">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                          <span class='glyphicon glyphicon-bell'></span><span class="hidden-xs">&thinsp;Last</span><span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                          <li role="presentation"><a id='last10a' href='#last10'>10</a></li>
+                          <li role="presentation"><a id='last50a' href='#last50'>50</a></li>
+                          <li role="presentation"><a id='last100a' href='#last100'>100</a></li>
+                          <li role="presentation"><a id='last200a' href='#last200'>200</a></li>
+                          <li role="presentation"><a id='last500a' href='#last500'>500</a></li>
+                        </ul>
+                      </li>
+                      <li role="presentation" class="col-xs-4" id="paramsli"><a href='params.html'><span class='glyphicon glyphicon-cog'></span><span class="hidden-xs">&thinsp;Settings</span></a></li>
+                      </div>
+                    </ul>
+                </div>
+                <form id="search" class="col-md-5 col-sm-5 col-xs-3 pull-left" role="search">
+                    <div class="form-group" >
+                      <div class="input-group">
+                        <span class="input-group-btn">
+                            <button type="submit" id="searchbtn" class="btn btn-default hidden-xs"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+                        </span>
+                        <input type="text" class="form-control searchfield" placeholder="Search">
+                      </div>
+                    </div>
+                </form>
+                <form id="actions" class="col-md-4 col-sm-4 col-xs-4 pull-right" >
+                    <div class="row">
+                        <a type="button" href='javascript:void(0)' id="png-collect" class="col-xs-4 btn btn-default"><span class="glyphicon glyphicon-save" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Collect PNG</span></a>        
+                        <a type="button" href='javascript:void(0)' id="png-create" class="col-xs-4 btn btn-default"><span class="glyphicon glyphicon-open" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Create PNG</span></a>             
+                        <a type="button" href="/shutdown" id="shutdownbtn" class="col-xs-4 btn btn-danger"><span class="glyphicon glyphicon-off" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Shutdown</span></a>
+                    </div>
+                </form>
+        </nav>
+    </div>
+</div>
+<div style='margin-left: 5px; margin-right: 5px;' id='categories'></div>
+<hr style='margin: 5px' />
+<div id='thread'>
+</div>
+<hr/>
+<div id='statusd'></div>
+<div id='placesd'></div>
+<!-- Modal -->
+<div class="modal fade" id="imgmodal" tabindex="-1" role="dialog" aria-labelledby="Image→Base64">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Image→Base64</h4>
+      </div>
+      <div class="modal-body">
+      
+        <form class="input-group" id="img2b64">
+          <input id="inputFileToLoad" type="file" />
+        </form>
+        <br/>
+        <div class='range1'>
+          Scale:
+          <br>
+          <input id='scale' type='range' min=1 max=100 />
+          <br>Quality:
+          <br>
+          <input id='quality' type='range' min=1 max=100 />
+          <br> Sharpness:
+          <br>
+          <input id='sharpness' type='range' min=0 max=100 />
+          <br>Type:<br/>  
+          <select id='imgtype'>
+            <option>JPEG</option>
+            <option>WebP (Chrome only)</option>
+            <option>No compression (for zipJPEGs)</option>
+          </select><br>
+        </div><br>
+        <!-- <button id='update'>Apply settings</button> -->
+
+
+        <div id='info'></div>
+        <br/>
+        <div class='hide' id='result'></div>
+      </div>
+      <div class="modal-footer">
+        <button id='img-preview-btn' type="button" class="btn btn-default">Preview</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary apply-modal">Insert image</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

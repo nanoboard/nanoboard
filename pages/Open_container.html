@@ -1,1 +1,135 @@
-<meta charset="utf-8"><script src='../scripts/jquery.min.js'> </script><script src='../scripts/base64.js'> </script><script src='../scripts/params.js'> </script><script src='../scripts/post.js'> </script><script src='../scripts/nanoclient.js'> </script><link rel='stylesheet' type='text/css' href='../styles/bootstrap.min.css'><link rel='stylesheet' type='text/css' href='../styles/nano.css'><div class="input_params"><br><font color="black">Just input the pathway: <input id="pathway_for_PNG" value="upload/More-secrets-inside.png" size="75"><input type="submit" onclick="submit_pathway();"><br><font color="black">or select PNG container, here: <input id="select_container" type="file" style="display:inline-block;"><!--<br>Enter password: <input id="password" type="text" value="nano3">--><br>and wait...</div><hr><div id="result"></div><style>.border_div{	margin: 5px;	padding: 5px;	background-color: #ffe6fb;	border: 1px solid black;}.input_params{	padding-left: 50px;}.post{	margin: 15px;	padding: 15px;	max-width: 100%;	/*	background-color: #ffe6fb;	border: 1px solid black;	*/}</style><script>var dataURL = "";document.getElementById("select_container").addEventListener('change', function(evt){	var result = document.getElementById("result");	result.innerHTML = "";		//var password = document.getElementById("password");    var f = evt.target.files[0];     if (f){        var r = new FileReader();        r.onload = function(e){            dataURL = e.target.result;			console.log("file loaded. This will be saves as PNG. Also, you can convert any image to PNG, yourself, here: http://127.0.0.1:7346/pages/convert-to-PNG.html");                        //test POST-query, onchange (try to select file for loading, and see console.log).            $.post(        '../api/run-nbpack/',                '-u'+'|'+                            //0 posts from last posts to pack (this already inside curhlp array), and this is inside full_queue array.                (                        // and dataURL with selected source image. Delimiter is '\n' between this two blocks.                    (dataURL!=="")        //if dataURL not empty string                        ?                        dataURL    //append dataURL                        :                        'No_dataURL_specified_for_source_image.'                //else, append string with length over 32 symbols                )+'|'                + 'nano3'				//+    password.value	//for other passwords            )            .done(function(replies){                //console.log("reply received");				var posts = JSON.parse(replies);				result.innerHTML += '<center><h3>'+posts.length+' posts was been found in this container ('+f.name+')</h3></center>';				for(post_number=1;post_number<=posts.length;post_number++){					var current_message = escapeTags(Base64.decode(posts[post_number-1].message));					current_message = detect_files(current_message);			//replace files to links					current_message = replace_local_quotes(current_message);			//format nanopost.					current_message = applyFormatting(current_message);			//format nanopost.					result.innerHTML += '<div class="post">'+'<font color="green"><b>Post:</b></font> №'+post_number+'; '+										"<b>Date (client 3.1):</b> "+posts[post_number-1].date+"; "+										"<b>Post hash:</b> "+posts[post_number-1].hash+"; "+										'<b>ReplyTo:</b> '+posts[post_number-1].replyTo+										//"Message:<br>"+										'<hr style="display:block;">'+current_message+"</div>";				}				//document.getElementById("result").innerHTML = replies;		//just append JSON-response            })            ;//end of post query        };        r.readAsDataURL(f);                //read as dataURL...    }else     {        console.log("failed");    }});function submit_pathway(){	var input = document.getElementById("pathway_for_PNG");		//element with pathway	var pathway_for_PNG = input.value;	var result = document.getElementById("result");	result.innerHTML = "";		//var password = document.getElementById("password");	//test GET-query, onchange (try to select file for loading, and see console.log).    $.get('../api/run-nbpack/'+encodeURIComponent("-u"+'|'+pathway_for_PNG+'|'+'nano3'))	//send pathway in GET-query (short URL);    .done(function(replies){        //console.log("reply received");		var posts = JSON.parse(replies);		result.innerHTML += '<center><h3>'+posts.length+' posts was been found in this container ('+pathway_for_PNG+')</h3></center>';		for(post_number=1;post_number<=posts.length;post_number++){			var current_message = escapeTags(Base64.decode(posts[post_number-1].message));			current_message = detect_files(current_message);			//replace files to links			current_message = replace_local_quotes(current_message);			//format nanopost.			current_message = applyFormatting(current_message);			//format nanopost.			result.innerHTML += '<div class="post">'+'<font color="green"><b>Post:</b></font> №'+post_number+'; '+								"<b>Date (client 3.1):</b> "+posts[post_number-1].date+"; "+								"<b>Post hash:</b> "+posts[post_number-1].hash+"; "+								'<b>ReplyTo:</b> '+posts[post_number-1].replyTo+								//"Message:<br>"+								'<hr style="display:block;">'+current_message+"</div>";		}		//document.getElementById("result").innerHTML = replies;		//just append JSON-response    })    ;//end of GET-query}</script>
+<html>
+  <meta charset="utf-8">
+
+<script src='../scripts/jquery.min.js'> </script>
+<script src='../scripts/base64.js'> </script>
+<script src='../scripts/params.js'> </script>
+<script src='../scripts/post.js'> </script>
+<script src='../scripts/nanoclient.js'> </script>
+
+<link rel='stylesheet' type='text/css' href='../styles/bootstrap.min.css'>
+<link rel='stylesheet' type='text/css' href='../styles/nano.css'>
+
+<div class="input_params">
+<br><font color="black">Just input the pathway: <input id="pathway_for_PNG" value="upload/More-secrets-inside.png" size="75"><input type="submit" onclick="submit_pathway();">
+<br><font color="black">or select PNG container, here: <input id="select_container" type="file" style="display:inline-block;">
+<!--
+<br>
+Enter password: <input id="password" type="text" value="nano3">
+-->
+<br>
+and wait...
+</div>
+<hr>
+<div id="result"></div>
+
+<style>
+.border_div{
+	margin: 5px;
+	padding: 5px;
+	background-color: #ffe6fb;
+	border: 1px solid black;
+}
+.input_params{
+	padding-left: 50px;
+}
+.post{
+	margin: 15px;
+	padding: 15px;
+	max-width: 100%;
+	/*
+	background-color: #ffe6fb;
+	border: 1px solid black;
+	*/
+}
+
+</style>
+<script>
+var dataURL = "";
+document.getElementById("select_container").addEventListener('change', function(evt){
+	var result = document.getElementById("result");
+	result.innerHTML = "";
+	
+	//var password = document.getElementById("password");
+    var f = evt.target.files[0]; 
+    if (f){
+        var r = new FileReader();
+        r.onload = function(e){
+            dataURL = e.target.result;
+			console.log("file loaded. This will be saves as PNG. Also, you can convert any image to PNG, yourself, here: http://127.0.0.1:7346/pages/convert-to-PNG.html");
+            
+            //test POST-query, onchange (try to select file for loading, and see console.log).
+            $.post(        '../api/run-nbpack/',
+                '-u'+'|'+                            //0 posts from last posts to pack (this already inside curhlp array), and this is inside full_queue array.
+                (                        // and dataURL with selected source image. Delimiter is '\n' between this two blocks.
+                    (dataURL!=="")        //if dataURL not empty string
+                        ?
+                        dataURL    //append dataURL
+                        :
+                        'No_dataURL_specified_for_source_image.'                //else, append string with length over 32 symbols
+                )+'|'
+                + 'nano3'
+				//+    password.value	//for other passwords
+            )
+            .done(function(replies){
+                //console.log("reply received");
+				var posts = JSON.parse(replies);
+				result.innerHTML += '<center><h3>'+posts.length+' posts was been found in this container ('+f.name+')</h3></center>';
+				for(post_number=1;post_number<=posts.length;post_number++){
+					var current_message = escapeTags(Base64.decode(posts[post_number-1].message));
+					current_message = detect_files(current_message);			//replace files to links
+					current_message = replace_local_quotes(current_message);			//format nanopost.
+					current_message = applyFormatting(current_message);			//format nanopost.
+
+					result.innerHTML += '<div class="post">'+'<font color="green"><b>Post:</b></font> №'+post_number+'; '+
+										"<b>Date (client 3.1):</b> "+posts[post_number-1].date+"; "+
+										"<b>Post hash:</b> "+posts[post_number-1].hash+"; "+
+										'<b>ReplyTo:</b> '+posts[post_number-1].replyTo+
+										//"Message:<br>"+
+										'<hr style="display:block;">'+current_message+"</div>";
+				}
+				//document.getElementById("result").innerHTML = replies;		//just append JSON-response
+            })
+            ;//end of post query
+        };
+        r.readAsDataURL(f);                //read as dataURL...
+    }else 
+    {
+        console.log("failed");
+    }
+});
+
+
+function submit_pathway(){
+	var input = document.getElementById("pathway_for_PNG");		//element with pathway
+	var pathway_for_PNG = input.value;
+	var result = document.getElementById("result");
+	result.innerHTML = "";
+	
+	//var password = document.getElementById("password");
+	//test GET-query, onchange (try to select file for loading, and see console.log).
+    $.get('../api/run-nbpack/'+encodeURIComponent("-u"+'|'+pathway_for_PNG+'|'+'nano3'))	//send pathway in GET-query (short URL);
+    .done(function(replies){
+        //console.log("reply received");
+		var posts = JSON.parse(replies);
+		result.innerHTML += '<center><h3>'+posts.length+' posts was been found in this container ('+pathway_for_PNG+')</h3></center>';
+		for(post_number=1;post_number<=posts.length;post_number++){
+			var current_message = escapeTags(Base64.decode(posts[post_number-1].message));
+			current_message = detect_files(current_message);			//replace files to links
+			current_message = replace_local_quotes(current_message);			//format nanopost.
+			current_message = applyFormatting(current_message);			//format nanopost.
+
+			result.innerHTML += '<div class="post">'+'<font color="green"><b>Post:</b></font> №'+post_number+'; '+
+								"<b>Date (client 3.1):</b> "+posts[post_number-1].date+"; "+
+								"<b>Post hash:</b> "+posts[post_number-1].hash+"; "+
+								'<b>ReplyTo:</b> '+posts[post_number-1].replyTo+
+								//"Message:<br>"+
+								'<hr style="display:block;">'+current_message+"</div>";
+		}
+		//document.getElementById("result").innerHTML = replies;		//just append JSON-response
+    })
+    ;//end of GET-query
+}
+
+</script>
+</html>

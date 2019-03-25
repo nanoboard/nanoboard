@@ -14,11 +14,12 @@ namespace NDB
         */
         public static void Main(string[] args)
         {
+            //Console.WriteLine(DateTime.Now.ToString("R"));
             Aggregator.CheckUpdatePlacesConfig();
             var db = new PostDb();
             nbpack.NBPackMain.PostDatabase = db;
             var serv = new HttpServerBuilder(db).Build();
-            serv.Run();
+            serv.Run();            
         }
     }
 }

@@ -30,6 +30,7 @@ namespace NServer
             _handlers = new Dictionary<string, Func<string, string, HttpResponse>>();
             // filling handlers dictionary with actions that will be called with (request address, request content) args:
             _handlers["get"] = GetPostByHash;
+            _handlers["getlastn"] = GetLastNPosts;
             _handlers["delete"] = DeletePost;
             _handlers["add"] = AddPost;
             _handlers["addmany"] = AddPosts;
@@ -186,6 +187,26 @@ namespace NServer
             }
 
             return new HttpResponse(StatusCode.Ok, JsonConvert.SerializeObject(post));
+        }
+
+        private HttpResponse GetLastNPosts(string hash, string n)
+        {
+            List<NDB.Post> posts;
+            try
+            {
+                posts = _db.GetLastNAnswers(hash, Convert.ToInt32(n));
+            }
+            catch(Exception e)
+            {
+                return new ErrorHandler(StatusCode.BadRequest, e.Message).Handle(null);
+            }
+
+            if (posts == null)
+            {
+                return new ErrorHandler(StatusCode.NotFound, "No such post.").Handle(null);
+            }
+                        
+            return new HttpResponse(StatusCode.Ok, JsonConvert.SerializeObject(posts));
         }
 
         // includes deleted

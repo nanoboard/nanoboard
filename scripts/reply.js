@@ -459,7 +459,7 @@ function addReplyForm(id) {
     .insertAfter($('#' + id))
     .css('margin-left', parseInt($('#' + id).css('margin-left')) + _treeOffsetPx + 'px')
     .append($('<div>').addClass('reply')
-      .append($('<textarea oninput="check_base64(this);" onclick="check_base64(this);">').val('[g]' + new Date().toUTCString() + ', client: 3.0[/g]\n'))
+      .append($('<textarea oninput="check_base64(this);" onclick="check_base64(this);">').val('[g]' + new Date().toUTCString() + ', client: 3.1[/g]\n'))
       .append($('<br>'))
       .append($('<button>')
         .addClass('reply-button btn btn-danger ')

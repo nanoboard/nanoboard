@@ -345,7 +345,8 @@ function loadReplies(hash, offset, highlight) {
     .done(function(arr){
       arr = JSON.parse(arr);
       if (arr.length == 0) return;
-      for (var i = arr.length-1; i >= 0; i--) {
+      for (var i = arr.length-1; i >= 0; i--)
+	  {
         var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
         if (_showDeleted == 'false' && deleted) continue;
         var p = addPost(arr[i], function(d) { d.insertAfter($('#'+hash)); }, false)
@@ -360,6 +361,28 @@ function loadReplies(hash, offset, highlight) {
       }
       vid_show()
     });
+}
+
+function AddBriefView(hash, deleted, highlight)
+{
+	$.post('../api/getlastn/' + hash, '3').done(function(brief)
+	{						
+		brief = JSON.parse(brief);
+		brief.reverse();
+		if(brief.length==0) return;
+		for(var i=0;i<brief.length;i++)
+		{
+			var p1=addPost(brief[i], function(d){d.insertAfter($('#'+hash));}, false, true);
+			if(p1)
+			{
+				p1.css('margin-left', 2 * _treeOffsetPx + 'px');
+				if (deleted) p1.css({ opacity: _deletedOpacity });								
+				if (highlight == brief[i].hash) {
+				  p1.addTemporaryClass('high', 8000);
+				}
+			}
+		}
+	});
 }
 
 function loadThread(hash, highlight) {
@@ -471,20 +494,28 @@ function loadThread(hash, highlight) {
 
           addPost(post, function(d){ d.appendTo($('#thread')); }, false, false);
           if (_depth == 1) arr.reverse();
-          for (var i = 0; i < arr.length; i++) {
+          for (var i = 0; i < arr.length; i++)
+		  {
             var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
             if (_showDeleted == 'false' && deleted) continue;
             var p = addPost(arr[i], function(d) {d.appendTo($('#thread'));}, true)
-            if (p){
+            if (p)
+			{
                 p.css('margin-left',  _treeOffsetPx + 'px');
                 if (deleted) p.css({ opacity: _deletedOpacity});
-                if (highlight == arr[i].hash) {
+                if (highlight == arr[i].hash)
+				{
                   p.addTemporaryClass('high', 8000);
                 }
-                if (_depth > 1) {
+                if (_depth > 1)
+				{
                   loadReplies(arr[i].hash, 2, highlight);
                 }
-            }
+				if(_depth==1)
+				{
+					AddBriefView(arr[i].hash, deleted, highlight);
+				}
+            }			
           }
           vid_show()
         });

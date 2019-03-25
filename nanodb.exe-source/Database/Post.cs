@@ -1,5 +1,7 @@
 using Newtonsoft.Json;
 using NDB;
+using System;
+using System.Collections.Generic;
 
 namespace NDB
 {
@@ -14,6 +16,25 @@ namespace NDB
         public string message;      // is Base64 string of UTF-8 bytes
         [JsonProperty("replyTo")]
         public string replyto;
+
+        public DateTime date
+        {
+            get
+            {
+                DateTime res;
+                try
+                {
+                    res = Convert.ToDateTime(message.FromB64().Split(new string[] { "[g]" }, StringSplitOptions.None)[1].
+                        Split(new string[] { ", client:" }, StringSplitOptions.None)[0]);
+                    
+                }
+                catch(Exception e)
+                {
+                    res = new DateTime();
+                }
+                return res;
+            }
+        }
 
         public Post()
         {

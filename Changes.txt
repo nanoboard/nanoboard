@@ -33,7 +33,39 @@ File: .../nanoboard-restore/nanodb.exe-source/Server/DbApiHandler.cs
 	-	At line 131: the function was been added parse_number(string string_number), because int.Parse and Int32.Parse not working correctly for me.
 	-	At line 150-151: replaced using this. Now last 50 and las 500 messages working good.
 	
+	-	Add all changes from nanoboard 3.1. See thread http://127.0.0.1:7346/pages/index.html#thread70ca25ba04a241d3b3729611205bf4bb
+		All changes from [3.1 version](https://github.com/username1565/nanoboard/commit/e828b228af6d2a1cc507ff80a59c25a0f5a511f0)
+		According the comment https://github.com/username1565/nanoboard/issues/3#issuecomment-463904141 from issue https://github.com/username1565/nanoboard/issues/3
+		3 level for replyes, when thread loaded from main page.
+		Sorting last posts by date.
+		Bump for threads.
+		Add comparer to make avaiable to compile version 3.1 in .NET Framework 3.5. See post 082a06592e3b241e3c49063524a3ac25
+_____________________________________________________________________________________________________________________________________________
+	Full changes:
+				\Changes.txt			this file - changed. This info added.
+				\pages\index.html		Just change version to 3.1
+				\pages\version.txt		Just change version to 3.1
+				\scripts\nanoclient.js	add function AddBriefView from 3.1
+				\scripts\reply.js		Just change version to 3.1
+				
+				\nanodb.exe-source\nanodb.csproj
+				\nanodb.exe-source\nanodb.sln
+				\nanodb.exe-source\Program.cs
+						copy this 3 files from 3.1 client with changes.
+				\nanodb.exe-source\app.config
+				\nanodb.exe-source\nanodb.csproj.user
+						Add this two files files.
+				\nanodb.exe-source\compile.bat				- add this file to compile nanodb.exe from the source code, using MSBuild.exe
 
+				\nanodb.exe-source\Database\Post.cs			- add changes from 3.1 client.
+				\nanodb.exe-source\Database\PostDb.cs		- add changes from 3.1 client + define comparer: "DTComparer : IComparer"
+				\nanodb.exe-source\PngTransport\NBPack.cs	- add two strings from 3.1 client, in the end, after Validate(posts);
+				\nanodb.exe-source\Server\DbApiHandler.cs	- add API command "/api/getlastn" + method GetLastNPosts from 3.1 client.
+				\nanodb.exe-source\Server\ErrorHandler.cs	- just change version.
+				
+			Total changes 16 files: 13 files changed + 3 files added: app.config, nanodb.csproj.user + compile.bat.
+			Compiled win32 (x86) exe - in zip-archive, in Releases.
+_____________________________________________________________________________________________________________________________________________
 
 Code commented. See source code.
 

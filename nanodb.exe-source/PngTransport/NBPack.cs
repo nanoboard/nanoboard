@@ -344,6 +344,8 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
                         message = Convert.ToBase64String(Encoding.UTF8.GetBytes(np.SerializedString().Substring(32)))
                     }).ToArray();
                 Validate(posts);
+                for (int i = 0; i < posts.Length; i++)
+                    posts[i].message = NDB.PostsValidator.FromB64(posts[i].message);
                 var result = JsonConvert.SerializeObject(posts, Formatting.Indented);
                 File.WriteAllText(outputPath, result);
             }

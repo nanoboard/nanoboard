@@ -8,6 +8,15 @@ using System.Text;
 
 namespace NDB
 {
+    //Undefined comparer in .NET Framework 4.0. Define this.
+    public class DTComparer : IComparer<DateTime> {
+        public int Compare(DateTime x, DateTime y) {
+            long ticks = (x - y).Ticks;
+            if (ticks < 0) return -1;
+            if (ticks > 0) return 1;
+            return 0;
+        }
+    }
     /*
         Class that operates on posts database.
     */
@@ -442,6 +451,32 @@ namespace NDB
             return p;
         }
 
+        public List<Post> GetLastNAnswers(string hash, int n)
+        {
+            List<Post> res = new List<Post>();
+            if (!_rrefs.ContainsKey(hash)) return res;
+            
+            var stack = new Stack<List<DbPostRef>>();
+            stack.Push(_rrefs[hash]);
+
+            while (stack.Count > 0)
+            {
+                var elem = stack.Pop();            
+
+                foreach (var reply in elem.ToArray())
+                {
+                    res.Add(GetPost(reply.hash));
+
+                    if (_rrefs.ContainsKey(reply.hash))
+                        stack.Push(_rrefs[reply.hash]);
+                }
+            }
+                        
+            res=res.OrderBy<Post, DateTime>(a => a.date, new DTComparer()).ToList();
+            if (n == 0) return res;
+            return res.Count < n ? res : res.GetRange(res.Count - n, n);
+        }
+
         public Post[] GetReplies(string hash)
         {
             if (!_rrefs.ContainsKey(hash))
@@ -450,11 +485,10 @@ namespace NDB
             var rrefs = _rrefs[hash].ToArray();
 
             for (int i = 0; i < rrefs.Length; i++)
-            {
-                var rref = rrefs[i];
-                res[i] = GetPost(rref.hash);
-            }
-
+                res[i] = GetPost(rrefs[i].hash);                
+            if (GetPost(hash).replyto == "bdd4b5fc1b3a933367bc6830fef72a35")
+                res = res.OrderBy<Post, DateTime>((a) => GetLastNAnswers(a.hash, 1).Count>0?GetLastNAnswers(a.hash,1).Last().date:a.date,
+                    new DTComparer()).ToArray();
             return res;
         }
 

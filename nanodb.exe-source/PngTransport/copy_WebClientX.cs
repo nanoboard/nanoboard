@@ -28,7 +28,7 @@ namespace nbpack
 
         public event Action<byte[]> DownloadDataCompleted = delegate{};
 
-        public void DownloadDataAsync(Uri uri)
+        public void DownloadDataAsync(Uri uri, string save_to_filename="")
         {
             _wc.DownloadDataCompleted += (object sender, DownloadDataCompletedEventArgs e) =>
             {
@@ -87,7 +87,11 @@ namespace nbpack
             };
             try{_clients.Add(_wc);}catch{}
             //_wc.DownloadDataAsync(new Uri(uri.AbsoluteUri.Replace("https://", "http://")));
-            _wc.DownloadDataAsync(new Uri(uri.AbsoluteUri));	//delete replace.
+            if(save_to_filename==""){
+				_wc.DownloadDataAsync(new Uri(uri.AbsoluteUri));					//delete replace.
+			}else{
+				_wc.DownloadDataAsync(new Uri(uri.AbsoluteUri), save_to_filename);	//delete replace.
+			}
         }
 
         public WebHeaderCollection Headers

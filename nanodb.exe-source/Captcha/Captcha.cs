@@ -11,6 +11,10 @@ using NDB;
 using nboard;
 using NServer;
 using System.Text.RegularExpressions;
+//using System.Net;
+//wanted to download captcha pack from here:
+//https://github.com/Karasiq/nanoboard/releases/download/v1.2.0/ffeaeb19.nbc
+//but github using redirect, and no any proxy added, for downloading this anonymously.
 
 namespace captcha
 {
@@ -42,13 +46,189 @@ namespace captcha
         private const string CaptchaImageFileSuffix = ".png";
         public const string SignatureTag = "sign";
         private const string PowTag = "pow";
+		
+		public static string captcha_file = "captcha.nbc";
+		public static string original_captcha_file_sha256_hash = "0732888283037E2B17FFF361EAB73BEC26F7D2505CDB98C83C80EC14B9680413";
+		public static string captcha_downloading_url = "http://some_url_to_download_captcha/";	//This value can be customized in config-3.json, without hardcoding this.
+
+		public static bool captcha_checked = false;
+		public static bool IsCaptchaValid = false;
+		public static bool captcha_found = false;
 
         private static string _packFile;
 
+		private static string SHA256CheckSum(string filePath)
+		{
+			Console.Write("Wait calculating SHA256-hash for \""+filePath+"\"... ");
+			using (SHA256 SHA256 = SHA256Managed.Create())
+			{
+				using (FileStream fileStream = File.OpenRead(filePath)){
+					string sha256hash = ToHex(SHA256.ComputeHash(fileStream), true);
+					Console.Write("Done!\n");
+					//Console.WriteLine(sha256hash);	//show hash
+					return sha256hash;
+				}
+			}
+		}
+
+		private static string ToHex(byte[] bytes, bool upperCase)
+		{
+			StringBuilder result = new StringBuilder(bytes.Length * 2);
+			for (int i = 0; i < bytes.Length; i++)
+				result.Append(bytes[i].ToString(upperCase ? "X2" : "x2"));
+			return result.ToString();
+		}
+		
+//		private static void download_captcha_file(string url, string filename){
+			/*
+			using (WebClient wc = new WebClient())
+			{
+				//wc.DownloadProgressChanged += wc_DownloadProgressChanged;
+				wc.DownloadFileAsync (
+					new System.Uri(url),	// Param1 = Link of file
+					filename				// Param2 = Path to save
+				);
+			}
+			*/
+			
+//			Console.WriteLine("url: "+url+", filename: "+filename);
+/*
+	long fileSize = 0;
+    int bufferSize = 1024;
+    bufferSize *= 1000;
+    long existLen = 0;
+    
+    System.IO.FileStream saveFileStream;
+    if (System.IO.File.Exists(filename))
+    {
+        System.IO.FileInfo destinationFileInfo = new System.IO.FileInfo(filename);
+        existLen = destinationFileInfo.Length;
+    }
+
+    if (existLen > 0)
+        saveFileStream = new System.IO.FileStream(filename,
+                                                  System.IO.FileMode.Append,
+                                                  System.IO.FileAccess.Write,
+                                                  System.IO.FileShare.ReadWrite);
+    else
+        saveFileStream = new System.IO.FileStream(filename,
+                                                  System.IO.FileMode.Create,
+                                                  System.IO.FileAccess.Write,
+                                                  System.IO.FileShare.ReadWrite);
+ 
+    System.Net.HttpWebRequest httpReq;
+    System.Net.HttpWebResponse httpRes;
+    httpReq = (System.Net.HttpWebRequest) System.Net.HttpWebRequest.Create(url);
+    httpReq.AddRange((int) existLen);
+    System.IO.Stream resStream;
+    httpRes = (System.Net.HttpWebResponse) httpReq.GetResponse();
+    resStream = httpRes.GetResponseStream();
+ 
+    fileSize = httpRes.ContentLength;
+ 
+    int byteSize;
+    byte[] downBuffer = new byte[bufferSize];
+ 
+    while ((byteSize = resStream.Read(downBuffer, 0, downBuffer.Length)) > 0)
+    {
+        saveFileStream.Write(downBuffer, 0, byteSize);
+    }
+*/
+
+/*
+            bool _collectAvail = false;
+            AggregatorMain.Run(new string[0], url, filename);
+//            Aggregator.ParseImage(new string[0], url, filename);
+            ThreadPool.QueueUserWorkItem(o => 
+            {
+                while(AggregatorMain.Running) 
+                {
+                    Thread.Sleep(1000);
+                }
+
+                _collectAvail = true;
+            });
+            //return _collectAvail;
+*/			
+/*
+		DateTime startTime = DateTime.UtcNow;
+        WebRequest request = WebRequest.Create(url);
+        WebResponse response = request.GetResponse();
+        using (Stream responseStream = response.GetResponseStream()) {
+            using (Stream fileStream = File.OpenWrite(filename)) { 
+                byte[] buffer = new byte[4096];
+                int bytesRead = responseStream.Read(buffer, 0, 4096);
+                while (bytesRead > 0) {       
+                    fileStream.Write(buffer, 0, bytesRead);
+                    DateTime nowTime = DateTime.UtcNow;
+                    if ((nowTime - startTime).TotalMinutes > 5) {
+                        throw new ApplicationException(
+                            "Download timed out");
+                    }
+                    bytesRead = responseStream.Read(buffer, 0, 4096);
+                }
+            }
+        }
+*/
+		
+/*
+			WebClient webClient = new WebClient();
+			webClient.DownloadFile(url, filename);			
+*/
+/*
+			WebClient webClient = new WebClient();
+			//webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(Completed);
+			//webClient.DownloadProgressChanged += new DownloadProgressChangedEventHandler(ProgressChanged);
+			webClient.DownloadFileAsync(new Uri(url), filename);
+*/
+  
+/*
+			using (var client = new WebClient())
+			{
+				client.DownloadFile(new System.Uri(url), filename);
+			}			
+*/
+
+//}
+
+		
+		public static bool verify_captcha_hash(){
+            _packFile = Configurator.Instance.GetValue("captcha_pack_file", captcha_file);
+			captcha_downloading_url = Configurator.Instance.GetValue("captcha_url", captcha_downloading_url);
+			
+			string captcha_file_hash = "";
+			if(!File.Exists(_packFile)){
+				Console.WriteLine(_packFile+" does not exists.");
+
+				//download_captcha_file(captcha_downloading_url, captcha_file);	//github using redirect with temporary links, so cann't download. Method was been removed.
+
+				return false;
+			}
+			else{
+				captcha_file_hash = SHA256CheckSum(_packFile);
+				if(captcha_file_hash!=original_captcha_file_sha256_hash){
+					Console.WriteLine(
+								"(captcha_file_hash == original_captcha_file_sha256_hash): "+(captcha_file_hash==original_captcha_file_sha256_hash)
+						+"\n"+	"captcha_file_hash:\n"+captcha_file_hash
+						+"\n"+	"original_captcha_file_sha256_hash:\n"+original_captcha_file_sha256_hash
+					);
+
+					//download_captcha_file(captcha_downloading_url, captcha_file);	//just leave this here.
+
+					return false;
+				}else{
+					Console.Write("Hash OK? "+(captcha_file_hash==original_captcha_file_sha256_hash)+". ");
+					return true;
+				}
+			}
+		}
+		
         static Captcha()
         {
-            _packFile = Configurator.Instance.GetValue("captcha_pack_file", "captcha.nbc");
+            //_packFile = Configurator.Instance.GetValue("captcha_pack_file", "captcha.nbc");
+            _packFile = Configurator.Instance.GetValue("captcha_pack_file", captcha_file);
             _sha = SHA256.Create();
+			captcha_found = File.Exists(_packFile);			
         }
 
         public string ImageDataUri
@@ -124,8 +304,12 @@ namespace captcha
             return new Captcha(publicKey, encryptedSeed, image);
         }
 
-        public static bool PostHasSolvedCaptcha(string post)
+        public static bool PostHasSolvedCaptcha(string post, bool bypassValidation = false)
         {
+			if(bypassValidation) {
+				//Console.WriteLine("Captcha.cs: PostHasSolvedCaptcha - bypassValidation = "+bypassValidation+" now.");
+				return true;
+			}
             var captcha = GetCaptchaForPost(post);
             if (captcha == null) return false;
             return captcha.CheckSignature(post);
@@ -155,6 +339,7 @@ namespace captcha
 
         public static int CaptchaIndex(string post, int max)
         {
+			if(max==0){return 0;}						//% max, when max = 0 return error
             post = post.ExceptSignature();
             var hash = ComputeHash(ExceptXmg(post));
             if (hash.MaxConsecZeros(PowByteOffset, PowTreshold) < PowLength) return -1;

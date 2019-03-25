@@ -14,16 +14,33 @@ function escapeTags(text) {
 
 function detectImages(text) {
   var prefix = 'data:image/jpeg;base64,';
-  var matches = text.match(/\[(i|x)mg=[A-Za-z0-9+\/=]{4,64512}\]/g);
+  //var matches = text.match(/\[(i|x)mg=[A-Za-z0-9+\/=]{4,64512}\]/g);	//images from karasiq nanoboard don't display as images, with limit.
+  var matches = text.match(/\[(i|x)mg=[A-Za-z0-9+\/=]{4,}\]/g);			//Now - OK.
   if (matches != null) {
+		//console.log(matches);
     for (var i = 0; i < matches.length; i++) {
       var value = matches[i].toString();
       value = value.substring(5);
       value = value.substring(0, value.length - 1);
+	  
+      var isfname = text.split(value)[1];							//get second part of message, before next value
+	  var isfname = isfname.split("]")[1];							//split by ']\n[filename.ext]' -> ( '' + "]" + '\n[filename.ext' + "]" )
+      var isfname = isfname.substring(2, isfname.length);				//substring '\n[' to get filename.ext
+	  var test = /\.([0-9a-z]+)(?:[\?#]|$)/i.test(isfname);		//test is filename.ext there
+	  //console.log("detectImages, isfname", isfname, '(isfname==\'\')', (isfname==''), 'test', test);	//show result
+	  
+	  if(isfname!=='' && test==true){		//if not empty string and if [filename.ext] after image
+		var file_name = '['+isfname+']';	//add "[" and "]" to 'filename.ext' 
+		var download_link = '<a href="'+prefix+value+'" download="'+isfname+'">['+isfname+']</a>';
+		text = replaceAll(text, file_name, download_link);	//replace this to link for download the file.
+		//console.log('<a href="'+prefix+value+'" download="'+isfname+'">['+isfname+']</a>'); //show this link
+	  }
+	  
       value = '<img src="' + prefix + value + '" />';
       text = replaceAll(text, matches[i], value);
     }
   }
+  //console.log('post.js: applyformatting, detectImages', '- img replaced to tag img');
   return text;
 }
 
@@ -144,11 +161,11 @@ function detectURLs(text) {
 			
 			for(j=0; j<matches.length; j++){									//for each url in array
 				var next_url_index = text.indexOf(matches[j], start_index);		//search this url in text from start_index.
-				if(next_url_index==-1){											//if this this url not founded
+				if(next_url_index==-1){											//if this this url not found
 					continue;													//continue find next url
 				}																//else...
 																			//continue the code...
-				start_index = next_url_index; 									//else, if founded, make this as start index.
+				start_index = next_url_index; 									//else, if found, make this as start index.
 				var maybe_href = text.substring(start_index-6, start_index);	//copy previous 6 symbols
 				if(maybe_href==='href="'){										//if previous 6 symbols === 'href="' - do not replace text_link to link, this already replaced.
 					var next_quote = text.indexOf('"', start_index);				//find next quote index.

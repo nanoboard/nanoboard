@@ -41,6 +41,7 @@ namespace nbpack
             start.CreateNoWindow = true;
 
             Process p = Process.Start(start);
+			p.WaitForExit();
 
             FileStream baseStream = p.StandardOutput.BaseStream as FileStream;
             byte[] bytes = null;
@@ -56,6 +57,8 @@ namespace nbpack
                 } while (lastRead > 0);
 
                 bytes = ms.ToArray();
+				baseStream.Close();
+				baseStream.Dispose();
             }
 
             p.WaitForExit();
@@ -94,6 +97,7 @@ namespace nbpack
             start.CreateNoWindow = true;
 
             Process p = Process.Start(start);
+			p.WaitForExit();
             Console.WriteLine("CURL PROCESS STARTED");
 
 
@@ -111,6 +115,8 @@ namespace nbpack
                 } while (lastRead > 0);
 
                 bytes = ms.ToArray();
+				baseStream.Close();
+				baseStream.Dispose();
             }
 
             p.WaitForExit();

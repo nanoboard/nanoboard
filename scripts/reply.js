@@ -374,7 +374,7 @@ function appendStyle(styles) {
 
   document.getElementsByTagName("head")[0].appendChild(css);
 }
-var textarea_base64_error = '.base64_error{border: 2px solid red;}'
+var textarea_base64_error = '.base64_error, .length_error {border: 2px solid red;}'
 window.onload = function() { appendStyle(textarea_base64_error) };		//do appending
 
 //function to check base64 for all elements, with one bb-code.
@@ -420,8 +420,21 @@ function check_base64_in_tags(text, bb_code){//bb_code = 'img', 'xmg', 'file', o
 	return true;																					//else, after all - return true;
 }
 
+var maxlength = 64512;
+function calculate_length(textarea){
+	var length = textarea.value.length;
+	document.getElementById("length").innerHTML = length+' typed ('+(maxlength-length)+' left)';
+	if(length>maxlength){
+		textarea.classList.add('length_error');
+		textarea.title = "Max length = "+maxlength+" symbols.";
+	}else{
+		textarea.classList.remove('length_error');
+		textarea.title = "";
+	}
+}
 //check base64 for many bb-codes.
 function check_base64(textarea){
+	calculate_length(textarea);
 	var text = textarea.value;
 	
 	var bb_codes_with_base64 = ['xmg', 'img', 'file'];												//array with bb-codes, where need to check base64...
@@ -440,7 +453,10 @@ function check_base64(textarea){
 		}
 	}
 	//else, if false not returned, all base64 is base64-encoded.
-	textarea.title = '';																						//remove title
+	if(textarea.classList.contains('length_error')){}
+	else{
+		textarea.title = '';																						//remove title
+	}
 //	textarea.style.border = '1px solid lime';																	//change border color to lime
 	textarea.classList.remove('base64_error');																	//remove class, and turn textarea back.
 	return true;																								//return true;
@@ -451,6 +467,25 @@ function check_base64(textarea){
 	//4 digits interpretting as base64
 */	
 
+}
+
+function validate_symbols(textarea){
+	
+	//var regexp = /(|)([^?abcefgijknopqrsvxyz3478]|[012569dhlmtuw])/;	// лизни-ка (|), поначалу.			//норм, если regexp.test(answer)	//без длины.
+
+	var regexp = /^[?abcefgijknopqrsvxyz3478]{0,5}$/;														//Норм, если !regexp.test.
+	
+	var answer = textarea.value;
+	//if(regexp.test(answer)){
+	if(!regexp.test(answer)){
+		textarea.classList.add('base64_error');
+		textarea.title = 	"Answer can contains [? a b c e f g i j k n o p q r s v x y z 3 4 7 8]\n"+
+							"and can not contains [0 1 2 5 6 9 d h l m t u w].\n"+
+							"Captcha answer contains no more than 5 symbols."
+		;
+	}else{
+		textarea.classList.remove('base64_error');;
+	}
 }
 
 function addReplyForm(id) {
@@ -486,7 +521,7 @@ function addReplyForm(id) {
                   var captchaModal = $('<div>');
                   captchaModal.addClass('captcha_modal');
                   captchaModal.append('<img class="captcha_image" src="' + dataUri + '"><br/>');
-                  captchaModal.append('<textarea class="captcha_answer"></textarea><br/>');
+                  captchaModal.append('<textarea class="captcha_answer" oninput="validate_symbols(this);" onclick="validate_symbols(this);"></textarea><br/>');
                   var captchaBtn = $('<button>');
                   captchaBtn
                     .text('Send')
@@ -505,7 +540,6 @@ function addReplyForm(id) {
                           form.show();
                         });
                     });
-                  captchaModal.append(captchaBtn);
                   captchaModal.append($('<button>').text('Cancel').addClass('reply-button btn btn-danger').click(function(){
                     captchaModal.remove();
                     form.show();
@@ -513,8 +547,35 @@ function addReplyForm(id) {
                   }));
                   $('body').append(captchaModal);
                   $('.captcha_answer').focus();
+                  captchaModal.append(captchaBtn);
+/*
+					$('#captcha_image').resizable();
+					$('#captcha_modal').draggable({
+						appendTo: 'body',
+						start: function(event, ui) {
+							isDraggingMedia = true;
+						},
+						stop: function(event, ui) {
+							isDraggingMedia = false;
+							// blah
+						}
+					});
+*/
                 });
-            });
+            })
+			.fail(function(response){
+                  waitPowModal.remove();
+                  var captchaModal = $('<div>');
+                  captchaModal.addClass('captcha_modal');
+                  captchaModal.append('<img class="captcha_image" src="../images/error.png" style="width: 64px; height:64px"><br/>');
+                  captchaModal.append('<div class="captcha_answer" style="width: 256px; height: 100px">'+response.responseText.replace('\n', '<br>')+'</div><br/>');
+                  captchaModal.append($('<button>').text('Cancel').addClass('reply-button btn btn-danger').click(function(){
+                    captchaModal.remove();
+                    form.show();
+                  }));
+                  $('body').append(captchaModal);
+                  $('.captcha_answer').focus();
+			});
         })
         /*.click(function() {
           sendPostToDb({
@@ -531,7 +592,7 @@ function addReplyForm(id) {
         $('#imgmodal').modal()
         $('#scale').click()
         })))
-      .append('<hr>Format selection: ')
+      .append('<hr><div id="length" style="display: inline-block;"></div><br>Format selection: ')
       .append($('<a href=javascript:void(0)>')
         .html('<b>[b]</b>')
         .click(function(){

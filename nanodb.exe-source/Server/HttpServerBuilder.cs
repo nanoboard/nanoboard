@@ -27,7 +27,8 @@ namespace NServer
         public HttpServer Build()
         {
             string ip = Configurator.Instance.GetValue("ip", "127.0.0.1");  // pass default params in case if they are missing
-            int port = int.Parse(Configurator.Instance.GetValue("port", "7346"));
+//            int port = int.Parse(Configurator.Instance.GetValue("port", "7346"));
+            int port = nbpack.NBPackMain.parse_number(Configurator.Instance.GetValue("port", "7346"));
             Configurator.Instance.GetValue("password", Configurator.DefaultPass);
             var server = new HttpServer(ip, port);
             var pagesHandler = new FileHandler("pages", MimeType.Html);

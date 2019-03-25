@@ -8,8 +8,9 @@ using System.Text;
 
 namespace NDB
 {
-    //Undefined comparer in .NET Framework 4.0. Define this.
-    public class DTComparer : IComparer<DateTime> {
+	//In client 3.1 - undefined comparer for .NET Framework 4.0.
+	//Define this.
+	public class DTComparer : IComparer<DateTime> {
         public int Compare(DateTime x, DateTime y) {
             long ticks = (x - y).Ticks;
             if (ticks < 0) return -1;
@@ -246,6 +247,12 @@ namespace NDB
         {
             return _ordered.Where(k => !_deleted.Contains(k)).Skip(skip).Take(count).Select(h => GetPost(h)).ToArray();
         }
+
+		//From client 3.1
+        public string[] RangePresent(int skip, int count, string only_hashes)
+        {
+            return _ordered.Where(k => !_deleted.Contains(k)).Skip(skip).Take(count).ToArray();
+        }
         
         /*
             Adds post back to DB after deletion.
@@ -317,8 +324,8 @@ namespace NDB
 
         public bool PutPost(Post p, bool allowReput = false, bool bypassValidation = false)
         {
-            if (!bypassValidation && !PostsValidator.Validate(p)) // do not add posts that fail validation
-                return false;
+	            if (!PostsValidator.Validate(p, bypassValidation)) 		// do not add posts that fail validation
+                    return false;
 
             lock (_lock)
             {
@@ -451,6 +458,24 @@ namespace NDB
             return p;
         }
 
+        public Post[] GetPosts(string hashes_joined_with_comma, int take=-1) 			//string "hash1,hash2,hash3,..."
+        {
+			string[] array_hashes = hashes_joined_with_comma.Split(',');	//split by comma
+			//for (int i = 0; i < array_hashes.Length; i++) 					//for each hash
+			//{
+				//Console.WriteLine(array_hashes[i]);								//Just display this.
+			//}
+            var array_with_posts = new Post[((take!=-1) ? take : array_hashes.Length)];						//post with length of array hashes
+
+            for (int i = 0; i < ((take!=-1) ? take : array_hashes.Length); i++)					//for each hash in array
+            {
+                array_with_posts[i] = GetPost(array_hashes[i]);							//get post by hash and add this
+            }
+
+            return array_with_posts;														//return array with posts
+        }
+
+		//from client 3.1 - get last n posts in thread
         public List<Post> GetLastNAnswers(string hash, int n)
         {
             List<Post> res = new List<Post>();
@@ -472,7 +497,10 @@ namespace NDB
                 }
             }
                         
-            res=res.OrderBy<Post, DateTime>(a => a.date, new DTComparer()).ToList();
+            //res=res.OrderBy<Post, DateTime>(a => a.date, Comparer<DateTime>.Create((a, b) => (DateTime.Compare(a, b)))).ToList(); //unstable in .NET v4.0
+			res = res.OrderBy<Post, DateTime>(a => a.date, new DTComparer()).ToList();
+			//res = res.OrderByDescending<Post, DateTime>(a => a.date).ToList();	//maybe working in .NET v4.0
+
             if (n == 0) return res;
             return res.Count < n ? res : res.GetRange(res.Count - n, n);
         }
@@ -485,10 +513,17 @@ namespace NDB
             var rrefs = _rrefs[hash].ToArray();
 
             for (int i = 0; i < rrefs.Length; i++)
-                res[i] = GetPost(rrefs[i].hash);                
+                res[i] = GetPost(rrefs[i].hash);
             if (GetPost(hash).replyto == "bdd4b5fc1b3a933367bc6830fef72a35")
+			
+//                res = res.OrderBy<Post, DateTime>((a) => GetLastNAnswers(a.hash, 1).Count>0?GetLastNAnswers(a.hash,1).Last().date:a.date,
+//                    Comparer<DateTime>.Create((a, b) => DateTime.Compare(a, b))).ToArray();		//unstable in .NET Framework 4.0
+
+//                res = res.OrderByDescending<Post, DateTime>((a) => (GetLastNAnswers(a.hash, 1).Count>0)?GetLastNAnswers(a.hash,1).Last().date:a.date).ToArray(); //maybe working in .NET 4.0
+
                 res = res.OrderBy<Post, DateTime>((a) => GetLastNAnswers(a.hash, 1).Count>0?GetLastNAnswers(a.hash,1).Last().date:a.date,
-                    new DTComparer()).ToArray();
+                    new DTComparer()).ToArray();		//unstable in .NET Framework 4.0
+
             return res;
         }
 

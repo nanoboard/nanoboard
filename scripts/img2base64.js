@@ -72,8 +72,8 @@ function updateImage(loader) {
           $('.output').find('img').attr('src', 'error');
           $('#info').css('color','red');
         } else {
-//          $('#result').text('[xmg='+res.substring(res.indexOf(',')+1)+']');			//old code with bb-code xmg
-          $('#result').text('[file name="'+file.name+'" type="'+file.type+'"]'+res.substring(res.indexOf(',')+1)+'[/file]'); //bb-code file, with filename and mime-type, like in karasiq-nanoboard.
+//          $('#result').text('\n[xmg='+res.substring(res.indexOf(',')+1)+']');			//old code with bb-code xmg
+          $('#result').text('\n[file name="'+file.name+'" type="'+file.type+'"]'+res.substring(res.indexOf(',')+1)+'[/file]'); //bb-code file, with filename and mime-type, like in karasiq-nanoboard.
           $('.output').find('img').attr('src', res);
           $('#info').css('color','black');
         }
@@ -119,7 +119,8 @@ function updateImage(loader) {
           $('#result').text('error');
         } else {
           $('#info').css('color','black');
-          $('#result').text('[xmg='+dataURL.substring(dataURL.indexOf(',')+1)+']');		//saving backward compatibility with old zipJPEGs and bb-code xmg.
+			var clearBase = dataURL.substring(dataURL.indexOf(',')+1);
+			$('#result').text('\n[xmg='+clearBase+']\n['+file.name+']');		//saving backward compatibility with old zipJPEGs and bb-code xmg.
         }
       };
       var shrd = canvas.toDataURL();
@@ -153,7 +154,8 @@ $('.apply-modal').click(function() {
     v = __current_text_input.val();
     var textBefore = v.substring(0,  cursorPos);
     var textAfter  = v.substring(cursorPos);
-    __current_text_input.val( textBefore+$("#result").text()+textAfter );
+	var middleText = '\n'+$("#result").text().trim();
+	__current_text_input.val( textBefore + middleText + textAfter );
     $("#imgmodal").modal('hide')
 })
 

@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>Nanoboard</title>
 <link rel="shortcut icon" href="/images/favicon.ico" />
+<script src='../scripts/polyfills.js'> </script>
+<script src='../scripts/sha256.js'> </script>
 <script src='../scripts/jquery.min.js'> </script>
 <script src='../scripts/base64.js'> </script>
 <script src='../scripts/notif.js'> </script>
@@ -50,6 +52,11 @@
 <link rel='stylesheet' type='text/css' href='../styles/notif.css'>
 <link rel='stylesheet' type='text/css' href='../styles/bootstrap.min.css'>
 <link rel='stylesheet' type='text/css' href='../styles/nano.css'>
+<style>
+/*show-hide posts wakaba css*/
+.post_type_hidden {cursor:pointer; opacity: 0.5 }
+.post_type_hidden .post__message, .post_type_hidden .post__refmap, .post_type_hidden .post__images {display: none !important;}
+</style>
 </head>
 <body>
 <span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.1</sup></span>
@@ -59,7 +66,7 @@
                 <div class="col-md-3 col-sm-3 col-xs-5">
                     <ul id="navs"class="nav nav-pills">
                       <div class="row">
-                      <li role="presentation" id="mainli" class="active col-xs-4"><a id='maina' href='#'><span class='glyphicon glyphicon-home'></span><span class="hidden-xs">&thinsp;Main</span></a></li>
+                      <li role="presentation" id="mainli" class="active col-xs-4"><a id='maina' href='#' onclick="hide_create_png();"><span class='glyphicon glyphicon-home'></span><span class="hidden-xs">&thinsp;Main</span></a></li>
                       <li role="presentation" id="lastli" class="dropdown col-xs-4">
                         <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
                           <span class='glyphicon glyphicon-bell'></span><span class="hidden-xs">&thinsp;Last</span><span class="caret"></span>
@@ -88,14 +95,61 @@
                 </form>
                 <form id="actions" class="col-md-4 col-sm-4 col-xs-4 pull-right" >
                     <div class="row">
-                        <a type="button" href='javascript:void(0)' id="png-collect" class="col-xs-4 btn btn-default"><span class="glyphicon glyphicon-save" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Collect PNG</span></a>        
-                        <a type="button" href='javascript:void(0)' id="png-create" class="col-xs-4 btn btn-default"><span class="glyphicon glyphicon-open" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Create PNG</span></a>             
+                        <a type="button" href='javascript:void(0)' id="png-collect" class="col-xs-4 btn btn-default"><span class="glyphicon glyphicon-save" aria-hidden="true"></span><span id="collect_text" class='btn-title hidden-xs hidden-sm'>&nbsp;Collect PNG</span></a>        
+                        <a type="button" href='javascript:void(0)' id="png-create-bookmark" class="col-xs-4 btn btn-default" onclick="show_create_PNG();"><span class="glyphicon glyphicon-bookmark" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Create PNG</span></a>             
                         <a type="button" href="/shutdown" id="shutdownbtn" class="col-xs-4 btn btn-danger"><span class="glyphicon glyphicon-off" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Shutdown</span></a>
                     </div>
                 </form>
         </nav>
     </div>
 </div>
+
+<div id="createPNG" style="display: none; padding: 10px;">
+    Pack <input id="from_queue" type="number" value="" min="0" onchange="change_values();"/> posts, from queue.<br><br>
+    And pack: <input id="from_last_posts" type="number" value="" min="0" onchange="change_beginning();"/> last posts
+	from post with number: <input id="beginning_post_from_last" type="number" value="" min="0" onchange="generate_hash_list();"/>
+	<!--&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:void(0);" onclick="change_beginning();">Set values;</a>--><br><br>
+    And add to container: <input id="rand_last_posts" type="number" value="0" min="0" onchange="change_values();"/> random posts.<br><br>
+	<br><a href="Open_container.html" target="_blank">Open the single selected container you can here.</a>
+	&nbsp;&nbsp;&nbsp;&nbsp; <a href="convert-to-PNG.html" target="_blank">Convert some image to PNG you can here.</a>
+    <br>
+	Source picture: <input id="custom_picture" type="file" style="display: inline-block;" accept=".jpg,.jpeg,.png"/>
+	<br><br>
+    <a type="button" href='javascript:void(0)' id="png-create" class="col-xs-4 btn btn-default"><span class="glyphicon glyphicon-open" aria-hidden="true"></span><span id="png-create-text" class='btn-title hidden-xs hidden-sm'>&nbsp;Create PNG</span></a>
+    <br>
+    <br>
+    <div id="queue_info" style="display: block;" onclick="change_values();">
+        <br>
+        <div id="queue_accepted" style="display: inline-block;">
+            <br>
+            Queue accepted.
+            <br>
+            Pack
+            <div id="pack_from_queue" style="display: inline-block;">0</div> posts
+            from
+            <div id="posts_in_queue" style="display: inline-block;">0</div>
+            posts in queue.
+            <div id="queue_hashes"></div>
+        </div>
+        <div id="queue_not_accepted" style="display: inline-block;">
+            <br>
+            Queue is empty...
+            <br>
+        </div>
+        <br><br>
+        <div id="last_posts_queue">
+            Pack last
+            <div id="pack_last" style="display: inline-block;">0</div>
+            posts - from
+            <div id="posts_count" style="display: inline-block;">0</div> posts...
+        </div>
+            Hashes of last posts to pack (without hashes of deleted posts):
+        <br>
+        <div id="hashes_last">Click here to update, after some time...</div>
+        
+    </div>
+</div>
+<div id="page">
 <div style='margin-left: 5px; margin-right: 5px;' id='categories'></div>
 <hr style='margin: 5px' />
 <div id='thread'>
@@ -149,6 +203,472 @@
     </div>
   </div>
 </div>
+</div><!--end div id "page"-->
+
+<script>
+//elements, as variables.
+var page = document.getElementById('page');
+var cpng = document.getElementById('createPNG');
+    var fq = document.getElementById('from_queue');
+    var qa = document.getElementById('queue_accepted');
+    var qna = document.getElementById('queue_not_accepted');
+    var startlp = document.getElementById('beginning_post_from_last');
+    var getlp = document.getElementById('from_last_posts');
+    var randlp = document.getElementById('rand_last_posts');
+    var pl = document.getElementById('pack_last');
+    var pc = document.getElementById('posts_count');
+    var qh = document.getElementById('queue_hashes');
+    var hl = document.getElementById('hashes_last');
+    var pfq = document.getElementById('pack_from_queue');
+    var piq = document.getElementById('posts_in_queue');
+    
+//хотел сделать так, чтобы по числу items current_queue наполнялся из queue - items элементами, втекающими из queue, и вытекающими туда.
+//При этом, чтобы изменялась длина queue, по мере наполнения current_queue.
+
+function change_beginning(){
+	console.log(total_posts_available - getlp.value);
+	startlp.value = total_posts_available - getlp.value;
+	change_values();
+}
+
+var current_queue = []; //array with specified number of hashes from queue;
+var result = [];
+var rest = [];			//rest of hashes, if not selected.
+
+var total_posts_available = postCount;
+function get_total_posts(){
+	$.get(        'http://127.0.0.1:7346/api/count')    //return hashes only, using GET-query not json posts...
+	.done(
+		function(replies){
+			total_posts_available = parseInt(replies);
+		}
+	)
+	.fail(
+		function(){
+			setTimeout("get_total_posts();", 100);
+		}
+	);
+}
+setTimeout("get_total_posts();", 100);
+
+//Перетекание элементов из одного массива - в другой, и наоборот.
+//Ниже - пример функции под полифиллом для Array.slice()
+
+
+//Теперь, парой строк можно обменивать элементы в массивах:
+function transfer_hashes_to_temp_array(source, destination, items, start_index, use_offset){        //source, destination - arrays, items number - items in destination. start_index - start index, use_offset - true, if using start_index, and if this = 0;
+	start_index = parseInt(start_index) || 0;		//default start index = 0
+	items = parseInt(items);
+	//console.log('source: ', source, ', source.length: ', source.length,
+	//			'\ndestination: ', destination, ', destination.length: ', destination.length,
+	//			'\nitems', items, ', start_index', start_index,
+	//			'\nuse_offset', use_offset
+	//);
+    result = [source, destination, []];                                        //result[0] - source, result[1] - destination.
+    var total = result[0].length + result[1].length;
+    if((items==0 || items<0) && !use_offset){result[0] = result[1].concat(result[0]); result[1] = []; 
+	//console.log(	'result[0]: ', result[0],
+	//				'\nresult[1]: ', result[1],
+	//				'\nresult[2]: ', result[2]
+	//);
+return result;}
+    else if(items>=result[0].length+result[1].length){result[1] = result[1].concat(result[0]); result[0] = []; 
+	//console.log(	'result[0]: ', result[0],
+	//				'\nresult[1]: ', result[1],
+	//				'\nresult[2]: ', result[2]
+	//);
+return result;}
+    else{
+        var concat = result[1].concat(result[0]);
+		//console.log('items', items, ', start_index', start_index, '\n', 'concat', concat);
+        result[0] = concat.slice(start_index+items,concat.length);
+        result[1] = concat.slice( start_index, start_index+items );
+		if(start_index>0 || use_offset){
+			if(result[0].length>0){result[1] = result[1].concat(result[0]); result[0] = [];}
+			result[2] = concat.slice( 0, start_index );
+		}
+		if(use_offset && start_index+items===concat.length){
+			//console.log("OK.", concat.length);
+		}else if(
+					//use_offset &&
+					(start_index+items!==concat.length || result[1].length>items)){
+			//console.log("FFFFUUUU", concat.length);
+			//result[2] = result[0];
+			result[0] = result[0].concat(result[1].slice(items, result[1].length));
+			result[1] = result[1].slice(0, items);
+		}
+	//console.log(	'result[0]: ', result[0],
+	//				'\nresult[1]: ', result[1],
+	//				'\nresult[2]: ', result[2]
+	//);
+		if(use_offset && result[0].length==0){result[0] = result[2]; result[2] = [];}
+        if(
+				(start_index==0 	&& 	(result[0].length+result[1].length === total)					)
+			||	(start_index>0 		&& 	(result[0].length+result[1].length+result[2].length === total)	)
+			//||	(start_index==0 	&& 	(result[0].length+result[1].length+result[2].length === total)	)	//inverted indexes...
+		){return result;}
+        else{
+			console.log('some error in with array length\'s');
+		}
+    }
+}
+//___________________________________________________________________________
+//                                    TEST
+//___________________________________________________________________________
+/*
+var array2 = [1,2,3,4,5,6,7];            //destination
+var array1 = [8,9,10,11,12];            //source
+
+console.log('\n\n\n\n\n\n\n')
+for(i=-5;i<=(array1.length+array2.length+5);i++){
+    var result = transfer_hashes_to_temp_array(array1, array2, i);
+    
+    console.log(
+        'elements in dest: ', i
+        ,'\n src: ', JSON.stringify(result[0])
+        ,'\n dst: ', JSON.stringify(result[1])
+        ,'\n'
+    );
+}
+*/
+
+function show_create_PNG(){
+    page.style.display = 'none';
+    cpng.style.display = 'block';
+    
+	if(total_posts_available==0){
+		setTimeout("change_values();", 1000);
+		return;
+	}
+	startlp.value = startlp.max = total_posts_available - getlp.value;
+
+    if((queue.length+current_queue.length)===0){
+        fq.readOnly = true;
+        qa.style.display = "none";
+        qna.style.display = "inline-block";
+        getlp.value = 3; //50;
+        fq.value = 0;
+        pl.innerHTML = getlp.value;
+        pc.innerHTML = total_posts_available;
+    }else{
+        qa.style.display = "inline-block";
+        qna.style.display = "none";
+        pl.innerHTML = getlp.value;
+        pc.innerHTML = total_posts_available;
+        qh.innerHTML = 'Regenerate hashes on change...';
+        fq.readOnly = false;
+
+        var value = fq.max = fq.value = pfq.innerHTML = piq.innerHTML = (queue.length+current_queue.length);
+        console.log('value', value);
+        result = transfer_hashes_to_temp_array(queue, current_queue, value);
+        queue = result[0];
+        current_queue = result[1];
+        update_hashes_of_last_post(current_queue, 'queue', value);
+        
+        
+        getlp.value = 10-(queue.length+current_queue.length);
+        getlp.max = total_posts_available;
+    }
+    
+    generate_hash_list();
+}
+
+function hide_create_png(){
+    page.style.display = 'block';
+    cpng.style.display = 'none';
+    $('#png-create-bookmark').removeClass("active");
+}
+
+function change_values(){
+	if(total_posts_available==0){
+		setTimeout("change_values()", 1000);
+		return;
+	}
+	startlp.max = total_posts_available - getlp.value;
+	startlp.value = (startlp.value>startlp.max) ? startlp.max : startlp.value;
+
+    var value = fq.value || (queue.length+current_queue.length);
+    //console.log('queue', queue, 'current_queue', current_queue, value, transfer_hashes_to_temp_array(queue, current_queue, value));
+    var result = transfer_hashes_to_temp_array(queue, current_queue, value);
+    queue = result[0];
+    current_queue = result[1];
+    //console.log('result', result);
+/*
+    if(value==0 && queue.length!=0){
+        fq.value = queue.length;
+    }
+*/
+    
+    var from_last_posts = getlp.value;
+
+    if((current_queue.length+queue.length)!=0){
+        qa.style.display = "inline-block";
+        qna.style.display = "none";
+        piq.innerHTML =  fq.max = (current_queue.length+queue.length);
+        fq.readOnly = false;
+    }else{
+        qa.style.display = "none";
+        qna.style.display = "inline-block";
+        fq.readOnly = true;
+    }
+    
+    update_hashes_of_last_post(current_queue, 'queue', value);
+    generate_hash_list()
+
+    pfq.innerHTML = value;
+    pl.innerHTML = from_last_posts;
+    getlp.max = pc.innerHTML = total_posts_available;
+    //console.log('queue', queue, 'current_queue', current_queue, value);
+}
+
+var fullhl = [];                //fullhl - full hashes last posts array. This is array to save hashes, and to don't send XHR-query everytime on change values. This will be sliced.
+var parthl = [];                //parthl - partial hash list. This is array to save hashes, after move elements from fullhl
+var curhlp = [];                //curhlp - current hashes of last posts array. This contains values after full array - sliced.
+
+//two ways of use this function. For queue and for list last posts. Different ways. 
+function update_hashes_of_last_post(last_posts_hashes, queue, value){
+    var queue = queue || false;
+    var value = value || false;
+    var hashes_html = ""
+    function generate_list(array, value, html){
+        html = html || "";
+        for(hash=0; hash<value; hash++){
+            html +=     	'Post №'+(fullhl.indexOf(array[hash])) +
+							': <a href="javascript:void(0);" onclick="_depth=2;loadThread(&quot;'+
+                            array[hash]+
+                            '&quot;); hide_create_png();" title="Click to open post/thread/category...">'+
+                            array[hash]+
+                            '</a><br>'
+            ;
+        }
+        return html;
+    }
+    
+    if(queue!==false && queue==='queue'){
+        if    (value!==0){hashes_html = generate_list(last_posts_hashes, value, hashes_html);}
+        qh.innerHTML = hashes_html;
+        return;
+    }
+
+    hashes_html = generate_list(last_posts_hashes, last_posts_hashes.length, hashes_html)
+    hl.innerHTML = hashes_html;
+    return;
+}
+
+
+function generate_hash_list(){
+    var nlp = getlp.value;    			//nlp - number of last posts.
+	from_beginning = startlp.value;		//start post.
+    if(nlp<=(curhlp.length+parthl.length) || parthl.length!==0){                                        //if(number of last posts lesser than length of both arrays)
+		//console.log('before: parthl[0]', parthl[0], '3 arrays length: ', rest.concat(curhlp.concat(parthl)).length, ', rest.length', rest.length, ', curhlp.length', curhlp.length, 'parthl.length', parthl.length);
+        //console.log('before: parthl', parthl, '3 arrays: ', rest.concat(curhlp.concat(parthl)), ', rest', rest, ', curhlp', curhlp, 'parthl', parthl);
+        //console.log('before: parthl', parthl, '3 arrays: ', parthl.concat(curhlp.concat(rest)), ', rest', rest, ', curhlp', curhlp, 'parthl', parthl);
+        
+		//WORKING...
+		var result = transfer_hashes_to_temp_array(rest.concat(curhlp.concat(parthl)), [], nlp, from_beginning);        //take hashes in dest from source or push from dest to source.
+		
+		//var2
+        //var result = transfer_hashes_to_temp_array(parthl.concat(curhlp.concat(rest)), [], nlp, from_beginning);        //take hashes in dest from source or push from dest to source.
+        
+		//BAD WORKING
+		//var result = transfer_hashes_to_temp_array(rest.concat(curhlp.concat(parthl)), [], nlp, from_beginning, true);        //take hashes in dest from source or push from dest to source.
+        //var result = transfer_hashes_to_temp_array(rest.concat(parthl.concat(curhlp)), [], nlp, from_beginning, true);        //take hashes in dest from source or push from dest to source.
+        //var result = transfer_hashes_to_temp_array(parthl.concat(curhlp.concat(rest)), [], nlp, from_beginning, true);        //take hashes in dest from source or push from dest to source.
+
+		//console.log('after1: result[0]', result[0], ', result[1]', result[1], ', result[2]', result[2]);
+
+		//WORKING
+        //parthl = result[0] || result[2];                                          //update arrays1
+        //curhlp = result[1];                                                       //update arrays2
+		//console.log('curhlp',curhlp,', curhlp.length:', curhlp.length);
+		//rest = (typeof result[0]==='undefined') ? [] : result[2];					//
+        
+        parthl = result[0];
+		curhlp = result[1];
+		rest = result[2];
+
+		//var2
+		//rest = result[0];
+		//curhlp = result[1];
+        //parthl = result[2];
+        
+		update_hashes_of_last_post(curhlp);                                        //update list of hashes in current array...
+		
+		//console.log('after2: parthl[0]', parthl[0], '3 arrays length: ', rest.concat(curhlp.concat(parthl)).length, ', rest.length', rest.length, ', curhlp.length', curhlp.length, 'parthl.length', parthl.length);
+        //console.log('after2: parthl', parthl, '3 arrays: ', rest.concat(curhlp.concat(parthl)), ', rest', rest, ', curhlp', curhlp, 'parthl', parthl);
+    }
+    else{            //load new full array, using query                                                                                                                                        
+        //console.log('total_posts_available', total_posts_available, 'nlp', nlp, '(total_posts_available-nlp)', (total_posts_available-nlp));
+        //console.log(
+        //    'number last posts: ', nlp,
+        //    '\n (cur.l+full.l)', (curhlp.length+parthl.length),
+        //    '\n nlp<(cur.l+full.l)', (nlp<=(curhlp.length+parthl.lenght)),
+        //    '\n cur.l', curhlp.length,
+        //    '\n full.l', parthl.length
+        //);
+        
+        //console.log('Loading last posts...');
+        //$.get(        'http://127.0.0.1:7346/api/prange/?fromto='+(total_posts_available-nlp)+'-'+nlp+'&only_hashes=only_hashes') //return hashes only, using GET-query not json posts...
+        $.get(        'http://127.0.0.1:7346/api/prange/?fromto=0-'+total_posts_available+'&only_hashes=only_hashes') //get all list of posts. Return hashes only, using GET-query not json posts...
+        //http://127.0.0.1:7346/api/prange/0-50/        //here is json posts... Many data...
+        .done(function(replies){                        //some test function for response...
+            //console.log(
+            //    'number of posts from last: ', nlp,
+            //    '\n(cur.length', 'cur.l+full.l)', curhlp.length+parthl.length,
+            //    '\ncurr.length', curhlp.length,
+            //    '\nfull.length', parthl.length,
+            //    '\ndone loading parthl..........'
+            //);
+
+            var temparray = JSON.parse(replies).reverse();        //all last posts from beginning.
+
+			//var temparray = [9,8,7,6,5,4,3,2,1,0];        //test array to test elements moving on change values...
+
+			total_posts_available = temparray.length;			
+            //console.log('full from get: ', parthl, 'full.length', parthl.length);
+            if(temparray.length===0){
+                setTimeout("console.log('Failed to loading array with hashes... Try again, after timeout...'); generate_hash_list();", 2000);
+                return false;
+            }
+            if(
+				//	( temparray.length == ( curhlp.length + parthl.length ) )
+				//||
+				( temparray.length < nlp )
+			) {
+				console.log('temparray.length', temparray.length, '(curhlp.length+parthl.length)', (curhlp.length+parthl.length));
+                console.log('On the board not found '+nlp+' last posts. Maybe some posts was been deleted.');
+				getlp.value = nlp--;
+            }else{														//else
+                fullhl = parthl = temparray;							//copy new array to temparray
+                curhlp = [];											//make current array empty
+            }															//and update current array
+
+            var result = transfer_hashes_to_temp_array(parthl, curhlp, nlp, from_beginning);        //take hashes in dest from source or push from dest to source.
+            parthl = result[0];                                                        //update arrays1
+            curhlp = result[1];                                                        //update arrays2
+			rest = result[2];
+            update_hashes_of_last_post(curhlp);                                        //update list of hashes in current array...
+			change_values();
+
+            //generate_hash_list();
+        })
+        .fail(function() {//if fail...
+            pushNotification('Failed to load last posts.');
+            setTimeout("generate_hash_list();", 2000);
+        });
+    }
+}
+//setTimeout("generate_hash_list();", 2000);
+
+var dataURL = "";
+document.getElementById("custom_picture").addEventListener('change', function(evt){
+    var f = evt.target.files[0]; 
+    if (f){
+        var r = new FileReader();
+        r.onload = function(e){
+            console.log(e.target.result);
+            
+            dataURL = e.target.result;
+            
+            var from_queue =             fq.value;
+            var from_last_posts =     getlp.value;
+            console.log(    'index.html: custom_picture onchange.',
+                    '\n from_last_posts: ', from_last_posts,
+                    '\n, dataURL: ', dataURL,
+                    '\n queue: ', current_queue,
+                    '\n from_queue: ', current_queue.length,
+                    '\n last_posts_to_pack: ', curhlp,
+                    '\n number of last posts to pack: ', curhlp.length
+            );
+			console.log("file loaded. This will be saves as PNG. Also, you can convert any image to PNG, yourself, here: http://127.0.0.1:7346/pages/convert-to-PNG.html")
+            
+            //test post query, onchange (try to select file for loading, and see console.log).
+
+            var full_queue = current_queue.concat(curhlp);
+            console.log('total posts to pack: ', full_queue.length);
+            
+/*
+            $.post(        '../api/convert-to-PNG/',
+                //from_last_posts+'\n'+
+                //full_queue.length+'\n'+
+                0+'\n'+                            //0 posts from last posts to pack (this already inside curhlp array), and this is inside full_queue array.
+                (                        // and dataURL with selected source image. Delimiter is '\n' between this two blocks.
+                    (dataURL!=="")        //if dataURL not empty string
+                        ?
+                        dataURL+'\n'    //append dataURL
+                        :
+                        'No_dataURL_specified_for_source_image.\n'                //else, append string with length over 32 symbols
+                )
+                +    (
+                        (full_queue.length!==0)                                            //if queue not empty
+                            ? full_queue.join(',')+'\n'                                            //send queue
+                            : 'No_any_queue_was_been_specified_in_this_query'+'\n'        //else, send string with length over 32 symbol
+                    )
+                +    (current_queue.length+curhlp.length)                        //and send number of selected posts
+            )
+            .done(function(replies){
+                console.log("Picture saved as");
+                current_queue = [];
+                curhlp = [];
+                console.log('current_queue after select file', current_queue, ' curhlp deleted too: ', curhlp);
+            })
+
+            ;//end of post query
+
+            //test another queryes
+            //$.post(        '../api/prange/0-50/', 'only_hashes')                                        //return hashes only, using POST-query not json posts...
+            //$.get(        'http://127.0.0.1:7346/api/prange/?fromto=0-50&only_hashes=only_hashes')    //return hashes only, using GET-query not json posts...
+            //http://127.0.0.1:7346/api/prange/0-50/                                                //here is json posts... Many data...
+*/
+        };
+        //r.readAsArrayBuffer(f);
+        r.readAsDataURL(f);                //read as dataURL...
+    }else 
+    {
+        console.log("failed");
+    }
+});
+
+
+/*
+setInterval(
+    function(){
+        //console.log(dataURL);
+        //console.log(current_queue, queue);
+        //console.log(parthl.length, curhlp.length);
+        console.log(curhlp.length+current_queue.length);
+    },
+    1000
+);
+*/
+
+
+/*
+setInterval(
+    function(){
+        //console.log(dataURL);
+        //console.log(current_queue, queue);
+        //console.log(parthl.length, curhlp.length);
+        console.log(parthl.indexOf('7a27a0143864f40f58e148d11b78f0bc'));
+    },
+    1000
+);
+*/
+
+/*
+setTimeout(
+    function(){
+        //console.log(dataURL);
+        //console.log(current_queue, queue);
+        //console.log(parthl.length, curhlp.length);
+        //document.write(parthl, parthl.length);
+        console.log(parthl, parthl.length);
+    },
+    20000
+);
+*/
+</script>
+
 
 </body>
 </html>

@@ -57,11 +57,25 @@ function showLast(N){
           .done(function(arr){
             active_tab("lastli")
             arr = JSON.parse(arr);
+/*
+//3.1
+			if(document.getElementById('createPNG').style.display === 'block'){
+				var threadId = 'thread';
+			}else{
+				var threadId = 'queue_thread';
+			}
+*/			
             if (arr.length > 0) {
+//3.0
               $('#thread').empty();
+//3.1
+//              $('#'+threadId).empty();
             } else { return; }
             for (var i = arr.length - 1; i >= 0; i--) {
+//3.0
               var p = addPost(arr[i], function(d) { d.appendTo($('#thread')); }, false);
+//3.1
+//              var p = addPost(arr[i], function(d) { d.appendTo($('#'+threadId)); }, false);
               if (arr[i].hash != _categories && 
                   arr[i].replyTo != _categories && 
                   arr[i].replyTo != _rootpost &&
@@ -71,7 +85,10 @@ function showLast(N){
                   function(h,pp) {
                   pp.append(
                     $('<a>')
+//3.0
                       .attr('href', '#thread' + h)
+//3.1
+//                      .attr('href', '#'+threadId + h)
                       .html('<span class="glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span><span class="btn-title">&thinsp;'+(h == null ? 'Thread Not Found' : 'Thread')+'</span>')
                       .click(function(){
                         //loadRootThread($(this).parent().attr('id'));

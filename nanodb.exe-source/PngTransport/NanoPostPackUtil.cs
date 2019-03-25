@@ -36,6 +36,7 @@ namespace nboard
             string str = Encoding.UTF8.GetString(bytes);
 
             int count = int.Parse(str.Substring(0, 6), System.Globalization.NumberStyles.HexNumber);
+            //int count = nbpack.NBPackMain.parse_number(str.Substring(0, 6), System.Globalization.NumberStyles.HexNumber);
 
             List<int> sizes = new List<int>();
             List<string> raws = new List<string>();
@@ -43,6 +44,7 @@ namespace nboard
             for (int i = 0; i < count; i++)
             {
                 int size = int.Parse(str.Substring((i + 1) * 6, 6), System.Globalization.NumberStyles.HexNumber);
+//                int size = nbpack.NBPackMain.parse_number(str.Substring((i + 1) * 6, 6), System.Globalization.NumberStyles.HexNumber);
                 sizes.Add(size);
             }
 

@@ -33,6 +33,40 @@ File: .../nanoboard-restore/nanodb.exe-source/Server/DbApiHandler.cs
 	-	At line 131: the function was been added parse_number(string string_number), because int.Parse and Int32.Parse not working correctly for me.
 	-	At line 150-151: replaced using this. Now last 50 and las 500 messages working good.
 	
+_____________________________________________________________________________________________________________________________________________
+
+Changes in nanoboard 3.2
+_____________________________________________________________________________________________________________________________________________
+Short changes:
+	-	change style small fix.
+	- 	add show-hide post by click on eye. Like on 2ch.hk.
+		Two strings from makaba.css used in the tag <style> in index.html.
+		Functions added in nanoclient.js and can be founded by keyword "post_type_hidden".
+		Post hash saved in LocalStorage.
+
+	-	add separate tab to create PNG.
+	-	add queue there. Now you can pack specified or selected posts and customize randomizing packing.
+	-	Add queue button for each post. Now by click to this button any post can be added and removed from queue.
+	-	Add page to unpack custom container. 	Now this located by http://127.0.0.1:7346/pages/Open_container.html
+	-	Add page to convert images to PNG.		Now this located here: http://127.0.0.1:7346/pages/convert-to-PNG.html
+	-	Add PNG generator. Bitmap or FractalGen. DataURL sent by GET or POST-query (for big images).
+		See method generate_PNG in /Server/DbApiHandler.cs
+	-	Add more GET and POST-parameters for api-methods there. 
+	-	Update post count /count - now only when collect.
+	-	Update places not by interval, now. There is separate link to update this by click.
+	-	notif - update by long interval, but when notif, this swithed to short interval. See scripts/params.js
+	-	Add check sha256 hash of the file captcha.nbc. This is checking once after try to load captcha. So no need captcha.nbc for readonly mode.
+		URL for downloading capcha is not hardcoded, and can be changed to custom URL - in config-3.json.
+	-	Add static captcha hash to config-3.json and this value is hardcoded in the code. See nanoboard-source/Captcha/Captcha.cs
+	-	Captcha not downloaded if fail, because:
+		1. Github using regirect.
+		2. This is not anonymous action.
+		Need to add proxy, so code to downloading captcha was been commented.
+	-	Proxy! This was been added to collectPNG.
+		See AddProxy method in /PngTransport/DbApiHandler.cs
+		/proxy.txt - list of proxies + comment.
+		When collect, each proxy from this list try to ping, then first successfully proxy using as default, and pictures is downloading using this proxy.
+	-	Change post validation to bypassValidation, when captcha.nbc not found. No error now.
 	-	Add all changes from nanoboard 3.1. See thread http://127.0.0.1:7346/pages/index.html#thread70ca25ba04a241d3b3729611205bf4bb
 		All changes from [3.1 version](https://github.com/username1565/nanoboard/commit/e828b228af6d2a1cc507ff80a59c25a0f5a511f0)
 		According the comment https://github.com/username1565/nanoboard/issues/3#issuecomment-463904141 from issue https://github.com/username1565/nanoboard/issues/3
@@ -65,6 +99,270 @@ ________________________________________________________________________________
 				
 			Total changes 16 files: 13 files changed + 3 files added: app.config, nanodb.csproj.user + compile.bat.
 			Compiled win32 (x86) exe - in zip-archive, in Releases.
+_____________________________________________________________________________________________________________________________________________
+Full changes:
+
+Changes in /root folder
+
+	- 	fractalgen_words.txt
+			add canonical words from OLD original FractalGen v1.1 + comments.
+			You can download standalone FractalGen  here: https://github.com/username1565/FractalGen/releases
+	- 	proxy.txt							- add proxy list + comments.
+	-	update useragent.config				- See aggregator.cs
+	-	Changes.txt							- full changes description.
+
+Changes in "upload/" folder
+	-	MORE-secrets-inside.png		- add some container to test unpack
+	
+Changes in	"styles/"
+	- 	\skins\futaba\nano.css
+			Change futaba style.
+			1. Download modified futaba from post 26cf46231ea152f7da224b572a071901 - there is font changed.
+			2. unzip it.
+			3. Added old code (commented), added comments there.
+			4. Change color for spoiler.
+			5. Set default background for spoiler on_hover.
+			6. Remove whitespaces between "[" and "]" for buttons.
+			7. Change "!important" to "important" for textareas. Now this have dynamic size in "Settings".
+
+Changes in "images/" folder
+	-	error.png - just add this picture when captcha not found or invalid. See another changes about captcha.
+
+Changes in "scripts/" folder:
+	-	checkver.js
+			Version not checking every time on load the page. Interval can be customized in the "Settings".
+			First interval is long (hours) - for checking update online.
+			Second interval is short (minutes) for remind, when updates available.
+			Also in settings saved the last version as text, and last update unix timestamp.
+	
+	-	img2base64.js
+			add filename in bb-code '\n' before picture in post.
+	-	init.js
+			remove display the empty categories.	[][]
+			add functions to working with queue.
+			change intervals of repeat XHR-queries - to repeat by timeouts, and release model with dynamic timeouts.
+			When fail or empty response, and no any notifications or count not changed - XHR-queries not repeated so often,
+			and repeat by long timeout. But when positive response received, timeout will be switched to shorter.
+			for png-collect-avail and png-create-avail this released - too.
+			Update post count when PNG collect - is in progress. No need to update this regularry.
+			/places now can be updated by click on the link. No need to download this every time, using interval, and compare then.
+			Add function function getPosts to load posts by their hashes to display posts in queue onclick by hash.
+			Check is collect finished, after update. When collect still in progress button "Collect PNG" is disabled.
+			"max_connections" = 10 by default. This can be changed in JavaScript and this is not hardcoded value now. This value go to \Server\DbApiHandler.cs using as one from parameters in POST-query.
+			two second parameters is "collect_using_files" and "save_files". RAM collect - added in Aggregator.cs.
+			Old code, with collect using files - saved. Files can be saved from RAM or just not deleted.
+			CreatePNG now sent some parameters in POST-query. Add custom PNG-file, after loading, like on Karasiq-nanoboard.
+	-	last.js
+			add code from client 3.1, but commented.
+			add comment.
+	-	nanoclient.js
+			add some functions
+			add function to relace found hashes to local posts/thread quotes. Now posts can be quoted, if hash only pasted. Also, links from karasiq nanoboard - contains local quote.
+			replace links on files, if bb-code [file] found.
+			add hide-show functions for each posts. Localstorage used to save hidden posts. Only hashes of posts saved there, in array.
+			add hash filename, for noname zipJPEGs
+			AddBriefView from nanoboard 3.1
+	-	notif.js
+			pushNotification don't return now, this just not called.
+	-	onadd.js
+			just add console.log. Maybe, retranslation working with BitMessage.
+	-	params.js
+			add params.
+			repeat get param on fail.
+			modify function parseRegexps, to working with json. Now, keywords from spam-list saved as serialized JSON.
+			add params about check update.
+			add info about captcha.nbc to verify this. Verification of capcha working when try send first post, and try to load captcha, after start nanodb.
+	- 	post.js
+			regexp - changed. Parse big pictures without bytelimit (from karasiq nanoboard, for example).
+			if [filename] found after image, clickable link available to download it. No need to save noname image by open dataURL, now. filename appending onadd image.
+			add code to replace link to local post link inside links from karasiq nanoboard, for example (another format).
+	-	reply.js
+			add function to check is base64 when tags must contains the base64. Append style with error, if not base64 there. Example: "[xmg=12]" in the text of post.
+			add function validate_symbols to validate symbols of captcha-answer. Press any no existing letter there to test.
+			add commented code to make captcha window draggable and resizable (not working).
+			add error, with info from params.js and config-3.json - download captcha, if captcha not found.
+			add length calculator in textarea.
+	-	retranslate.js
+			just add console.log
+	-	search.js
+			add code to replace span in href, and return correct result, after searching the link or fragment of the link.
+	-	sha256.js
+			repair damaged file.
+	-	polyfills.js
+			Add polyfills for endsWith and Array.slice functions, if somewhere this not supporting.
+			
+	-	karasiq-queue.jpg	- just add screen with queue on karasiq nanoboard.
+
+	-	jquery-1.12.0.js
+			In nanoboard 3.0 was used minified jquery.min.js.
+			Inside the source code is available version - v1.12.0.
+			After downloading it here: http://code.jquery.com/jquery-1.12.0.min.js
+			both minified versions was been compared and no any differences.
+			This is full version of this file with readable source code.
+			This was been downloaded here: http://code.jquery.com/jquery-1.12.0.js
+			jquery-1.12.0.js is not minified and have readable code.
+			And this can be used now. Just leave it here, without include.
+	-	bootstrap.min.js
+			In nanoboard 3.0 using minified bootstap.min.js.
+			Inside the source code is available version - v3.3.6.
+			After downloading this version here: https://github.com/twbs/bootstrap/releases/download/v3.3.6/bootstrap-3.3.6-dist.zip
+			from archive was been extracted \bootstrap-3.3.6-dist\js\bootstrap.min.js
+			and compared with bootstrap.min.js from nanoboard client 3.0.
+			No any differences.
+			bootstrap.js from this archive is not minified and have readable code.
+			And this can be used now. Just leave it here, without include.
+	-	bootstrap-3.3.6-dist.zip
+				archive with this bootstrap version. There is inside fonts with glyphicons and bootstrap.css
+				This archive need to verify the complete assembly of "bootstrap", by comparing the hash.
+		-	Folder \bootstrap-3.3.6-dist\fonts\ inside
+				This was been compared with fonts from nanoboard-restore.zip archive.
+				No any differences.
+				boostrap.css is not minified version and have readable source code.
+		-	\bootstrap-3.3.6-dist\css\bootstrap.css inside
+				is not minified and have readable code.
+				And this can be used now. Just leave it here, without include.
+			
+Changes in /pages folder
+	-	index.html
+			add sha256.js and polyfills.js
+			add style from 2ch.hk "show-hide posts wakaba css" to hide posts by click on eye.
+			change version from 3.0 to 3.1
+			add tab to create png. This is not button now.
+			add div createPNG with the page and params for creating PNG.
+			Add script with functions to working with queue.
+	-	params.html
+			Add params.js and checkver.js
+			Add default spam_filter value.
+			Add function to parse Unix timestamp.
+			Reload the page, after timeout, because not all values updated.
+			Add variable to get fontsize in textareas.
+			Resize textareas height by number of rows in content there.
+			working with different parameters.
+			repair ip:port values.
+	-	version.txt
+			Changed automatically, after each compilation.
+			Generated from nanoboard-source/compile.bat
+			Link for update can be customized in scripts/checkver.js
+	-	convert-to-PNG.html 			- convert image to PNG or generate PNG (random bitmap or fractal).
+	-	download_as_binary.html			- page to download base64 as binary file.
+	-	generate_date_for_version.html	- page to generate date and time in OLD canonical format, for version.txt
+	-	generate_HTTP(S)_links.html		- page to generate HTTP and HTTPS-links on the UNCOMMENTED thread with conteiners.
+	-	Open_container.html				- page to unpack custom container http://127.0.0.1:7346/pages/Open_container.html
+											file upload\MORE-secrets-inside.png	by default there, as example.
+	-	test_captcha.html				- just page to test captcha symbol length. 5 is minimum and 5 is maximum I see.
+
+nanodb.exe-source - full changes:
+"\"
+	-	app.config
+	-	nanodb.csproj.user
+			Add this two files from 3.1 nanoboard client.
+	-	nanodb.csproj				update this file from 3.1 add FractalGen.cs, and change Prefer32Bit to true.
+	-	nanodb.sln					update from 3.1 nanoboard client.
+	-	Program.cs					update from 3.1 nanoboard client.
+	-	compile.bat
+			add this file to compile source code, using MSBuild.exe,
+			and save win32 version in the "main"-folder
+			+ generate version.txt in "pages"-folder.
+			Generated version.txt have previous old format, with LF in the end.
+			Also, nanodb.exe is ready to start, if update copied, to unpacked
+			3.0 version with nanoboard 3.0 from restore-archive "nanoboard-restore.zip".
+	
+"Capctha\"
+	- 	Captcha.cs
+			add using with comment.
+			add public static variables about captcha state. This changed after validation and available in the program.
+			add SHA256CheckSum method to calculate sha256 from file.
+			add ToHex method to convert sha256-hash into string. 
+			add download_captcha_file method and comment this.
+			read captcha pathway from config-3.json
+			set bool captcha_found if exists
+			add bypassValidation for posts, if captcha not found or damaged. For readonly mode - no need any captcha now.
+			return 0 in CaptchaIndex because there was been error after try to devide by null, when captcha not found.
+			
+"Database\"
+	-	FileUtil.cs 	- add stream.Close() and stream.Dispose() in three places.
+	-	Post.cs			- add changes from nanoboard 3.1 + comment
+	-	PostDb.cs
+			add changes from nanoboard 3.1 + comment.
+			Define DTComparer : IComparer for .NET Framework 4.0 and maybe v3.5
+			call PostsValidator.Validate with value of bypassValidation
+	-	PostsValidator.cs
+			Add bypassValidation to Validate method.
+			do not return false, if bypassValidation==true.
+			Add bypassValidation in captcha.Captcha.PostHasSolvedCaptcha method. See Captcha. cs.
+
+"PngTransport\"
+	-	Aggregator.cs - many changes.
+			Add proxy, add RAM collect, without using files, repair collect, using files...
+			Add variable to limit connections (as parameter of POST-query, from DbApiHandler.cs).
+			download_timeout_sec can be customized in "Settings" too.
+			Repair error about "file is busy by another process" when program try to delete it, but bitmap not .Dispose()
+			Repair srcIndex, by just replacing two strings (decrement and notif) - after catch.
+			add return to see finish status in the end in console.
+	-	CurlWebClient.cs
+			Add p.WaitForExit(); and .Close(); .Dispose();
+	-	NanoPostPackUtil.cs
+			Change int.Parse to nbpack.NBPackMain.parse_number because int.Parse working bad for me.
+	-	NBPack.cs
+			Add two using for regexp and save image.
+			Change one word.
+			add more arguments to Create method.
+			add more arguments to Unpack methos.
+			add return to don't stop there, and continue.
+			add parse_number there, because int.Parse working bad for me.
+			param queue_image_params can be sent as parameter of POST-query. See scripts/init.js and Server/DbApiHandler.cs by keyword "png-create"
+			custom container available there, now from dataURL in POST-query.
+			different hardcoded parameters, now can be customized.
+			Unpack container can accept parameters from POST-query too. Search "run-nbpack" in the source code and see this in Open_container.html
+			etc..
+	-	PngStegoUtil.cs
+			Add Console.WriteLine with filename, after saving PNG.
+			method ReadHiddenBytesFromPng can accept dataURL now. This is different method, which accept string parameter (pathway or dataURL).
+			another method ReadHiddenBytesFromPng accept Image as argument, and this contains old code.
+	-	PngUtils.cs
+			Just add .Dispose() for bitmap, before return.
+	-	WebClientX.cs
+			Don't replace "https://", "http://", but old code commented.
+			Add proxy as parameter for WebClientX method. Old method - commented.
+			That's all here.
+	-	fractalgen.cs - modify the source of https://github.com/username1565/FractalGen/blob/master/Program.cs
+						to include this as module, and add there.
+						Add link to this file inside nanodb.csproj to compile this, using MSBuild.exe
+	- 	copy_WebClientX.cs
+		copy_Aggregator.cs
+			Try to using from Aggregator.cs the ParseImage method (with proxy),
+			for anonymous downloading "captcha.nbc",
+			from URL https://github.com/Karasiq/nanoboard/releases/download/v1.2.0/ffeaeb19.nbc
+			in /Capctha/Captcha.cs. But downloading failed, because github using redirecting.
+			Just leave this files here, to you see changes, after comparison, and leave this idea here.
+			
+"Server/"
+
+	-	DbApiHandler.cs
+			using imaging to save PNG and fractalgen to generate it.
+			add api command /api/getlastn/ from nanoboard client 3.1 to get last N posts as response to POST query.
+			add api command /api/getposts/ to get posts by array with post-hashes. See comment there.
+			add method GetPosts to getlist with specified posts.
+			add comment for modified api command /api/prange to get last posts by range, or get hashes only by range. See comment there.
+			add comment for modified api command /api/png-create. There is possible to pack specified posts by send array with hashes there.
+				Also, can be sent custom PNG dataURL and something else. See source code.
+			add api command /api/run-nbpack to run nbpack.cs "Simple tool", after sent parameters in POST-query. See source code and description there.
+			add GET or POST parameters to /api/png-collect see comment there.
+			add api command /api/convert-to-PNG - see comment there.
+			add text response for avail functions (collect and create)...
+			add method generate_PNG /api/convert-to-PNG/?generate_PNG,PNG_WIDTH,PNG_HEIGHT - random bitmap or fractalgen.
+	-	ErrorHandler.cs
+			Just change version to nanoboard 3.2
+	-	GetCaptchaTokenHandler.cs
+			Set bool variable and return error if captcha not found. This error with customized link is showing as captcha, in this case.
+	-	HttpServerBuilder.cs
+			Just replace int.Parse to nbpack.NBPackMain.parse_number
+	-	NotificationHandler.cs
+			Just add Thread.Sleep(10);
+	-	TcpServer.cs
+			Just replace int.Parse to nbpack.NBPackMain.parse_number
+			Also, add exception to catch in the end.
+
 _____________________________________________________________________________________________________________________________________________
 
 Code commented. See source code.

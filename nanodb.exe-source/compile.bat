@@ -1,6 +1,15 @@
 ::Without adding pathway to path
 ::I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /p:Configuration=Release nanodb.csproj
-I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /property:Configuration=Release nanodb.csproj
+
+::x86 and x64
+::I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /p:OutputPath="../x64/" /p:IntermediateOutputPath="../x86/" /property:Configuration=Release nanodb.csproj
+
+::x86 only, in the main folder. Ready to start.
+I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /p:IntermediateOutputPath="../" /property:Configuration=Release nanodb.csproj
+
+::x64 only, in the main folder. Ready to start.
+::I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /p:OutputPath="../" /property:Configuration=Release nanodb.csproj
+
 ::I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe nanodb.csproj
 
 
@@ -8,7 +17,8 @@ I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /property:Configuratio
 ::Generate ../pages/version.txt, like in old version of nanoboard.
 ::Previous - string format:
 ::Thu Feb  14 06:35:54 EST 2019
-::      (12)
+::      (12) - two whitespaces.
+::+ "LF" (in the end) - not CRLF
 @echo off
 REM Get day of week number, Sunday = 0
 for /f "skip=2 tokens=2 delims=," %%a in ('WMIC Path Win32_LocalTime Get DayOfWeek /Format:csv') do set /a DowNum=%%a + 1
@@ -36,9 +46,23 @@ FOR /F "skip=1 tokens=2 delims=," %%g IN ('WMIC Path Win32_LocalTime Get Year /F
 ::Show year YYYY
 ::echo YEAR = %YEAR%
 
-::Write multistring to file, using relative pathway
-(echo %DOW% %Mon%  %Day% %TIME:~0,-3% EST %YEAR%
-) > ../pages/version.txt
+::LF without CRLF
+setlocal EnableDelayedExpansion
+(set \n=^
+%=Do not remove this line=%
+)
+::Usage:
+::(echo Line1!\n!Line2
+::echo Works also with quotes "!\n!line2") > ../pages/version2.txt
+::But CRLF in the end.
 
-::don't close window
+::Create version.txt and write date and time in old canonical format
+::Write multistring to file, using relative pathway
+
+::Delete previous file if exists
+del "../pages/version.txt"
+::Write date and time - with LF and without CRLF in the end:
+set /p ="%DOW% %Mon%  %Day% %TIME:~0,-3% EST %YEAR%!\n!"<nul >> "../pages/version.txt"
+
+::don't close window, after all
 pause

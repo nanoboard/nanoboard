@@ -33,7 +33,7 @@ namespace NDB
                 replyTo should be valid hash
             returns false if rules violated
         */
-        public static bool Validate(Post p)
+        public static bool Validate(Post p, bool bypassValidation = false)
         {
             var message = p.message.FromB64();
             var bytes = Encoding.UTF8.GetBytes(message);
@@ -58,12 +58,12 @@ namespace NDB
 
             var post = p.replyto + message;
 
-            if (!captcha.Captcha.PostHasValidPOW(post))
+            if (!captcha.Captcha.PostHasValidPOW(post) && !bypassValidation)
             {
                 return false;
             }
 
-            if (!captcha.Captcha.PostHasSolvedCaptcha(post))
+            if (!captcha.Captcha.PostHasSolvedCaptcha(post, bypassValidation))
             {
                 return false;
             }

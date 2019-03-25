@@ -1,3 +1,16 @@
+function generateGuid() {	//generate guid.toLowerCase()
+  var result, i, j;
+  result = '';
+  for(j=0; j<32; j++) {
+    if( j == 8 || j == 12 || j == 16 || j == 20) 
+      result = result + '-';
+    i = Math.floor(Math.random()*16).toString(16)//.toUpperCase()
+	;
+    result = result + i;
+  }
+  return result;
+}
+
 //Function for checking, without throw error, is str base64-encoded or not. return true/false.
 //check is base64 without throw error
 function isBase64(str) {//return true, or false
@@ -9,110 +22,74 @@ function isBase64(str) {//return true, or false
     }
 }
 
+//add hash to queue-array and remove this, using javascript.
+var queue = [];								//empty queue array...
+//add hash to queue array
+function queue_add(arr, hash) {
+    arr.push(hash);							//push hash to array
+	pushNotification(hash+" added to queue.");
+}
+
+//remove hash from queue array, if this exists there.
+function queue_remove(arr, hash, show_notif) {
+	var index = arr.indexOf(hash);			//find hash in array
+	if (index > -1) {						//if found
+		arr.splice(index, 1);				//remove this
+		if( typeof show_notif == 'undefined' ){	pushNotification(hash+" removed from queue."); }	//false, if no need to show notif.
+	}
+}
+
+//add or remove, using one function
+function add_remove(arr, hash, element, generate, showhash){
+	hash = hash.toString();			//hash to string, if this is integer
+	if(current_queue.concat(arr).indexOf(hash)===-1){		//if hash not found in array
+		if(generate===true){		//and if need to generate link
+			return (
+				'<a href="javascript:void(0)" onclick="add_remove(queue, \''+hash+'\', this, false, '+showhash+');"'+
+				'title="Add post '+hash+' in queue...">'+
+				'<span class="glyphicon glyphicon-log-in" aria-hidden="true"></span> '+
+				((showhash)? '<gr>#'+shortenHash(hash)+'</gr>' : '')+
+				'</a>'
+			); //return link to add
+		}
+		else{														//if no need generate link, do action add
+			queue_add(arr, hash);											//add hash to array
+			element.innerHTML = '<span class="glyphicon glyphicon-log-out" aria-hidden="true"></span> '+
+			((showhash)? '<gr>#'+shortenHash(hash)+'</gr>' : '');	//change link to remove link
+			element.title = 'Remove post '+hash+' from queue...';	//set title for remove-link.
+		}
+	}else{							//if hash was been found in array
+		if(generate===true){		//and if need to generage link
+			return (
+				'<a href="javascript:void(0)" onclick="add_remove(queue, \''+hash+'\', this, false, '+showhash+');"'+
+				'title="remove post '+hash+' from queue...">'+
+				'<span class="glyphicon glyphicon-log-out" aria-hidden="true"></span> '+
+				((showhash)? '<gr>#'+shortenHash(hash)+'</gr>' : '')+
+				'</a>'
+			); //return link to remove
+		}else{														//if no need to generate link, do action remove
+			queue_remove(arr, hash);								//remove hash from array
+			queue_remove(current_queue, hash);						//remove hash from array
+			element.innerHTML = '<span class="glyphicon glyphicon-log-in" aria-hidden="true"></span> '+
+			((showhash)? '<gr>#'+shortenHash(hash)+'</gr>' : '');		//Change link to add link
+			element.title = 'Add post '+hash+' to queue...';	//set title for add-link.
+		}
+	}
+	//console.log(queue);
+}
+
 function numSuffix(numStr) {
   if (numStr.endsWith('11')) return 's';
   if (numStr.endsWith('1')) return '';
   return 's';
 }
 
-function addPost(post, appendFunc, hasShowButton, short) {
-  if (_use_spam_filter=='true' && post.hash != _categories){
-    for (i in _spam_filter){
-        if (_spam_filter[i].test(escapeTags(Base64.decode(post.message)))) return false;
-    }
-  }
-  var locationBackup = window.location.href.toString();
-  if (_depth > 1) hasShowButton = false;
-  if (short == undefined) short = true;
-  var d = $(document.createElement('div'));
-  d
-    .addClass('post')
-    .attr('id', post.hash);
-  if (_depth != 0)
-    d.append('<gr>#' + (short&&_depth!=1?shortenHash(post.hash):post.hash) + '&nbsp;</gr>');
-  if (_depth != 0) {
-    $('<a>')
-      .attr('href', '#' + post.replyTo)
-      .click(function() {
-        $('#' + post.replyTo)
-          .addTemporaryClass('high', 1000);
-        setTimeout(function(){
-          console.log('assigning location');
-          _location = locationBackup;
-          location.assign(locationBackup);
-        }, 200);
-      })
-      .appendTo(d)
-      .html('^' + shortenHash(post.replyTo));
-  }
-  d.append('&nbsp;');
-  d
-    .append($('<a>')
-      .attr('href', 'javascript:void(0)')
-      .html('<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span><span class="btn-title">&thinsp;Reply</span>')
-      .click(function() {
-        addReplyForm(post.hash);
-        d.next().find('textarea').focus();
-      }));
-  if (hasShowButton) {
-    d.append('&nbsp;');
-    var showLink = 
-      $('<a>')
-        .attr('href', (_depth==0?'#category':'#thread') + post.hash)
-        .text('[Show]')
-        .click(function() {
-          //_depth += 1;
-          //loadThread(post.hash);
-        });
-    d.append(showLink);
-    $.get('../api/threadsize/' + post.hash)
-      .done(function(size){
-        if (size == '0')
-          showLink.html('<span class="glyphicon glyphicon-comment not-avail" aria-hidden="true"></span><span class="btn-title not-avail">&thinsp;0</span>');
-        else
-          showLink.html('<span class="glyphicon glyphicon-comment" aria-hidden="true"></span><span class="btn-title">&thinsp;'+size+' – Show</span>');
-      });
-  }
-  d.append('&nbsp;');
-  d
-    .append($('<a>')
-      .attr('href', 'javascript:void(0)')
-      .html('<span class="glyphicon glyphicon-trash" aria-hidden="true"></span><span class="btn-title">Delete</span>')
-      .attr('title', 'Click to delete post forever.')
-      .click(function() {
-        if (post.hash == _categories) {
-          pushNotification("Cannot delete root post.");
-          return;
-        }
-        var undo = false;
-        d.append(
-          $('<button>')
-            .text('Undo')
-            .click(function(){
-              undo = true;
-              $(this).remove();
-            })
-            .append($('<span>').html('&nbsp;')
-              .css({ background: 'red', height: '5px', marginLeft: '5px'})
-              .animate({width: '100px'},50)
-              .animate({width: '0px'},Math.random()*200+_post_delete_timeout)));
-        setTimeout(function(){
-          if (undo) return;
-          deletePostFromDb(post.hash);
-          d.remove();
-          pushNotification('A post was deleted forever.');
-        }, _post_delete_timeout);
-      }));
-  appendFunc(d);
-  
-  //This code need function isBase64(str), and this function in beginning of this script
-  var post_content = escapeTags(Base64.decode(post.message));
-  //console.log('At beginning, post_content was been: \n', post_content);				//Value of post_content at beginning, with description
-
 	function replace_local_quotes(str){
 		//replace posts to local-links
 		
 		/*
+		//replace hashes to local links, inside links.
+		
 		//var extract_urls = /(https?:\/\/[^\s]+)/g;	//regular expression to get array with urls from string, or multistring
 		var extract_urls = /(http(s)?:\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g;	//regular expression to get array with urls from string, or multistring
 		var test_hex = /^[0-9a-fA-F]+$/;			//regular expression to test is the string hex or not
@@ -156,7 +133,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
 		var hex_array = str.match(extract_16bytes_hex);			//array with hex strings...
 
 		var index = 0;											//start index is 0
-		var temp_index = 0;										//index in the string, where current array element (hex) was been founded
+		var temp_index = 0;										//index in the string, where current array element (hex) was been found
 		var start_hex;											//start position of real hex
 		var position;											//end_position of real hex
 		var real_hex;											//real hex
@@ -173,7 +150,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
 			temp_index = str.indexOf(hex_array[i], temp_index+1);			//find and save the index of current hex substring in the string,
 																		//and find this from previous index, saved in var temp_index
 			//console.log('temp_index', temp_index);						//show this...
-			if(str.substring(temp_index-8, temp_index)==='category'){		//if before this hex, in the string founded 'category'
+			if(str.substring(temp_index-8, temp_index)==='category'){		//if before this hex, in the string found 'category'
 				start_hex = temp_index;										//set current index for first char in real_hex
 			}else if(str.substring(temp_index-3, temp_index+3)==='thread'){	//if 'thread' before hex, 'ead' is a part of hex, because this is hex symbols.
 				start_hex = temp_index+3;									//shift index for first char in real_hex
@@ -221,9 +198,9 @@ function addPost(post, appendFunc, hasShowButton, short) {
 		return str;
 	}//end replace function
 	//run this:
-	post_content = replace_local_quotes(post_content);	//replace posts to local links.
+	//post_content = replace_local_quotes(post_content);	//replace posts to local links.
 
-  
+function detect_files(post_content){
   //detect files
   var not_a_files = 0;																	//increment this, when not a file and no need to replace this...
   if(post_content.indexOf('[file')!==-1){												//if bb-code "file" found
@@ -311,9 +288,239 @@ u/GSjMbGDKA+9d7DMEMHtziZM61c72h/A3foMuoBqRh/AAAAAElFTkSuQmCC\">'
 	}
 	//console.log('post_content: ', post_content);																//show post in the end and continue script
   }//or continue script without replacing...
+  return post_content;
+}
+	//run this:
+	//post_content = detect_files(post_content);	//replace posts to local links.
+
+
+	
+//Begin functions to show-hide post and save in LocalStorage:
+/*
+		//remove hash from queue array, if this exists there.
+		function queue_remove(arr, hash) {
+			var index = arr.indexOf(hash);			//find hash in array
+			if (index > -1) {						//if found
+				arr.splice(index, 1);				//remove this
+			}
+		}
+*/
+//already defined...
+
+		var hidden_hashlist = [];	//array with hashes of hidden posts.
+		
+		// save array in LocalStorage
+		function saveStatusLocally() {
+			window.localStorage.setItem("hidden_posts", JSON.stringify(hidden_hashlist));
+		}
+		
+		// read the string
+		function readStatus() {
+			//print the value of the local storage "database" key
+			if (window.localStorage.getItem("hidden_posts") == null) {
+				//console.log("no any value in localstorage");
+			} else {
+				hidden_hashlist = JSON.parse(window.localStorage.getItem("hidden_posts"));
+			}
+		}	
+
+		function hide(element){
+			//console.log(element);
+		 	//glyphicon glyphicon-eye-close
+			
+			element.parentElement.classList.add("post_type_hidden");
+			//console.log('hide: parent_element: ',element.parentElement);
+			
+			//console.log(element.parentElement.parentElement.classList);
+			
+			//element.innerHTML = "Hidden";
+
+			var Post_hash = element.parentElement.id;	//get Post_hash
+			
+			element.classList.remove("glyphicon-eye-close");
+			element.classList.add("glyphicon-eye-open");
+			element.title = "Click to show this hidden post. Post_hash: "+Post_hash;
+			
+			pushNotification(Post_hash+" hidden now.");							//just show the notification.
+			
+			hidden_hashlist.push(Post_hash);									//push Post_hash to array with hashes of hidden posts
+			saveStatusLocally();												//save this in LocalStorage
+			//readStatus();														//read from
+			//console.log(hidden_hashlist);										//show array
+		}
+		
+		function show(element){
+			//glyphicon glyphicon-eye-open 	
+			
+			element.parentElement.classList.remove("post_type_hidden");
+			//console.log('show: parent_element: ',element.parentElement);
+			//element.innerHTML = "Hide";
+
+			var Post_hash = element.parentElement.id;	//get Post_hash
+			element.classList.remove("glyphicon-eye-open");
+			element.classList.add("glyphicon-eye-close");
+			element.title = "Click to hide this post. Post_hash: "+Post_hash;
+			
+			pushNotification(Post_hash+" showed now.");							//just show the notification.
+			
+			queue_remove(hidden_hashlist, Post_hash, false);					//remove Post_hash from array with hashes of hidden posts,
+			//and remove this using queue_remove function, without notification about dequeue.
+			
+			saveStatusLocally();												//save this in LocalStorage
+			//readStatus();														//read from
+			//console.log(hidden_hashlist);										//show array
+			
+			
+		}
+
+		function toogle_show_hide(element){
+			if(
+				element.parentElement.classList.contains("post_type_hidden")
+			){
+				//console.log('show(element);');
+				show(element);
+			}else{
+				//console.log('hide(element);');
+				hide(element);
+			}
+		}
+		
+		//hide hidden posts
+		function load_hidden(){
+			//localStorage.removeItem("hidden_posts");								//Just remove used item to clear LocalStorage from this.
+			readStatus();															//read array with the hashes of hidden posts from LocalStorage
+			//console.log(hidden_hashlist);											//show this
+			/*
+			for(i=0;i<hidden_hashlist.length;i++){									//for each Post_hash there
+				console.log(document.getElementById(hidden_hashlist[i]));										//find post div by id with this Post_hash
+				document.getElementById(hidden_hashlist[i]).classList.add("post_type_hidden");					//find post div by id with this Post_hash
+				document.getElementById(hidden_hashlist[i]).childNodes[0].classList.remove("glyphicon-eye-close");
+				document.getElementById(hidden_hashlist[i]).childNodes[0].classList.add("glyphicon-eye-open");				
+			}
+			*/
+		}
+		//setTimeout(load_hidden,10000);											//wait loading the page...
+		load_hidden();																//no need to load the page. Just read the array, and using values for generating posts.
+		
+//end functions to hide-show posts and save in LocalStorage
+
+function addPost(post, appendFunc, hasShowButton, short) {
+  if (_use_spam_filter=='true' && post.hash != _categories){
+    for (i in _spam_filter){
+        if (_spam_filter[i].test(escapeTags(Base64.decode(post.message)))) return false;
+    }
+  }
+  var locationBackup = window.location.href.toString();
+  if (_depth > 1) hasShowButton = false;
+  if (short == undefined) short = true;
+  var d = $(document.createElement('div'));
+  d
+    .addClass('post')
+    .addClass('post__details'+((hidden_hashlist.indexOf(post.hash)!=-1) ? ' post_type_hidden' : ""))
+    .attr('id', post.hash);
+
+    d.append('<span class="glyphicon '+
+		(
+			(hidden_hashlist.indexOf(post.hash)!=-1)
+				? 'glyphicon-eye-open " title="Click to show this hidden post. Post_hash: '+post.hash+'"'
+				: 'glyphicon-eye-close " title="Click to hide this post. Post_hash: '+post.hash+'"'
+		)
+		+
+		' aria-hidden="true" onclick="toogle_show_hide(this);">&nbsp;</span>'); 					//add glyphicon to hide-show post.
+	
+  if (_depth != 0){
+    //d.append('<gr>#' + (short&&_depth!=1?shortenHash(post.hash):post.hash) + '&nbsp;</gr>');	//old code.
+    d.append('<gr>' + (add_remove(queue, post.hash, '', true, true)) + '&nbsp;</gr>');
+  }
+  else{
+    d.append('<gr>' + (add_remove(queue, post.hash, '', true)) + '&nbsp;</gr>');	
+  }
+  if (_depth != 0) {
+    $('<a>')
+      .attr('href', '#' + post.replyTo)
+      .click(function() {
+        $('#' + post.replyTo)
+          .addTemporaryClass('high', 1000);
+        setTimeout(function(){
+          console.log('assigning location');
+          _location = locationBackup;
+          location.assign(locationBackup);
+        }, 200);
+      })
+      .appendTo(d)
+      .html('^' + shortenHash(post.replyTo));
+  }
+  d.append('&nbsp;');
+  d
+    .append($('<a>')
+      .attr('href', 'javascript:void(0)')
+      .html('<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span><span class="btn-title">&thinsp;Reply</span>')
+      .click(function() {
+        addReplyForm(post.hash);
+        d.next().find('textarea').focus();
+      }));
+  if (hasShowButton) {
+    d.append('&nbsp;');
+    var showLink = 
+      $('<a>')
+        .attr('href', (_depth==0?'#category':'#thread') + post.hash)
+        .text('[Show]')
+        .click(function() {
+          //_depth += 1;
+          //loadThread(post.hash);
+        });
+    d.append(showLink);
+    $.get('../api/threadsize/' + post.hash)
+      .done(function(size){
+        if (size == '0')
+          showLink.html('<span class="glyphicon glyphicon-comment not-avail" aria-hidden="true"></span><span class="btn-title not-avail">&thinsp;0</span>');
+        else
+          showLink.html('<span class="glyphicon glyphicon-comment" aria-hidden="true"></span><span class="btn-title">&thinsp;'+size+' – Show</span>');
+      });
+  }
+  d.append('&nbsp;');
+  d
+    .append($('<a>')
+      .attr('href', 'javascript:void(0)')
+      .html('<span class="glyphicon glyphicon-trash" aria-hidden="true"></span><span class="btn-title">Delete</span>')
+      .attr('title', 'Click to delete post forever.')
+      .click(function() {
+        if (post.hash == _categories) {
+          pushNotification("Cannot delete root post.");
+          return;
+        }
+        var undo = false;
+        d.append(
+          $('<button>')
+            .text('Undo')
+            .click(function(){
+              undo = true;
+              $(this).remove();
+            })
+            .append($('<span>').html('&nbsp;')
+              .css({ background: 'red', height: '5px', marginLeft: '5px'})
+              .animate({width: '100px'},50)
+              .animate({width: '0px'},Math.random()*200+_post_delete_timeout)));
+        setTimeout(function(){
+          if (undo) return;
+          deletePostFromDb(post.hash);
+          d.remove();
+          pushNotification('A post was deleted forever.');
+        }, _post_delete_timeout);
+      }));
+  appendFunc(d);
+  
+  //This code need function isBase64(str), and this function in beginning of this script
+  var post_content = escapeTags(Base64.decode(post.message));
+  //console.log('At beginning, post_content was been: \n', post_content);				//Value of post_content at beginning, with description
+
+	post_content = replace_local_quotes(post_content);	//replace posts to local links.
+	post_content = detect_files(post_content);			//replace files to links
+  
 
   var inner = $('<div>')
     .addClass('post-inner')
+    .addClass('post__message')
 //    .html(applyFormatting(escapeTags(Base64.decode(post.message))))											//old code
     .html(applyFormatting(post_content))																		//<--- HERE using replaced contend of post
     .appendTo(d);
@@ -327,9 +534,43 @@ u/GSjMbGDKA+9d7DMEMHtziZM61c72h/A3foMuoBqRh/AAAAAElFTkSuQmCC\">'
   if (imgcnt > 0) {
     for (var i = 0; i < imgcnt; i++) {
       var img = imgs[i];
-      if (img.src.startsWith('data:image/jpeg;base64,UEsDB')) {//if PK at first - then zip						//saving backward compatibility with old zipJPEGs
-        $(img).replaceWith($('<a download=file'+(i+1)+'.zip href='+img.src.replace('image/jpeg','application/zip')+'>[file'+(i+1)+'.zip]</a>'));
-      }
+		if (img.src.startsWith('data:image/jpeg;base64,UEsDB')) {//if PK at first - then zip						//saving backward compatibility with old zipJPEGs
+//			$(img).replaceWith($('<a download=file'+(i+1)+'.zip href='+img.src.replace('image/jpeg','application/zip')+'>[file'+(i+1)+'.zip]</a>')); //[file1.zip]
+//			$(img).replaceWith($('<a download='+generateGuid()+'.zip href='+img.src.replace('image/jpeg','application/zip')+'>['+generateGuid()+'.zip]</a>'));	//random guid for noname zip-files.
+
+//			$(img).replaceWith($('<a download='+Sha256.hash(img.src.replace('image/jpeg','application/zip')).substring(0,10)+'.zip href='+img.src.replace('image/jpeg','application/zip')+'>['+Sha256.hash(img.src.replace('image/jpeg','application/zip')).substring(0,10)+'.zip]</a>')); //partial sha256 for noname zip-files.
+
+			//partial sha256 for noname zip files.
+			var fileBaseLink = img.src; // Hope you'll do it right
+			fileBaseLink = 	fileBaseLink.replace('image/jpeg','application/zip');
+							fileBaseLink.replace('image/jpeg','application/zip')
+			// Better without substring(). More uinque bytes -> better.
+		//	var fileHash = Sha256.hash(fileBaseLink)
+			// Another improvement here: to get hash from decoded file. In that case, we may check integrity easily
+			var file_base64 = fileBaseLink.split("base64,")[0];
+			try{
+				var decoded_file = atob(file_base64);
+				var fileHash = Sha256.hash(decoded_file);
+				var fileName = fileHash + '.zip';
+			}
+			catch(err){
+				var fileHash = Sha256.hash(fileBaseLink);
+				var fileName = fileHash + '.zip';
+				console.log("file "+fileName+" has a broken base64. Error: "+err);
+			}
+			
+			$(img).replaceWith(
+				$('<a download='+fileName+' href='+fileBaseLink+'>['+fileName+']</a>')
+			);
+		}
+/*
+		else{
+			console.log("img not zipjpeg - else");
+			console.log('post_content: \n', post_content);
+			console.log('img.src: \n', img.src);
+			
+		}
+*/
     }
   }
   if (_showTimestamps == 'false') {
@@ -345,8 +586,7 @@ function loadReplies(hash, offset, highlight) {
     .done(function(arr){
       arr = JSON.parse(arr);
       if (arr.length == 0) return;
-      for (var i = arr.length-1; i >= 0; i--)
-	  {
+      for (var i = arr.length-1; i >= 0; i--) {
         var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
         if (_showDeleted == 'false' && deleted) continue;
         var p = addPost(arr[i], function(d) { d.insertAfter($('#'+hash)); }, false)
@@ -363,6 +603,7 @@ function loadReplies(hash, offset, highlight) {
     });
 }
 
+//3.1
 function AddBriefView(hash, deleted, highlight)
 {
 	$.post('../api/getlastn/' + hash, '3').done(function(brief)
@@ -390,12 +631,14 @@ function loadThread(hash, highlight) {
   $.get('../api/replies/' + hash)
     .done(function(arr){
       arr = JSON.parse(arr);
+	  //console.log('loadThred, arr: ', arr);
       if (arr.length > 0) {
         $('#thread').empty();
       } else { 
         _depth -= 1; 
         pushNotification('This thread/category is empty.');
-        return; 
+        //return; 					//don't return and show post
+		$('#thread').empty();		//don't repeat posts
       }
       $.get('../api/get/' + hash)
         .done(function(post){
@@ -424,7 +667,7 @@ function loadThread(hash, highlight) {
           $('#thread').append(
             $('<a>')
               .attr('href','javascript:void(0)')
-              .html('&nbsp;<span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>Sort by date')
+              .html('<span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>Sort by date')
               .click(function(){
                 $('.separat').remove();
                 var thread = $('g').parent().parent().parent();
@@ -462,7 +705,7 @@ function loadThread(hash, highlight) {
           $('#thread').append(
             $('<a>')
               .attr('href','javascript:void(0)')
-              .html('&nbsp;<span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Reversed sort')
+              .html('<span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>Reversed sort')
               .click(function(){
                 $('.separat').remove();
                 var thread = $('g').parent().parent().parent();
@@ -484,7 +727,7 @@ function loadThread(hash, highlight) {
 	   $('#thread').append(
             $('<a id="thread_top">')
               .attr('href','javascript:void(0)')
-              .html('&nbsp;<span class="glyphicon glyphicon-remove" aria-hidden="true"></span>Delete All')
+              .html('<span class="glyphicon glyphicon-remove" aria-hidden="true"></span>Delete All')
               .click(function(){
                 if (confirm('Are you sure you want delete all posts that you currently see?')) {
                   $('.glyphicon-trash').click();
@@ -494,28 +737,24 @@ function loadThread(hash, highlight) {
 
           addPost(post, function(d){ d.appendTo($('#thread')); }, false, false);
           if (_depth == 1) arr.reverse();
-          for (var i = 0; i < arr.length; i++)
-		  {
+          for (var i = 0; i < arr.length; i++) {
             var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
             if (_showDeleted == 'false' && deleted) continue;
             var p = addPost(arr[i], function(d) {d.appendTo($('#thread'));}, true)
-            if (p)
-			{
+            if (p){
                 p.css('margin-left',  _treeOffsetPx + 'px');
                 if (deleted) p.css({ opacity: _deletedOpacity});
-                if (highlight == arr[i].hash)
-				{
+                if (highlight == arr[i].hash) {
                   p.addTemporaryClass('high', 8000);
                 }
-                if (_depth > 1)
-				{
+                if (_depth > 1) {
                   loadReplies(arr[i].hash, 2, highlight);
                 }
-				if(_depth==1)
+				if(_depth==1)	//from client 3.1	
 				{
 					AddBriefView(arr[i].hash, deleted, highlight);
 				}
-            }			
+			}
           }
           vid_show()
         });

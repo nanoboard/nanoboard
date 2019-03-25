@@ -1,0 +1,17 @@
+.notif {
+  border: 1px solid #ddccc5;
+  border-radius: 4px;
+  background: none repeat scroll 0 0 #f0e0d6;
+  padding: 4px;
+  color: #600000;
+  max-width: 500px;
+  max-height: 100px;
+  overflow: auto;
+  word-break: break-all;
+}
+
+.notif_area {
+  position: fixed;
+  top: 70px;
+  right: 5px;
+}

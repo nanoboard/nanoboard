@@ -23,19 +23,24 @@ namespace NServer
         }
 
         public HttpResponse Handle(HttpRequest request)
+        //public async Task<HttpResponse> Handle(HttpRequest request)
         {
-            try
-            {
-                if (Messages.Count > 0)
-                {
-                    return new HttpResponse(StatusCode.Ok, Messages.Dequeue());
-                }
-            }
-            catch
-            {
-            }
+			//while(true){
+				try
+				{
+					if (Messages.Count > 0)
+					{
+						return new HttpResponse(StatusCode.Ok, Messages.Dequeue());
+					}
+				}
+				catch
+				{
+					Thread.Sleep(10); // Wait.
+				}
+			//}
 
             return new HttpResponse(StatusCode.Ok, "");
+            //return new HttpResponse(StatusCode.BadRequest, "false");
         }
     }
 

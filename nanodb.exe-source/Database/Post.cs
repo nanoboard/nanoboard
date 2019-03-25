@@ -1,5 +1,7 @@
 using Newtonsoft.Json;
 using NDB;
+
+//from client 3.1
 using System;
 using System.Collections.Generic;
 
@@ -17,6 +19,7 @@ namespace NDB
         [JsonProperty("replyTo")]
         public string replyto;
 
+		//from client 3.1
         public DateTime date
         {
             get

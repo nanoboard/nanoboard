@@ -8,6 +8,8 @@
 <script src='../scripts/base64.js'> </script>
 <script src='../scripts/notif.js'> </script>
 <script src='../scripts/bootstrap.min.js'></script>
+<script src='../scripts/params.js'> </script>
+<script src='../scripts/checkver.js'></script>
 <link rel='stylesheet' type='text/css' href='../styles/bootstrap.min.css'>
 <link rel='stylesheet' type='text/css' href='../styles/nano.css'>
 <link rel='stylesheet' type='text/css' href='../styles/notif.css'>
@@ -54,6 +56,9 @@ body {
 }
 </style>
 <script>
+var spam_filter_help_text = '#  Keywords for spam-filter\n// Each word per line:\n';
+var append_sfht = true;
+
 function closure(func) {
   var x = function(args1) {
     func(args1);
@@ -73,6 +78,26 @@ function beautifyParamName(txt) {
   return toCamelCase(txt.split('_').join(' '));
 }
 
+function convert_unix_timestamp(unixtimestamp){		//Unixtimestamp
+	var months_arr =							// Months array
+	['Jan','Feb','Mar','Apr',
+	'May','Jun','Jul','Aug',
+	'Sep','Oct','Nov','Dec'];
+	
+	var date = new Date(unixtimestamp*1000);	// Convert timestamp to milliseconds
+	var year = date.getFullYear();				// Year
+	var month = months_arr[date.getMonth()];	// Month
+	var day = date.getDate();					// Day
+	var hours = date.getHours();				// Hours
+	var minutes = "0" + date.getMinutes();		// Minutes
+	var seconds = "0" + date.getSeconds();		// Seconds
+	// Display date time in MM-dd-yyyy h:m:s format
+	var convdataTime = month+'-'+day+'-'+year+' '+
+	hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+	
+	return convdataTime;
+}
+
 $(function(){
   $.get('../api/paramget/skins')
     .done(function(skins){
@@ -85,13 +110,20 @@ $(function(){
           if (skin == '') skin = 'None';
           $('#skin-sel').val(skin).change();
           $('#skin-sel').change(function(){
-            var newSkin = $(this).val();
+			var newSkin = $(this).val();
             if (newSkin == 'None') newSkin = '';
             $.post('../api/paramset/skin', newSkin);
-            location.reload();
+            setTimeout(
+				function(){
+					location.reload();
+				},
+				500
+			);
           });
         });
      });
+
+var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^-\d\.]/g, ''), 10);	//font size in textareas, need to regulate height of this, onload.
 
   function showParams() {
     $.get('../api/params')
@@ -105,8 +137,8 @@ $(function(){
           var x = function(cont,par) {
             $.get('../api/paramget/' + par)
               .done(function(val) {
-                cont.text(beautifyParamName(par) + ':');
-                if (val == 'true' || val == 'false') {
+                cont.text(beautifyParamName(par) + ((par=='remind_if_updates_exists') ? ' (minutes)' : '') + ':');
+				if (val == 'true' || val == 'false') {
                   $('<input>')
                     .addClass('checkbox')
                     .attr('type', 'checkbox')
@@ -122,10 +154,18 @@ $(function(){
                         });
                     });
                 } else {
+				if(par=="last_update"){
+					cont.html(cont.html() + ' <a href="javascript:void(0)" onclick="checkVersion(true);">Check updates online, now!</a>');
+				}else if(par=='captcha_url'){
+					cont.html(cont.html() + ' <a href="'+val+'">Download captcha, now!</a>');
+				}
 				cont.append('<br/>');
 
 				var title = '';	//define variable for title tooltip
-				switch(par) {//set title tooltips for different textareas
+				var readonly = false;
+				var height = 0;
+				var width = 0;
+				switch(par) {	//set title tooltips for different textareas
 					case 'ip': title = 'IP address to bind...'; break;
 					case 'password': title = 'Your password...'; break;
 					case 'port': title = 'PORT to listen...'; break;
@@ -134,8 +174,13 @@ $(function(){
 								'http(s)://imageboard.com:443/thread/number.php?ports=50&sort=date\n'+
 								"http://my_server.local/pngLinks.html\n"+
 								"#etc...";
+						height = 250;	//px
+						width = 1000;
 						break;
-					case 'skins': title = 'Available skins...'; break;
+					case 'skins':
+						title = 'Available skins...\n["dark","futaba","photon"]';
+						val = val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]');
+						break;
 					case 'skin': title = 'Current skin...'; break;
 					case 'post_delete_timeout': title = 'Timeout to delete post...'; break;
 					case 'post_count_notification_time':
@@ -143,26 +188,97 @@ $(function(){
 								'Also, try to change the parameter "var _post_count_notification_time" in scripts/params.js';
 						break;
 					case 'post_offset_in_tree_px': title = 'Offset for post in the tree...'; break;
-					case 'spam_filter': title = 'Spam keywords...'; break;
-					case 'captcha_pack_file': title = 'filename.extension'; break;
-					case 'Download_Timeout_Sec': title = 'Timeout to download containers...'; break;
+					case 'spam_filter':
+						title = 'Keywords of spam-list... Format:\nWORD1\nword2\\n\n//Word3\\n//(disabled)\n//disabled_wORd\n\\n\\n\nWoRd5...\n(delimiter is \'\\n\')';
+						//console.log("spam_filter - show. val = ", val,	"val=='[\"\"]'", (val=='[""]'));
+						//console.log('val', val, 'help_text: '+val.substring(0, spam_filter_help_text.length));
+						val = (val=='' || val=='[""]') ? '' : JSON.parse(val.replace(/\\/g, '\\\\')).join('\n');	//if serialized JSON in config-3.json, not serialized string.
+						height = ( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
+						//console.log( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
+						//console.log('after replace, val: '+val);
+						break;
+					case 'captcha_pack_file':
+						title = 	'captcha file: captcha.nbc\n\n'
+								+	'Multihasher hashes:\n'
+								+	'CRC32: E5408891\n'
+								+	'MD5: 7E93FE7DB9BC3D70A84F34B4E4FA6257\n'
+								+	'RIPEMD-160: 2A6E1B283B48D9B05649346E1B72ACDA52E874E8\n'
+								+	'SHA-1: 3B81C46C03157FE55BD8F430FEEC9A8BF010C816\n'
+								+	'SHA-256: 0732888283037E2B17FFF361EAB73BEC26F7D2505CDB98C83C80EC14B9680413\n'
+								+	'SHA-384: B23C27C96C1D57DF8168C1E0406DB61B1A79F006997F164D33D2D70F6E4CAE674056885BB980F6E5804AAE03DAD76037\n'
+								+	'SHA-512: FCDF1161543174E4713D791C1FD18F6A64972EC91E9B331833DD4F941D3F88E1A717758B7851F5187EFA76202652AFD174CF8C4D6F8A03B0386284B4032D37F1\n'
+						;
+						break;
+					case 'download_timeout_sec': title = 'Timeout to download containers...'; break;
+					case 'check_updates_every_hours': title = 'Interval to check updates... Hours.'; break;
+					case 'last_update':
+						title = 'Time of last update. Unix timestamp (MM-DD-YYYY hh:mm:ss).';
+						readonly = true;
+						val = val+" ("+convert_unix_timestamp(val)+")";
+						break;
+					case 'last_another_repo_version':
+						title = 'Latest downloaded version (saved in config-3.json)';
+						readonly = true;
+						val = decodeURIComponent(val);
+						break;
+					case 'remind_if_updates_exists':
+						title = 'Interval for check if updates available (minutes).';
+						break;
+					case 'captcha_url': readonly = true; width = 600; break;
+					case 'original_captcha_sha256': readonly = true; break;
+						
+
 					default: title = ''; break;
-				}				
-				
+				}
+					height = ( (height != 0) ? height : ( ( val.split('\n').length + 1 ) * fontSize_in_textareas ) );	//textarea height
                 $('<textarea>')
                   .attr('title', title)		//add title tooltip to the textarea.
                   .attr('id', par)
-                  .val(val)
-                  .css('height', val.split('\n').length * 17 + 'px')
+                  .attr('readonly', readonly)
+                  .val(((par=='spam_filter') ? ( (append_sfht==true) ? spam_filter_help_text : '' ) : '' ) + val)
+                  .css('height', height + 'px')
+				  .css('width', ((width != 0) ? width + 'px' : ''))
                   .appendTo(cont)
                   .change(function(){
                     var elem = $(this);
                     var new_val = elem.val();
-                    $.post('../api/paramset/'+par, new_val)
-                      .done(function(){
-                        elem.val(new_val);
-                        pushNotification('Autosaved.');
-                      });
+					if(par=='spam_filter'){
+						//console.log('spam_filter - before: '+new_val);
+						new_val =
+								JSON.stringify(				//save serialized JSON in config-3.json
+									new_val
+									.substring(
+										((append_sfht==true) ? spam_filter_help_text.length : 0)
+										, new_val.length
+									)
+									.split('\n')
+								).replace(/\\\\/g, '\\')
+						;			
+
+						//console.log('spam_filter - after: '+new_val);
+					}else if (par=='skins'){
+						//console.log('new_val', new_val);
+						new_val = new_val.replace(/\n/g, '');
+						//console.log('new_val', new_val);
+					}
+					$.post('../api/paramset/'+par, new_val)
+						.done(function(){
+							elem.val(
+								(par=='spam_filter')
+									? (
+										(append_sfht==true)
+											? spam_filter_help_text
+											: ''
+									)
+									+JSON.parse(new_val.replace(/\\/g, '\\\\')).join('\n')				//save serialized JSON in config-3.json
+//									? new_val															//if no need serialized JSON, just serialized string
+									: (par=='skins')
+										? new_val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]')
+										: new_val
+							);
+							
+							pushNotification('Autosaved.');
+						});
                   });
 				}
               });

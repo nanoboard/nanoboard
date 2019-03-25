@@ -24,6 +24,8 @@ namespace NDB
                 {
                     pos = stream.Position;
                     stream.Write(bytes, 0, bytes.Length);
+					stream.Close();
+					stream.Dispose();
                 }
 
                 return (int)pos;
@@ -39,6 +41,8 @@ namespace NDB
                 {
                     stream.Seek(offset, SeekOrigin.Begin);
                     stream.Write(bytes, 0, bytes.Length);
+					stream.Close();
+					stream.Dispose();
                 }
             }
         }
@@ -51,6 +55,8 @@ namespace NDB
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 stream.Read(bytes, 0, length);
+				stream.Close();
+				stream.Dispose();
             }
             return bytes;
         }

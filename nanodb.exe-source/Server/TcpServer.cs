@@ -110,7 +110,8 @@ namespace NServer
                         var match = System.Text.RegularExpressions.Regex.Match(readData, "Content-Length: [0-9]+");
                         if (match.Success)
                         {
-                            contentLength = int.Parse(match.Value.Split(' ')[1]);
+//                            contentLength = int.Parse(match.Value.Split(' ')[1]);
+                            contentLength = nbpack.NBPackMain.parse_number(match.Value.Split(' ')[1]);
                             contentLength += readData.Split(new[]{ "\r\n\r\n" }, StringSplitOptions.None)[0].Length;
                         }
                     }
@@ -161,10 +162,11 @@ namespace NServer
                     }));
                 }
             }
-            catch
+            catch(Exception ex)
             {
                 Console.WriteLine("Something is wrong with connection between your browser and nanoboard client...");
                 Console.WriteLine("But that's ok, don't worry.");
+				Console.WriteLine("Exception: "+ex);
             }
             finally
             {

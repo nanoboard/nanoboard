@@ -48,6 +48,7 @@ namespace nboard
                     components[counter++] = c.B;
                 }
             }
+			innocuousBmp.Dispose();
             return components;
         }
  

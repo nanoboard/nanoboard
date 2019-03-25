@@ -29,18 +29,18 @@ namespace nboard
             }
       }
       public static bool Running { get; private set; }
-      public static void Run(string [] p = null)
+      public static void Run(string [] p = null, string url="", string save_to_filename="")
       {
         if (Running) return;
-        _Main(p);
+        _Main(p, url, save_to_filename);
       }
 	  
-      public static void _Main(string [] _params_ = null) {
+      public static void _Main(string [] _params_ = null, string url="", string save_to_filename="") {
         bool running = true;
         Running = true;
         var agg = new Aggregator(_params_);
         agg.ProgressChanged += () => { if (agg.InProgress == 0) running = false; else running = true; };
-        agg.Aggregate();
+        agg.Aggregate(url, save_to_filename);
         int lastProg = 0;
         float progStaySec = 0;
         while(running) {
@@ -114,7 +114,7 @@ namespace nboard
 				if(_params_.Length!=0){
 					for(int item=0; item<_params_.Length;item++)
 					{
-						//Console.WriteLine("_params_[i] = "+_params_[item]);
+						Console.WriteLine("_params_[i] = "+_params_[item]);
 						if(_params_[item] == "collect_using_files"){
 							Console.WriteLine("ParseImage: collect_using_files, only_RAM = false now");
 							only_RAM = false;
@@ -133,14 +133,11 @@ namespace nboard
 					}
 				}
 				Console.WriteLine("only_RAM = "+only_RAM+", save_files = "+save_files+", max_connections = "+max_connections);
+				
 
 				//delete all files in "download" folder
 				if(save_files==false){
-					if (!Directory.Exists("download"))
-					{
-						Directory.CreateDirectory("download");
-					}
-					Console.WriteLine("Delete files in \"download/\" folder...");
+					Console.WriteLine("Delete files in \"download//\" folder...");
 					System.IO.DirectoryInfo di = new DirectoryInfo("download"+Path.DirectorySeparatorChar);
 					foreach (FileInfo file in di.GetFiles()){file.Delete();}
 					foreach (DirectoryInfo dir in di.GetDirectories()){dir.Delete(true);}
@@ -195,30 +192,36 @@ namespace nboard
             }
         }
 
-        public void Aggregate()
+        public void Aggregate(string url = "", string save_to_filename="")
         {
             try
             {
-                CheckUpdatePlacesConfig();
-                bool empty = true;
+				if(url=="" && save_to_filename==""){
+					CheckUpdatePlacesConfig();
+					bool empty = true;
 
-                foreach (string place in _places)
-                {
-                    if (!place.StartsWith("#"))
-                    {
-                        empty = false;
+					foreach (string place in _places)
+					{
+						if (!place.StartsWith("#"))
+						{
+							empty = false;
 
-                        if (IsUriValid(place))
-                        {
-                            ParseText(place);
-                        }
-                    }
-                }
-
-                if (empty)
-                {
-                    InProgress = 0;
-                }
+							if (IsUriValid(place))
+							{
+								ParseText(place);
+							}
+						}
+					}
+					if (empty)
+					{
+						InProgress = 0;
+					}
+				}else if(url!="" && save_to_filename!=""){
+					if (IsUriValid(url))
+					{
+						ParseImage(url, save_to_filename);
+					}
+				}
             }
 
             catch (Exception e)
@@ -484,7 +487,7 @@ namespace nboard
             client.DownloadDataAsync(new Uri(address));
         }
 
-        private void ParseImage(string address)
+        private void ParseImage(string address, string save_to_filename="")
         {
             if (_downloaded.Contains(address))
                 return;
@@ -606,7 +609,11 @@ namespace nboard
             address = address.Replace("2ch.hk", "m2ch.hk");			//m2ch.hk working. See also the exception at line 265 with condition (picture_host!="2ch.hk" && host!="m2ch.hk")
             address = address.Replace("mm2ch.hk", "m2ch.hk");		//m2ch.hk contains 2ch.hk, and replaced to mm2ch.hk. Turn it back.
             Console.WriteLine("Starting download: " + address);
-            client.DownloadDataAsync(new Uri(address));
+            if(save_to_filename==""){
+				client.DownloadDataAsync(new Uri(address));
+			}else{
+				client.DownloadDataAsync(new Uri(address), save_to_filename);
+			}
 			return;
         }
     }

@@ -366,7 +366,9 @@ function show_create_PNG(){
         update_hashes_of_last_post(current_queue, 'queue', value);
         
         
-        getlp.value = 10-(queue.length+current_queue.length);
+        //getlp.value = 10-(queue.length+current_queue.length);					//just test with few posts, to don't load all hashes of 2000 posts.
+																				//This return negative numbers, when database deleted, and count of post < 10
+        getlp.value = (total_posts_available>10) ? 10 : total_posts_available;	//This not return negative nubmers
         getlp.max = total_posts_available;
     }
     
@@ -386,6 +388,11 @@ function change_values(){
 	}
 	startlp.max = total_posts_available - getlp.value;
 	startlp.value = (startlp.value>startlp.max) ? startlp.max : startlp.value;
+
+	if(getlp.value>total_posts_available && startlp.value<0){					//if negative numbers found
+		startlp.max = getlp.value = total_posts_available;							//do this
+		startlp.value = total_posts_available - getlp.value;						//and this
+	}
 
     var value = fq.value || (queue.length+current_queue.length);
     //console.log('queue', queue, 'current_queue', current_queue, value, transfer_hashes_to_temp_array(queue, current_queue, value));

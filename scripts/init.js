@@ -219,9 +219,10 @@ $(function() {
     $('#png-create').addClass("disabled");
 	$('#png-create-text').text("Wait for generate...");
 	
-//    $.get('../api/png-create')
+    $.get('../api/png-create')	//turn back standart png-create
 
-	console.log('random posts from last: ', randlp.value);
+/*
+console.log('random posts from last: ', randlp.value);
     $.post(		'../api/png-create/',
 				startlp.value+'-'+from_last_posts+'\n'+
 				(						// and dataURL with selected source image. Delimiter is '\n' between this two blocks.
@@ -236,7 +237,8 @@ $(function() {
 				current_queue.length+'\n'+
 				randlp.value
 			)
-      .done(function(){
+*/
+	    .done(function(){
 		console.log("done png-create post-query...");
         creationRun = false;
 		current_queue = [];			//remove all packed hashes from current_queue

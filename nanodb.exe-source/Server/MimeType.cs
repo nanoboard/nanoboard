@@ -18,6 +18,7 @@ namespace NServer
         public const string Css = "text/css; charset=utf-8";
         public const string Plain = "text/plain; charset=utf-8";
         public const string Image = "image/png";
+		public const string Dynamic = "dynamic";	//for dynamic content types
     }
     
 }

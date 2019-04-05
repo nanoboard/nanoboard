@@ -43,6 +43,18 @@ namespace NServer
             server.AddHandler("styles", new StylesHandler());
             server.AddHandler("notif", new NotificationHandler());
             server.AddHandler("images", new FileHandler("images", MimeType.Image, true));
+			
+//            server.AddHandler("download", new FileHandler("download", MimeType.Image, true));	//html-file as image
+//            server.AddHandler("download", new FileHandler("download", MimeType.Html, true));	//images as html-text
+//            server.AddHandler("download", new FileHandler("download", "application/octet-stream", true));	//files to download (not opened as images or html)
+            server.AddHandler("download", new FileHandler("download", MimeType.Dynamic, true));	//files to download (not opened as images or html)
+			//http://127.0.0.1:7346/download/Files_will_deleted.txt.	-	(dot in the end) application/octet-stream
+			//http://127.0.0.1:7346/download/index.html.				-	(dot in the end) application/octet-stream
+			//http://127.0.0.1:7346/download/index.html					-	text/html
+			//http://127.0.0.1:7346/download/image.png					-	image/png
+			//http://127.0.0.1:7346/download/Files_will_deleted.txt		-	text/plain
+			//etc...
+			
             server.AddHandler("fonts", new FileHandler("fonts", "application/font",true));
             server.AddHandler("shutdown", new ActionHandler("Server was shut down.", ()=>server.Stop()));
             server.AddHandler("restart", new ActionHandler("Server was restarted.", ()=>{

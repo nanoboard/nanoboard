@@ -168,6 +168,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 			string queue = "";															//string with hashes of posts, separated with comma.
 			int from_queue = 0;
 			int random_posts = -1;
+			int max_bytelength = 150000;
 			//Console.WriteLine("queue_image_params {0}", queue_image_params);
 			
 			var splitted = queue_image_params.Split('\n');
@@ -187,6 +188,14 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 				}else if(splitted[i]=="No_dataURL_specified_for_source_image."){
 					//Console.WriteLine("DataURL not specified...");
 					dataURL = splitted[i];
+				}else if(splitted[i].StartsWith("max_bytelength=")){
+						//max_bytelength=
+						int parsed_value = nbpack.NBPackMain.parse_number(splitted[i].Substring(14));
+						max_bytelength = (parsed_value!=0) ? parsed_value : max_bytelength;
+					//	Console.WriteLine(
+					//		"Set max_bytelength = "+max_bytelength+", parsed_value = "+parsed_value+","
+					//		+"\n(splitted[i]==\"\") = "+(splitted[i]=="")+", splitted[i] = "+splitted[i]
+					//	);
 				}else if(splitted[i].Length>=32){
 					//Console.WriteLine("splitted.Length = 1, splitted[i] = {0}, maybe this is queue in GET-query...", splitted[i]);
 					queue = splitted[i];
@@ -210,7 +219,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 					}else if (i==1){
 						//Console.WriteLine("splitted[i], i>0, this is not first value with length lesser than 32, maybe number = from_queue{0}", splitted[i]);
 						from_queue = nbpack.NBPackMain.parse_number(splitted[i]);
-					}else /*if (i==2)*/{
+					}else/*if (i==2)*/{
 						random_posts = nbpack.NBPackMain.parse_number(splitted[i]);
 					}
 				}
@@ -246,7 +255,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 				|| 	queue == ""									//or if this is defined, but empty string
 			){																			//pack last from_last_posts
 					//Console.WriteLine("Queue is empty. Pack last {0} posts...", from_last_posts);					//Show message about this
-				count = PostDatabase.GetPresentCount();											//get posts count
+				count = PostDatabase.GetPresentCount();											//get posts count (total posts)
 				if(from_last_posts!=-1 && from_last_posts!=0){
 					Console.WriteLine("Pack last {0} posts...", from_last_posts);
 					take = from_last_posts;														//from_last_posts posts to taking
@@ -258,48 +267,23 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 					);
 					take = 50;														//from_last_posts posts to taking
 				}
-				var last50s = PostDatabase.RangePresent(Math.Max( ( (start_post_number!=-1) ? start_post_number : count - take), 0), take);		//take last 50 posts
+				Console.WriteLine("start_post_number = "+start_post_number+", (count - take) = "+(count - take)+
+				"\n( (start_post_number!=-1) ? start_post_number : (count - take) )"+( (start_post_number!=-1) ? start_post_number : (count - take) )+
+				"\n(Math.Max( ( (start_post_number!=-1) ? start_post_number : (count - take) ), 0))"+Math.Max( ( (start_post_number!=-1) ? start_post_number : (count - take) ), 0)+
+				"\ntake = "+take
+				);
+				var last50s = PostDatabase.RangePresent(Math.Max( ( (start_post_number!=-1) ? start_post_number : (count - take) ), 0), take);		//take last 50 posts
 				list = last50s.ToList();														//push this to list.			
 			}else{																			//if queue hashes defined
 				
 				var posts = PostDatabase.GetPosts(queue, from_queue);							//get array with posts
-				count = posts.Length;															//get post count
+				//count = posts.Length;															//get post count in queue
+				count = PostDatabase.GetPresentCount();											//get posts count in database (total posts)
 					//Console.WriteLine("Queue accepted. Pack {0} posts from {1} posts in queue...", from_queue, count);	//show message about pack posts from queue
 				list = posts.ToList();															//push posts to list
 			}
 
-            while (!ByteCountUnder(list, 150000))
-            {
-                list.RemoveAt(0);
-            }
-
-            var r = new Random();
-			
-            if(random_posts==-1){
-				Console.WriteLine(	"Number of random posts to pack not specified!"+
-									"Pack random 50 posts, by default..."
-				);
-				random_posts = 50;
-			}else{
-				Console.WriteLine(	"Add {0} random posts to container", random_posts);				
-			}
-			
-			//add random posts
-            int rbytes = 0;
-			for (int i = 0; i < random_posts; i++)
-            {
-                int index = (int)Math.Min(Math.Pow(r.NextDouble(), 0.3) * count, count - 1);
-                var p = PostDatabase.RangePresent(index, 1)[0];
-                var bc = ByteCount(p);
-                if (rbytes + bc > 150000){
-					Console.WriteLine("{0} posts selected from last {1}, according of bytelimit", i, random_posts);
-					break;
-                }
-				rbytes += bc;
-                if(!list.Contains(p)){list.Add(p);}
-            }
-			
-			//select random containerfile
+			//select random container file
             var files = Directory.GetFiles("containers", "*.png").ToList();
             files.AddRange(Directory.GetFiles("containers", "*.jpg"));
             files.AddRange(Directory.GetFiles("containers", "*.jpeg"));
@@ -310,8 +294,81 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
                 return;
             }
 
+            var r = new Random();
+
             var file = files[r.Next(files.Count)];
             var name = "upload/" + Guid.NewGuid().ToString() + ".png";
+
+		//begin calculate capacity			
+			Image bmp = null;
+			if(dataURL=="No_dataURL_specified_for_source_image."){
+				bmp = Bitmap.FromFile(file);
+			}
+			else if(
+					dataURL.IndexOf("data:") != -1
+				&& 	dataURL.IndexOf("base64,")!= -1
+				&&	nbpack.NBPackMain.IsBase64Encoded(dataURL.Split(',')[1])
+			){
+				Console.WriteLine("Image uploaded and dataURL found. Create bitmap from dataURL.");
+				
+				//create bitmap from dataURL, and save this as PNG-file to Upload folder.
+				var base64Data = Regex.Match(dataURL, @"data:image/(?<type>.+?),(?<data>.+)").Groups["data"].Value;
+				var binData = Convert.FromBase64String(base64Data);
+
+				using (var stream = new MemoryStream(binData))
+				{
+					bmp = new Bitmap(stream);		//create image from dataURL
+				}
+			}else{
+				Console.WriteLine("NBPack.cs - Create method: No DataURL found.");
+            }
+			var capacity = ((bmp.Width * bmp.Height * 3) >> 3) - 4;							//each bit in RGB subpixel byte - 32. Result = total bytes can be packed.
+			capacity = (capacity>max_bytelength) ? capacity : max_bytelength;				//if capacity < 150000 bytes, resize image.
+			
+			//Console.WriteLine("bmp.Width = "+bmp.Width+", bmp.Height = "+bmp.Height+", capacity = "+capacity+", max_bytelength = "+max_bytelength);
+			
+			bmp.Dispose();
+		//end calculate capacity
+
+
+			int deleted_post_number = 0;
+            while (!ByteCountUnder(list, capacity))		//remove old static limit, and check bytecount - up to capacity, to do not do resize image.
+            {
+				Console.WriteLine(
+					"removed_post_hash: "+list[0].hash
+					+"! Deleted post nubmer = "+(++deleted_post_number)
+				);
+                list.RemoveAt(0);
+            }
+			
+            if(random_posts==-1){
+				Console.WriteLine(	"Number of random posts to pack not specified!"+
+									"Pack random 50 posts, by default..."
+				);
+				random_posts = 50;
+			}else if(random_posts!=0){
+				Console.WriteLine(	"Add {0} random posts to container", random_posts);				
+			}else{
+				//don't show nothing if 0 posts added.
+			}
+			
+			//add random posts
+            int rbytes = 0;
+			for (int i = 0; i < random_posts; i++)
+            {
+                int index = (int)Math.Min(Math.Pow(r.NextDouble(), 0.3) * count, count - 1);
+                var p = PostDatabase.RangePresent(index, 1)[0];
+                var bc = ByteCount(p);
+                if (rbytes + bc > capacity){
+					Console.WriteLine("{0} posts selected from last {1}, according of bytelimit", i, random_posts);
+					break;
+                }
+				rbytes += bc;
+                if(!list.Contains(p)){list.Add(p);}
+            }
+			
+			//Shuffle all elements in list - to anonymize container creator.
+			list = list.OrderBy(a => Guid.NewGuid()).ToList();
 
 			//pack from file or from specified dataURL
 			if(dataURL=="No_dataURL_specified_for_source_image."){
@@ -319,8 +376,16 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 			}else{
 				Pack(list.ToArray(), dataURL, key, name);
 			}
-            
-			NServer.NotificationHandler.Instance.Messages.Enqueue("Saved PNG to /" + name);
+			
+			List<string> packed_posts_hashes = new List<string>();
+            foreach (var p in list)
+            {
+				packed_posts_hashes.Add(p.hash);
+            }
+			
+			NServer.NotificationHandler.Instance.Messages.Enqueue("Saved PNG to /"	+	name);
+			NServer.NotificationHandler.Instance.Messages.Enqueue("Hashes of posts, packed into "+name+": "	+ JsonConvert.SerializeObject(packed_posts_hashes));
+
 			return;
         }
 
@@ -339,9 +404,8 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
                     if (added)
                     {
                         NServer.NotificationHandler.Instance.
-                            Messages.Enqueue("[g]Extracted post:[/g]");
-                        NServer.NotificationHandler.Instance.
-                            Messages.Enqueue(Encoding.UTF8.GetString(Convert.FromBase64String(p.message)));
+                            Messages.Enqueue(	"[b][g]Extracted post:[/g][/b] "
+											+	Encoding.UTF8.GetString(Convert.FromBase64String(p.message)));
                     }
                 }
             }
@@ -384,9 +448,8 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
                     if (added)
                     {
                         NServer.NotificationHandler.Instance.
-                            Messages.Enqueue("[g]Extracted post:[/g]");
-                        NServer.NotificationHandler.Instance.
-                            Messages.Enqueue(Encoding.UTF8.GetString(Convert.FromBase64String(p.message)));
+                            Messages.Enqueue(	"[b][g]Extracted post:[/g][/b] "
+											+	Encoding.UTF8.GetString(Convert.FromBase64String(p.message)));
                     }
                 }
             }

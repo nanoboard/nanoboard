@@ -6,6 +6,87 @@ function replaceAll(text, search, replace) {
   return text.split(search).join(replace);
 }
 
+function replaceAll_search(text, search, replace) {
+
+		console.log(
+			'replaceAll_search:\n',
+			'text', text, '\n',
+			//'text', text,
+			' search', search,
+			'\nreplace', replace
+		);
+	
+	var result = text;
+	if(
+			//search.indexOf("//")	===	-1	&&
+			search.indexOf("/")	===	-1	&&
+			//search.indexOf("\\")	===	-1	&&		
+			search.indexOf("[xmg")	===	-1
+	){
+//		search = new RegExp(search, 'gi');
+		var regexp = new RegExp(search, 'gi');
+//		search = new RegExp(search, 'i');
+
+		var match = text.match(regexp);
+		
+		console.log('text.match(regexp) = ', text, '.match(', regexp, ') = \n match = ', match);
+
+		if(match!=null && match.length==1 && match[0]!=regexp){
+			replace = replace.split(regexp).join(match[0]);
+			result = replaceAll(result, regexp, replace);
+		}else if(match!=null && match.length>1){
+		
+		
+			//when many matches in text........ HTTP, http, http, http...
+			//and when HTtP is search string...
+			//match Array [ "HTTP", "http", "http", "http", "http", "http", "http" ]
+			//so for each element...
+			for(i=0; i<match.length; i++){
+
+				/*
+					console.log("try replace (", regexp, 'to ', match[i], ')');
+					replace = replace.split(regexp).join(match[i]);
+					console.log("replace: match[i] = ", match[i], ", replace", replace);
+					result = result.replace(match[i], replace);
+				*/
+			
+				//modify replace to current match
+				replace = replace.split(regexp).join(match[i]);
+			
+				//and replace i-th match
+				//result = 'BLABLA';
+				//var count = (result.match(/B/g) || []).length;
+				
+				console.log('try replace ', i, '-th match of ', regexp, ' to ', replace);
+				console.log('before result============', result);
+				var t=0;   
+				result =
+					result.replace(regexp,
+						function (match) {
+							t++;
+							console.log('iiiiiiiiiiiiiiiiiiiiii=============================', i, ', (t-1) = ', (t-1));
+							if(((t-1) === i)){console.log('replace ', match, 'to ', replace, 'in match = ', i);}
+							return ((t-1) === i) ? replace : match;
+						}
+					)
+				;
+				console.log('after result=============', result);
+				//alert(result);
+			}
+//			return result;
+		}
+		console.log('match', text.match(regexp));
+		console.log('search indexOf(//) == -1: now regexp = ', regexp, 'search', search);
+	}else{
+		console.log('not if........ replace: \nsearch = ', search, ', \nreplace = ', replace);
+		result = text.split(search).join(replace);
+	}
+	
+	console.log('text = \n', text, '\nsearch = ', search, '\nreplacement = ', replace, '\nresult = \n', result);
+	
+  return result;
+}
+
 function escapeTags(text) {
   return text
     .replace(/>/gim, '&gt;')
@@ -135,7 +216,15 @@ var get_link = function (value, post){
 }
 
 function detectURLs(text) {
-  var matches = text.match(/https?:\/\/[A-Za-z%&\?\-=_\.0-9\/:#]+/g);
+//  var matches = text.match(/https?:\/\/[A-Za-z%&\?\-=_\.0-9\/:#]+/g);	//old code not matching cyrillic symbols. "https://wiki.1chan.ca/Наноборда"
+
+	//New regexp
+	var matches = text.match(/(https?|ftps?|mailto|gopher|tox|irc|skype|magnet):?:\/\/(-\.)?[^\s\/?\.#<>]?[А-яЁёA-z0-9%&()@\?\!\$\'\*\+\,\;\-=_\.\/:#]+/g);
+	//cyrillic symbols in url - OK
+	//more protocols - OK
+	//dot " ", ".", "!", "?", ":", in the end of sentence not skiped. Can be "The link is http://example.org/index.html!!!" -> "http://example.org/index.html"
+	//")" not skip when "(" not found in url earlier. Can be: "https://example.com/my(text).html))))))))" -> "https://example.com/my(text).html"
+
   var you_re=new RegExp(".*youtube\.com.*")
   if (matches != null) {
     for (var i = 0; i < matches.length; i++) {

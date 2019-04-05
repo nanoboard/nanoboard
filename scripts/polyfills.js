@@ -1,6 +1,8 @@
-//Polyfills for functions, that not supporting in some browsers.
+/**
+		Polyfills for functions, that not supporting in some browsers.
+*/
 
-//polyfill for endsWith function
+//BEGIN polyfill for endsWith function
 //Source: https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith
 if (!String.prototype.endsWith) {
   Object.defineProperty(String.prototype, 'endsWith', {
@@ -15,8 +17,10 @@ if (!String.prototype.endsWith) {
     }
   });
 }
+//END polyfill for endsWith function
 
-//polifyll for array.slice()
+
+//BEGIN polifyll for array.slice()
 //Source: https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Global_Objects/Array/slice
 /**
  * Прокладка для "исправления" отсутствия поддержки в IE < 9 применения slice
@@ -82,5 +86,47 @@ if (!String.prototype.endsWith) {
     };
   }
 }());
+//END polifyll for array.slice()
+
+//Math.trunc polyfill. Ceil if negative, floor if positive + another cases.
+if (!Math.trunc) {
+	Math.trunc = function(v) {
+		v = +v;
+		return (v - v % 1)   ||   ( (!isFinite(v) || v === 0 ) ? v : ( (v < 0) ? -0 : 0 ) );
+		
+		// returns:
+		//  0        ->  0
+		// -0        -> -0
+		//  0.2      ->  0
+		// -0.2      -> -0
+		//  0.7      ->  0
+		// -0.7      -> -0
+		//  Infinity ->  Infinity
+		// -Infinity -> -Infinity
+		//  NaN      ->  NaN
+		//  null     ->  0		
+	};
+}
+
+//Array surfle (mix elements in array)
+function shuffle(arra1) {
+    var ctr = arra1.length, temp, index;
+
+// While there are elements in the array
+    while (ctr > 0) {
+// Pick a random index
+        index = Math.floor(Math.random() * ctr);
+// Decrease ctr by 1
+        ctr--;
+// And swap the last element with it
+        temp = arra1[ctr];
+        arra1[ctr] = arra1[index];
+        arra1[index] = temp;
+    }
+    return arra1;
+}
+//Usage: 
+//var myArray = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+//console.log(shuffle(myArray));
 
 //The End.

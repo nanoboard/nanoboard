@@ -68,9 +68,10 @@ namespace nboard
         private const string Config = "places.txt";
         private const string ImgPattern = "href=\"[:A-z0-9/\\-\\.]*\\.png\"";
 
-		public static bool 	only_RAM 		= 	true;
-		public static bool 	save_files 		= 	false;
-		public static int 	max_connections = 	6;
+		public static bool 	only_RAM 							= 	true;
+		public static bool 	save_files 							= 	false;
+		public static bool 	do_not_save_and_do_not_delete 		= 	false;
+		public static int 	max_connections 					= 	6;
 		
 	  
         private int _inProgress = 0;
@@ -121,13 +122,24 @@ namespace nboard
 						}else if(_params_[item] == "save_files"){
 							Console.WriteLine("ParseImage: save_files save_files = true now");
 							save_files = true;
-						}else if(_params_[item] == "delete_files"){
+						}
+						else if(_params_[item] == "do_not_save_and_do_not_delete"){
+							Console.WriteLine("ParseImage: do_not_save_and_do_not_delete, do_not_save_and_do_not_delete = true now");
+							do_not_save_and_do_not_delete = true;
+							save_files = false;
+						}
+						else if(_params_[item] == "delete_files"){
 							Console.WriteLine("ParseImage: delete_files, save_files = false now");
 							save_files = false;
 						}else if(_params_[item] == "collect_using_RAM"){
 							Console.WriteLine("ParseImage: collect_using_RAM, only_RAM = true now");
 							only_RAM = true;
-						}else{
+						}
+						else if(_params_[item].Contains("DownloadPNG: ")){
+							Console.WriteLine("DownloadPNG: ");
+							//return;
+						}
+						else{
 							max_connections = nbpack.NBPackMain.parse_number(_params_[item]);
 						}
 					}
@@ -135,7 +147,7 @@ namespace nboard
 				Console.WriteLine("only_RAM = "+only_RAM+", save_files = "+save_files+", max_connections = "+max_connections);
 
 				//delete all files in "download" folder
-				if(save_files==false){
+				if(save_files==false && do_not_save_and_do_not_delete==false){
 					if (!Directory.Exists("download"))
 					{
 						Directory.CreateDirectory("download");
@@ -276,7 +288,7 @@ namespace nboard
             {
 				string proxyUrl = "";
 				string proxy_file = File.Exists("proxy.txt")?File.ReadAllText("proxy.txt"):"";
-				proxies = proxy_file.Split('\n').Where(p => !p.StartsWith("#")).ToList();
+				proxies = proxy_file.Split('\n').Where( p => (  !p.StartsWith("#") && p!=""  ) ).ToList();
 				foreach (var proxy_URL in proxies) {
 					Console.WriteLine("Try ping proxy: "+proxy_URL);
 					if(Ping(proxy_URL)==true){
@@ -483,6 +495,82 @@ namespace nboard
             Console.WriteLine("Starting download: " + address);
             client.DownloadDataAsync(new Uri(address));
         }
+		
+        public string DownloadPNG(string[] params_)
+		{
+			string URL = "";
+			int i = 0, interval = 500, max_interval = 5000;	//milliseconds
+			for(i=0;i<params_.Length;i++){
+				if(params_[i].Contains("DownloadPNG: ")){
+					URL = params_[0].Split(new string [] {"DownloadPNG: "}, StringSplitOptions.None)[1];
+				}else if(i==1){
+					interval = nbpack.NBPackMain.parse_number(params_[1]);
+				}else if(i==2){
+					max_interval = nbpack.NBPackMain.parse_number(params_[2]);
+				}else{
+					return "invalid arguments. string format: \"DownloadPNG: URL|interval|max_interval\"";
+				}
+			}
+			var client = new WebClientX(proxy);
+            client.Headers = _headers;
+			
+			string downloaded_from_URL = "false";
+			
+            client.DownloadDataCompleted += bytes => 
+            {
+                    if (!Directory.Exists("temp")) Directory.CreateDirectory("temp");
+                    if (!Directory.Exists("download")) Directory.CreateDirectory("download");
+
+                    MemoryStream ms = null;
+					Image RAM_container = null;
+					
+					string [] temp = URL.Split('/');
+					string name = temp[temp.Length-1];
+					if(only_RAM==false){
+						File.WriteAllBytes("temp" + Path.DirectorySeparatorChar + name, bytes);
+						File.Move("temp" + Path.DirectorySeparatorChar + name, "download" + Path.DirectorySeparatorChar + name);
+						if(save_files==true){
+							Console.WriteLine("\n"+URL+"\nsaved as "+"download" + Path.DirectorySeparatorChar + name+"\n");
+						}
+                    }
+					else{
+						ms = new MemoryStream(bytes);
+						RAM_container = Image.FromStream(ms);														//image in RAM
+						if(save_files==true){
+							File.WriteAllBytes("download"+ Path.DirectorySeparatorChar + name, ms.ToArray());
+							Console.WriteLine("\n"+URL+"\nsaved as "+name+"\n");
+						}
+					}
+					GC.Collect();
+					Console.WriteLine("Downloaded: " + URL);
+					
+					string filepath = 
+							name.Replace(Path.DirectorySeparatorChar, '/')								//file pathway
+					;
+					downloaded_from_URL = 
+							"Image Downloaded from " + URL
+						+	"<br>"
+						+	"<a href=\""
+						//+	"../"
+						+	"../download/"
+						+	filepath+"\" download=\""+name.Replace("download\\", "")+"\">"
+						+		"<img src=\"../"+filepath+"\"/>"
+						+		"<br>"+name.Replace("download\\", "")
+						+	"</a>"
+					;
+				return;
+			};
+			client.DownloadDataAsync(new System.Uri(URL));
+	
+			i = 0;
+			do{
+				Thread.Sleep(interval);
+				i+=interval;
+			}
+			while( (downloaded_from_URL == "false") && (i < max_interval) );
+			
+			return downloaded_from_URL;
+		}
 
         private void ParseImage(string address)
         {

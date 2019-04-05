@@ -33,8 +33,9 @@ function available_updates(){
 
 	//pushNotification('Nanoboard client update is available: <a href=https://raw.githubusercontent.com/nanoboard/nanoboard/feature/2.0/release2.zip>[Download]</a>', 30000);
 	pushNotification(
-		'Nanoboard client update is available:'+
-		'<a href=https://github.com/username1565/nanoboard/releases/download/win32/nanodb.exe+noIPlogger+pathways_fixed.zip>[Download]</a>'
+		'Nanoboard client update is available: '+
+		//'<a href=https://github.com/username1565/nanoboard/releases/download/win32/nanodb.exe+noIPlogger+pathways_fixed.zip>[Download]</a>'
+		'<a href="https://github.com/username1565/nanoboard/releases/">[Download]</a>'
 		, 60000	//show this within 1 minute
 	);
 	//and repeat checking using short timeout "repeat_if_success", in minutes.

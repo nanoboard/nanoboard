@@ -487,28 +487,36 @@ function validate_symbols(textarea){
 		textarea.classList.remove('base64_error');;
 	}
 }
+/*
 
-function addReplyForm(id) {
-  var form = $('<div>')
-    .addClass('post').addClass('reply-div')
-    .insertAfter($('#' + id))
-    .css('margin-left', parseInt($('#' + id).css('margin-left')) + _treeOffsetPx + 'px')
-    .append($('<div>').addClass('reply')
-      .append($('<textarea oninput="check_base64(this);" onclick="check_base64(this);">').val('[g]' + new Date().toUTCString() + ', client: 3.1[/g]\n'))
-      .append($('<br>'))
-      .append($('<button>')
-        .addClass('reply-button btn btn-danger ')
-        .text('Cancel')
-        .click(function() {
-          $(this).parent().parent().remove();
-        }))
-      .append($('<button>')
-        .text('Send')
-        .addClass('reply-button btn btn-primary')
-        .click(function() {
-          var pst = Base64.encode(id + $(this).parent().find('textarea').val());
+function get_token(pst){
+	console.log('pst', pst);
+	$.post('../pow', pst)
+		.done(function(token){
+			console.log("token", token);	//every time - different tokens for the same post.
+			return token;
+		});
+}
+
+*/
+
+function generate_captcha(replyto_hash_and_post) {
+			console.log(
+				//	'id'+id
+				//+
+				' textarea val: '+$(this).parent().find('textarea').val()
+				+	'replyto_hash_and_post'+replyto_hash_and_post
+			);
+          var pst = Base64.encode(replyto_hash_and_post);
+
+					var captchaModal = $('.captcha_modal');
+					captchaModal.remove();
+                    //form.show();
+                    //$.post('../solve/' + token, Base64.encode("~~~~~"));
+					
           var waitPowModal = $('<div>');
           waitPowModal.addClass('pow_modal');
+          waitPowModal.attr('title', 'Generate unique token, for sign message, using Proof-Of-Work (POW).');
           waitPowModal.html('<b>Wait for POW</b><br/>usually less than a minute...');
           $('body').append(waitPowModal);
           var form = $(this).parent().parent();
@@ -520,7 +528,8 @@ function addReplyForm(id) {
                   waitPowModal.remove();
                   var captchaModal = $('<div>');
                   captchaModal.addClass('captcha_modal');
-                  captchaModal.append('<img class="captcha_image" src="' + dataUri + '"><br/>');
+				  //replyto_hash_and_post = id;
+                  captchaModal.append('<img class="captcha_image" src="' + dataUri + '" onclick="generate_captcha(replyto_hash_and_post);" title="Click to reload."><br/>');
                   captchaModal.append('<textarea class="captcha_answer" oninput="validate_symbols(this);" onclick="validate_symbols(this);"></textarea><br/>');
                   var captchaBtn = $('<button>');
                   captchaBtn
@@ -530,6 +539,7 @@ function addReplyForm(id) {
                       var answer = $('.captcha_answer').val();
                       $.post('../solve/' + token, Base64.encode(answer))
                         .done(function(postStr){
+							console.log('answer success. postStr = '+postStr+' JSON_parsed: '+JSON.parse(postStr));
                           form.remove();
                           mockSendPostToDb(JSON.parse(postStr));
                           captchaModal.remove();
@@ -576,7 +586,30 @@ function addReplyForm(id) {
                   $('body').append(captchaModal);
                   $('.captcha_answer').focus();
 			});
-        })
+        }
+
+function addReplyForm(id) {	// это хэш поста к которому ответ.
+  var form = $('<div>')
+    .addClass('post').addClass('reply-div')
+    .insertAfter($('#' + id))
+    .css('margin-left', parseInt($('#' + id).css('margin-left')) + _treeOffsetPx + 'px')
+    .append($('<div>').addClass('reply')
+      .append($('<textarea oninput="check_base64(this);" onclick="check_base64(this);">').val('[g]' + new Date().toUTCString() + ', client: 3.1[/g]\n'))
+      .append($('<br>'))
+      .append($('<button>')
+        .addClass('reply-button btn btn-danger ')
+        .text('Cancel')
+        .click(function() {
+          $(this).parent().parent().remove();
+        }))
+      .append($('<button>')
+        .text('Send')
+        .addClass('reply-button btn btn-primary')
+        .click(function(){
+			replyto_hash_and_post = id + $(this).parent().find('textarea').val();
+			console.log("replyto_hash_and_post", replyto_hash_and_post);
+			generate_captcha(replyto_hash_and_post);
+		})
         /*.click(function() {
           sendPostToDb({
             'replyTo': id,

@@ -251,7 +251,38 @@ namespace NDB
 		//From client 3.1
         public string[] RangePresent(int skip, int count, string only_hashes)
         {
-            return _ordered.Where(k => !_deleted.Contains(k)).Skip(skip).Take(count).ToArray();
+//			try{
+				if(only_hashes.Contains("with_bytelength")){				
+					var indexString = File.ReadAllText(_index);
+					var refs = JsonConvert.DeserializeObject<Index> (indexString).indexes;
+					List<string> hashes_bytes = new List<string>();
+				
+				
+					var hashes = _ordered.Where(k => !_deleted.Contains(k)).Skip(skip).Take(count).ToArray();
+				
+					foreach (var r in refs) 
+					{
+						if(hashes.Contains(r.hash)){
+							hashes_bytes.Add(
+								JsonConvert.SerializeObject(
+									new string[]	{
+										r.hash
+										,
+										(r.length+32).ToString()			//Just get post bytelength from JSON-file with indexes (_index)
+									}
+								)
+							);
+						}
+					}
+					return hashes_bytes.ToArray();							//return hashes with bytelength
+				}else{
+					return _ordered.Where(k => !_deleted.Contains(k)).Skip(skip).Take(count).ToArray();	//return hashes only
+				}
+//			}
+//			catch(Exception ex){
+//				Console.WriteLine(ex);
+//				return _ordered.Where(k => !_deleted.Contains(k)).Skip(skip).Take(count).ToArray();	//return something to see catch exception
+//			}
         }
         
         /*

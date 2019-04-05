@@ -11,8 +11,20 @@
 <link rel='stylesheet' type='text/css' href='../styles/nano.css'>
 
 <div class="input_params">
-<br><font color="black">Just input the pathway: <input id="pathway_for_PNG" value="upload/More-secrets-inside.png" size="75"><input type="submit" onclick="submit_pathway();">
-<br><font color="black">or select PNG container, here: <input id="select_container" type="file" style="display:inline-block;">
+<br><font color="black">Just input the pathway for container: <input id="pathway_for_PNG" value="upload/More-secrets-inside.png" size="100" />
+	<input type="submit" onclick="submit_pathway();" />
+<br><font color="black">or select PNG container, here: <input id="select_container" type="file" style="display:inline-block;" />
+<br><font color="black">or enter container URL: <input id="container_URL" size ="100" type="text" style="display:inline-block;"
+	value="https://www.google.de/images/srpr/logo11w.png"/>
+	<input type="submit" onclick="readURL_as_dataURL()" />
+	
+	<label title="Preview running the to loading an image from 'download folder' after GET-query.
+For large images, this can crush browser.
+Default value = disabled">
+		Preview, after downloading:
+		<input id="preview_after_downloading" type="checkbox" checked="false" onchange="enable_disable_preview(this.checked);"/>
+		<div id="preview" style="display: inline-block;">Disabled</div>
+	</label>
 <!--
 <br>
 Enter password: <input id="password" type="text" value="nano3">
@@ -45,6 +57,91 @@ and wait...
 
 </style>
 <script>
+var is_enabled_preview = false;	//disabled by default
+var preview_after_downloading = document.getElementById('preview_after_downloading');
+var div_preview_status = document.getElementById('preview');
+
+function enable_disable_preview(checked){
+	is_enabled_preview = checked;
+	if(checked){
+		console.log('checked');
+		div_preview_status.innerHTML = "Enabled";
+	}else{
+		console.log('not checked');
+		div_preview_status.innerHTML = "Disabled";
+	}
+}
+enable_disable_preview(preview_after_downloading.checked);
+
+function parse_PNG_by_dataURL(dataURL, filename=false, download=false){
+			console.log("file loaded. This will be saved as PNG. Also, you can convert any image to PNG, yourself, here: http://127.0.0.1:7346/pages/convert-to-PNG.html");
+            
+            //test POST-query, onchange (try to select file for loading, and see console.log).
+			
+            $.post(        '../api/run-nbpack/',
+                '-u'+'|'+                           	//unpack
+                (                        				//and dataURL with selected source image. Delimiter is '\n' between this two blocks.
+                    (dataURL!=="")        				//if dataURL not empty string
+                        ?
+                        (dataURL.indexOf("../download/")!==-1)		//if this saved to download
+							?	dataURL.replace("../", "")						//replace back to root folder from /pages/
+							:	dataURL											//else unpack dataURL
+                        :
+                        'No_dataURL_specified_for_source_image.'                //else, append string with length over 32 symbols
+                )+'|'
+                + 'nano3'				//default password
+				//+    password.value	//for other passwords
+            )
+            .done(function(replies){//in "replies" - reply on POST-query
+			
+                //console.log("reply received");		//show this.
+
+				var posts = JSON.parse(replies);		//parse posts
+				result.innerHTML += '<center><h3>'
+									+ posts.length
+									+' posts was been found in this container'
+									+' ('
+										+(
+											(download==='download')	//if download enabled - show link
+											//downloading is available in browser from download folder, after downloading.
+											//But this can be deleted.
+											//So just click to link to download.
+												? '<a href="'+dataURL+'" download="'+filename+'"'
+													+'title="This file in \'download\/\' folder and it can be deleted! Click to download file in browser.">download/'+filename
+													+(
+														(dataURL.indexOf("../download/")!=-1 && is_enabled_preview)	//if file in download-folder, and if checkbox checked
+															? 	' <img src="'+dataURL+'" style="border: 2px solid gray; width: 64px; height: 64px;"'
+																+	'title="Small preview."> '	//show preview
+															:	''								//else, just link
+													)
+													+'</a>'
+												: 'download/'+filename	//else, just text
+										)
+									+') '
+									+'</h3></center>'
+				;
+				
+				for(post_number=1;post_number<=posts.length;post_number++){
+					var current_message = escapeTags(Base64.decode(posts[post_number-1].message));
+					current_message = detect_files(current_message);			//replace files to links
+					current_message = replace_local_quotes(current_message);			//format nanopost.
+					current_message = applyFormatting(current_message);			//format nanopost.
+
+					//console.log('current_message.length', current_message.length);		//sometimes "NSERROR OUT OF MEMORY"...
+					
+					result.innerHTML += '<div class="post">'+'<font color="green"><b>Post:</b></font> №'+post_number+'; '+
+										"<b>Date (client 3.1):</b> "+posts[post_number-1].date+"; "+
+										"<b>Post hash:</b> "+posts[post_number-1].hash+"; "+
+										'<b>ReplyTo:</b> '+posts[post_number-1].replyTo+
+										//"Message:<br>"+
+										'<hr style="display:block;">'+current_message+"</div>";
+				}
+				//document.getElementById("result").innerHTML = replies;		//just append JSON-response
+            })
+            ;//end of post query
+}
+
+
 var dataURL = "";
 document.getElementById("select_container").addEventListener('change', function(evt){
 	var result = document.getElementById("result");
@@ -56,41 +153,7 @@ document.getElementById("select_container").addEventListener('change', function(
         var r = new FileReader();
         r.onload = function(e){
             dataURL = e.target.result;
-			console.log("file loaded. This will be saves as PNG. Also, you can convert any image to PNG, yourself, here: http://127.0.0.1:7346/pages/convert-to-PNG.html");
-            
-            //test POST-query, onchange (try to select file for loading, and see console.log).
-            $.post(        '../api/run-nbpack/',
-                '-u'+'|'+                            //0 posts from last posts to pack (this already inside curhlp array), and this is inside full_queue array.
-                (                        // and dataURL with selected source image. Delimiter is '\n' between this two blocks.
-                    (dataURL!=="")        //if dataURL not empty string
-                        ?
-                        dataURL    //append dataURL
-                        :
-                        'No_dataURL_specified_for_source_image.'                //else, append string with length over 32 symbols
-                )+'|'
-                + 'nano3'
-				//+    password.value	//for other passwords
-            )
-            .done(function(replies){
-                //console.log("reply received");
-				var posts = JSON.parse(replies);
-				result.innerHTML += '<center><h3>'+posts.length+' posts was been found in this container ('+f.name+')</h3></center>';
-				for(post_number=1;post_number<=posts.length;post_number++){
-					var current_message = escapeTags(Base64.decode(posts[post_number-1].message));
-					current_message = detect_files(current_message);			//replace files to links
-					current_message = replace_local_quotes(current_message);			//format nanopost.
-					current_message = applyFormatting(current_message);			//format nanopost.
-
-					result.innerHTML += '<div class="post">'+'<font color="green"><b>Post:</b></font> №'+post_number+'; '+
-										"<b>Date (client 3.1):</b> "+posts[post_number-1].date+"; "+
-										"<b>Post hash:</b> "+posts[post_number-1].hash+"; "+
-										'<b>ReplyTo:</b> '+posts[post_number-1].replyTo+
-										//"Message:<br>"+
-										'<hr style="display:block;">'+current_message+"</div>";
-				}
-				//document.getElementById("result").innerHTML = replies;		//just append JSON-response
-            })
-            ;//end of post query
+			parse_PNG_by_dataURL(dataURL, f.name);
         };
         r.readAsDataURL(f);                //read as dataURL...
     }else 
@@ -99,6 +162,29 @@ document.getElementById("select_container").addEventListener('change', function(
     }
 });
 
+
+
+function readURL_as_dataURL(){
+	//dataURL for large images is very big.
+	//So just parse containter from URL,
+	//save file in "download"-folder,
+	//and return link to download container.
+	
+	result.innerHTML = "";
+	var url = document.getElementById('container_URL').value;
+
+	$.post(        '../api/download-png/', 'DownloadPNG: '+url+'|'+100+'|'+10000)	//DownloadPNG: URL|interval|max_interval
+		.done(
+			function(replies){
+				console.log("reply received: ", replies.length);
+				//result.innerHTML = replies;
+				//dataURL = 'data:image/png;base64,'+replies.split('data:image/png;base64,')[1].split('"')[0];
+				dataURL = replies.split('href="')[1].split('"')[0];
+				var filename = replies.split('download="')[1].split('"')[0];
+				parse_PNG_by_dataURL(dataURL, filename, 'download');
+			}
+		);
+}
 
 function submit_pathway(){
 	var input = document.getElementById("pathway_for_PNG");		//element with pathway

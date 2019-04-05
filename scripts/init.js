@@ -98,7 +98,7 @@ function update_Post_count_once(){
 }
 
 function notifyAboutPostCount() {
-	console.log('update_post_count', update_post_count);
+	//console.log('update_post_count', update_post_count);
 	if(update_post_count==false){ return; }
 	
 	$.get('../api/count')
@@ -117,7 +117,7 @@ $.ajax({
 */
 	.done(function(data){
 		data = parseInt(data);
-		console.log('total posts: '+data);
+		//console.log('total posts: '+data);
 		if (data != postCount) {
 			if (postCount != 0) {
 			var countStr = (data - postCount).toString();
@@ -136,27 +136,9 @@ $.ajax({
     });
 }
 
-function notifyAboutNotifications() {
-	$.get('../notif')
-		.done(function(data){
-			//if(data.indexOf("Saved PNG to /upload/")!==-1){		//Make button clickable, after receive last notification.
-			//	$('#png-create').removeClass('disabled');
-			//	$('#png-create-text').text('Create PNG');
-			//}
-		if(data!==''){
-			pushNotification(applyFormatting(data), _post_count_notification_time);
-			setTimeout(notifyAboutNotifications, 1000);
-		}else{
-			setTimeout(notifyAboutNotifications, _post_count_notification_time);
-		}
-    })
-    .fail(function(){
-		setTimeout(notifyAboutNotifications, _post_count_notification_time);
-    });
-}
 
 var _location = '';
-
+var max_bytelength_in_container_to_resize = 140000;	//max bytelength in container to resize this.
 $(function() {
   var collectionRun = true;
   var creationRun = true;
@@ -173,8 +155,12 @@ $(function() {
 	//$.get('../api/png-collect'+'/'+encodeURIComponent("collect_using_files|save_files"))		//collect, using files, without deleting. Parameters sending with encodeURIComponent()
 	//$.post('../api/png-collect/', encodeURIComponent("collect_using_files|delete_files"))		//collect, using files, with deleting this. Post query, with encoded params.
     //$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|save_files|8"))		//test save, from RAM, max_connections = 8
-	//$.post('../api/png-collect', "collect_using_RAM|save_files|"+max_connections)							//test save, from RAM, max_connections = 8
-	$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|delete_files|"+max_connections))		//test save, from RAM, max_connections = 8
+	//$.post('../api/png-collect', "collect_using_RAM|save_files|"+max_connections)								//test save, from RAM, max_connections = 10
+	//$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|delete_files|"+max_connections))		//test save, from RAM, max_connections = 10
+	
+	//This need to try run collect from "download" folder: http://127.0.0.1:7346/download/
+	$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|do_not_save_and_do_not_delete|"+max_connections))	//test save, from RAM, without deleting and adding posts. max_connections = 10.
+	//Success!
 
 	.done(
 		function(data){				//when PNG collect finished
@@ -219,10 +205,28 @@ $(function() {
     $('#png-create').addClass("disabled");
 	$('#png-create-text').text("Wait for generate...");
 	
-    $.get('../api/png-create')	//turn back standart png-create
+//    $.get('../api/png-create')
 
-/*
-console.log('random posts from last: ', randlp.value);
+	console.log(
+		'random posts from last: ', randlp.value,
+		'random_on_client_side', random_on_client_side,
+		'list_random_posts.length', list_random_posts.length,
+		'list_random_posts', list_random_posts
+	);
+	if(random_on_client_side==true){								//if random posts was been generated on client-side.
+	
+		console.log('random_on_client_side', random_on_client_side);
+		console.log('list_random_posts', list_random_posts);
+		console.log('current_queue before modification: ', current_queue);
+		current_queue = current_queue.concat(list_random_posts);	//add items from list_random_posts -> to current_queue
+		console.log('current_queue after concat: ', current_queue);
+		
+		console.log("current_queue before mix", current_queue);
+		current_queue = shuffle(current_queue);
+		console.log("current_queue before mix", current_queue);
+	}
+	
+	
     $.post(		'../api/png-create/',
 				startlp.value+'-'+from_last_posts+'\n'+
 				(						// and dataURL with selected source image. Delimiter is '\n' between this two blocks.
@@ -232,16 +236,20 @@ console.log('random posts from last: ', randlp.value);
 						:
 						'No_dataURL_specified_for_source_image.\n'				//else, append string with length over 32 symbols
 				)
-				+
-				current_queue.join(',')+'\n'+	//send queue
-				current_queue.length+'\n'+
-				randlp.value
+				+	current_queue.join(',')+'\n'	//send queue
+				+	current_queue.length+'\n'
+				+	( (random_on_client_side===true) ? 0 : randlp.value)+'\n'
+				+	'max_bytelength='+max_bytelength_in_container_to_resize
 			)
-*/
-	    .done(function(){
-		console.log("done png-create post-query...");
-        creationRun = false;
-		current_queue = [];			//remove all packed hashes from current_queue
+      .done(function(response){
+		console.log("done png-create post-query..."+response);
+//		Create_PNG_result.innerHTML = response;									//add response to div on PNG creation tab
+//		current_queue = [];			//remove all packed hashes from current_queue
+
+		$('#png-create').removeClass('disabled');										//this can activated in notifyAboutNotifications function
+		$('#png-create-text').text('Create PNG');										//show crete button
+		pushNotification('PNG creation finished (check your "upload" folder).');
+		creationRun = false;
       })
 	  .fail(function(){creationRun = false;});
   });
@@ -266,7 +274,8 @@ function check_avails() {																		//run checking avails
 		.fail(function(){
 			$('#png-create').addClass("disabled");
 			$('#png-create-text').text("Wait for generate...");
-			setTimeout(check_avails, 100);														//update after short timeout
+			//setTimeout(check_avails, 100);														//update after short timeout
+			
 		});
 	}
 	else if (collectionRun){
@@ -288,15 +297,139 @@ function check_avails() {																		//run checking avails
 		.fail(function(){
 			$('#png-collect').addClass("disabled");												//disable button
 			$('#collect_text').text('Collection started...');
-			setTimeout(check_avails, 100);														//update after short timeout
+			//setTimeout(check_avails, 100);														//update after short timeout
+			
 		});
 	}else{
 		setTimeout(check_avails, _post_count_notification_time);
 	}
 }
+
+function check_avails_once(){
+	if(collectionRun || creationRun){
+		check_avails();
+	}
+}
 	//setInterval(check_avails, _post_count_notification_time*4);
 	check_avails();																				//run this once.
 	
+var generated_container_name = "";
+var dont_show_notif = false;
+var add_saved = false;					//add pathway for saved file without replace hashes. true if add, false if innerHTML
+var already_saved_to = "";				//this string need to save notif, when file saved, but hashes still not returned.
+
+function notifyAboutNotifications() {
+	check_avails_once();
+	$.get('../notif')
+		.done(function(data){
+			//if(data.indexOf("Saved PNG to /upload/")!==-1){		//Make button clickable, after receive last notification.
+			//	$('#png-create').removeClass('disabled');
+			//	$('#png-create-text').text('Create PNG');
+			//}
+		if(data!==''){
+//			pushNotification(applyFormatting(data), _post_count_notification_time);
+//			setTimeout(notifyAboutNotifications, 1000);
+
+			//console.log('notify data'+data, data.substring(0,21));
+			if(data.substring(0,21)=='Saved PNG to /upload/'){
+				generated_container_name = data.substring(21);
+				if(add_saved==true){									//if need add
+					if(Create_PNG_result.innerHTML.indexOf(generated_container_name)!==-1){
+						Create_PNG_result.innerHTML += data;				//just add
+					}else{
+						already_saved_to = data;
+					}
+					add_saved = false;									//and false
+				}
+				else{													//else
+					if(Create_PNG_result.innerHTML.indexOf(generated_container_name)!==-1){
+						Create_PNG_result.innerHTML = data;					//insert in html and clear previous results.
+					}else{
+						already_saved_to = data;
+					}
+				}
+				//current_queue = [];												//remove all packed hashes from current_queue
+			}else if(data.substring(0,29)=="Hashes of posts, packed into "){
+				//Create_PNG_result.innerHTML += 		'<br>'+	data.split('["')[0]
+				Create_PNG_result.innerHTML = 		'<br>'+	data.split('["')[0]
+												+	'<br><div id="packed_hashes"></div>';
+				//var packed_hashes_list_element = document.getElementById('packed_hashes');
+				
+				var packed_hashes_array = [];
+				packed_hashes_array = (data.indexOf('["')!==-1) ? JSON.parse('["' + data.split('["')[1]) : [];
+				//var JSON_packed_hashes = JSON.parse('["' + data.split('["')[1]);
+				//packed_hashes_list_element;
+				console.log("packed_hashes_array", packed_hashes_array);
+				update_hashes_of_last_post(packed_hashes_array, 'packed_hashes', packed_hashes_array.length);
+				if(already_saved_to===""){
+					add_saved = true;
+				}else{
+					Create_PNG_result.innerHTML += already_saved_to;
+					already_saved_to = "";
+				}
+
+				console.log(
+							'packed hashes displayed!',
+							'\n',	'queue = ', queue,
+							'\n',	'current_queue = ', current_queue
+				);
+
+					//dequeue all packed hashes from current queue.
+				for(i=0; i<=packed_hashes_array.length; i++){
+					queue_remove(current_queue, packed_hashes_array[i]);
+					//queue_remove(queue, packed_hashes_array[i]);
+				}
+
+				console.log(
+							'after remove packed hashes: ',
+							'\n',	'queue = ', queue,
+							'\n',	'current_queue = ', current_queue
+				);
+				
+					//update values, after massive dequeue
+				piq.innerHTML = packed_hashes_array.length;
+			
+				if(fq.value>packed_hashes_array.length){
+					fq.value = packed_hashes_array.length;
+					pfq.innerHTML = packed_hashes_array.length;
+				}
+				
+
+				update_hashes_of_last_post(current_queue, 'queue', current_queue.length); //generate list with hashes of packed posts
+				//update_hashes_of_last_post(queue, 'queue', queue.length); //generate list with hashes of packed posts
+				
+				if(fq.value>queue.length){
+					fq.value = queue.length;
+					pfq.innerHTML = queue.length;
+				}
+				
+				console.log('current_queue.length', current_queue.length);
+				console.log('queue.length', queue.length, 'fq.value', fq.value, 'pfq.innerHTML', pfq.innerHTML);
+				
+
+				change_values();	//after update queue
+
+				//current_queue = [];
+				
+//				Create_PNG_result.innerHTML += '<br>'+data;
+				dont_show_notif = true;
+			}
+
+			if(dont_show_notif === true){dont_show_notif = false;}
+			else{
+				pushNotification(applyFormatting(data), _post_count_notification_time);
+			}
+			setTimeout(notifyAboutNotifications, 100);			//short timeout if notify received.
+		}else{
+			setTimeout(notifyAboutNotifications, _post_count_notification_time);
+		}
+    })
+    .fail(function(){
+		setTimeout(notifyAboutNotifications, _post_count_notification_time);
+    });
+}
+
+
   reloadParams();
 	  
   setInterval(function() {
@@ -315,7 +448,7 @@ function check_avails() {																		//run checking avails
         _depth = 1;
         loadThread(_location.split('#category')[1]);
       } else if (incl(_location, '#last')) {
-        showLast(parseInt(_location.split('#last')[1]));
+        showLast(parseInt(_location.split('#last')[1]));	//show last N-posts
       } else {
         // do nothing intentionally
       }
@@ -327,11 +460,28 @@ function check_avails() {																		//run checking avails
   //setInterval(function(){
   //  updatePlacesBar();
   //}, 2000);
-
-
+  
+/*
   setInterval(function(){
     retranslate();				//how this working???
   }, 300000);
+*/
+
+function run_retranslate(){
+	//repeat retranslate() by Interval, if _instantRetranslation==true, else don't repeat
+	if( _instantRetranslation == true){
+		retranslate();
+		setTimeout(
+			function(){
+				run_retranslate();
+			},
+			300000
+		);
+	}else{
+		console.log("_instantRetranslation = "+_instantRetranslation+". No need to start instant retranslation. ");
+	}
+}
+run_retranslate();	//Run once.
 
 /*
   setInterval(function(){

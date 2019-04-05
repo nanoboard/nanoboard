@@ -64,6 +64,8 @@ namespace NServer
 			
 			//GET and POST parameters available. http://127.0.0.1:7346/api/getposts/POST/OnlyRAM|save_files|10 (last value - is limit for connectoins)
             _handlers["png-collect"] = PngCollect;
+			_handlers["download-png"] = DownloadPNG;
+			
 			
 			//posts from queue can be packed, using link:
 			//http://127.0.0.1:7346/api/png-create/f682830a470200d738d32c69e6c2b8a4,cd94a3d60f2f521806abebcd3dc3f549,bdd4b5fc1b3a933367bc6830fef72a35
@@ -102,6 +104,19 @@ namespace NServer
             var prev = postHash;
             var result = SearchUp(postHash, categoriesHash, prev);
             return new HttpResponse(result == null ? StatusCode.NotFound : StatusCode.Ok, result ?? "");
+        }
+
+        private HttpResponse DownloadPNG(string GET = "", string POST = "") //default queue value is null
+        {
+			string params_ = "";		//string with queue_and_image, joined with comma. Default value is null, and this string is empty.
+			if(POST==""){				//if string with second value is empty
+				params_ = GET;			//then get queue_and_image from get query
+			}else{						//else, if contens was been send, using POST-query
+				params_ = POST;			//get queue_and_image from second parameter
+			}
+			string [] p = params_.Split('|');
+			var obj_Aggregator = new Aggregator(new string [] {p[0], "collect_using_RAM", "save_files", "1" /*max_connections*/});
+            return new HttpResponse(StatusCode.Ok, obj_Aggregator.DownloadPNG(p));
         }
 
         private bool _collectAvail = true;
@@ -400,11 +415,20 @@ namespace NServer
 			NDB.Post[] posts;
 			string[] posts_hashes;
 
+			//Console.WriteLine("DbApiHandler.cs: GetPresentRange. Only hashes: "+only_hashes);
+			
 			//if second parameter with string "only_hashes" sent, using POST-query
 			//or sent, using GET-query: http://127.0.0.1:7346/api/prange/?fromto=0-50&only_hashes=only_hashes
-			if(only_hashes=="only_hashes" || fromto.IndexOf("only_hashes")!=-1){
+			if(only_hashes=="only_hashes"){
 				//then, return hashes only
 				posts_hashes = _db.RangePresent(skip, count, only_hashes);
+				return new HttpResponse(StatusCode.Ok, JsonConvert.SerializeObject(posts_hashes));
+			}else if(fromto.IndexOf("only_hashes")!=-1){
+				string value_only_hashes = "only_hashes"+fromto.Split(new string[] { "only_hashes" }, StringSplitOptions.None)[1];
+				//Console.WriteLine("value_only_hashes: "+value_only_hashes);
+				
+				//then, return hashes only
+				posts_hashes = _db.RangePresent(skip, count, value_only_hashes);
 				return new HttpResponse(StatusCode.Ok, JsonConvert.SerializeObject(posts_hashes));
 			}else{
 				//else, return array with posts...
@@ -502,11 +526,27 @@ namespace NServer
         }
 
         // returns array of posts with messages including searchString, search avoids [img=..] tag contents.
-        private HttpResponse Search(string searchString, string notUsed = null)
+        private HttpResponse Search(string searchString = null, string notUsed = null)	//notUsed contains base64 encoded searchString, when POST-query sent.
         {
-            searchString = notUsed.FromB64();
-            var found = new List<NDB.Post>();
-            const int limit = 500;
+
+			Console.WriteLine("before searchString: "+searchString+" , notUsed: "+notUsed);
+
+            if(searchString=="" && notUsed!=""){
+				searchString = notUsed;
+            }else{
+				searchString = searchString;
+			}
+			string [] splitted = searchString.Split('|');
+			searchString = splitted[0].FromB64();
+
+			Console.WriteLine("after searchString: "+searchString+" , notUsed: "+notUsed);
+
+			var found = new List<NDB.Post>();
+			
+            int limit = 500;
+			if(splitted.Length==2){
+				limit = nbpack.NBPackMain.parse_number(splitted[1]);
+			}
 
             for (int i = _db.GetPostCount() - 1; i >= 0; i--)
             {
@@ -523,11 +563,12 @@ namespace NServer
                     msg = Regex.Replace(msg, "\\[img=[A-Za-z0-9+=/]{4,}\\]", "");			//remove limit, because pictures from Karasiq nanoboard can be larger.
                 }
 
-                if (msg.Contains(searchString))
+                //if (msg.Contains(searchString))
+                if (msg.IndexOf(searchString, StringComparison.CurrentCultureIgnoreCase)!=-1)
                 {
                     found.Add(post);
 
-                    if (found.Count >= 500) break;
+                    if (found.Count >= limit) break;
                 }
             }
 

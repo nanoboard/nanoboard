@@ -134,7 +134,7 @@ Changes in "scripts/" folder:
 			First interval is long (hours) - for checking update online.
 			Second interval is short (minutes) for remind, when updates available.
 			Also in settings saved the last version as text, and last update unix timestamp.
-	
+			Change link from link to zip to link to releases page.
 	-	img2base64.js
 			add filename in bb-code '\n' before picture in post.
 	-	init.js
@@ -364,6 +364,143 @@ nanodb.exe-source - full changes:
 			Also, add exception to catch in the end.
 
 _____________________________________________________________________________________________________________________________________________
+
+Short changes:
+	Captcha reloading onclick by captcha image.
+	Parsing container by specified URL.
+	Bytes for each posts and bytes to pack.
+	Repair queue. Return hashes of packed posts, and dequeue it, after packing.
+	Now available hashes of random posts, before packing. Random posts generated on client-side, and can be customized.
+	Addinfo for custom image. This available after loading, in the independent div.
+	Add two inputs in last posts tab to specify values there.
+	Now search is registry-independent.
+	Now files in /download/ folder available in browser.
+	Add list files in /download/ folder and switch this to PNG-only, by default. Now is available the collectPNG from "download" folder.
+____________________________________________________
+Changed files:
+	pages\index.html
+	pages\Open_container.html
+	pages\version.txt
+	scripts\checkver.js
+	scripts\init.js
+	scripts\last.js
+	scripts\nanoclient.js
+	scripts\params.js
+	scripts\polyfills.js
+	scripts\post.js
+	scripts\reply.js
+	scripts\search.js
+	nanodb.exe-source\Database\PostDb.cs
+	nanodb.exe-source\PngTransport\Aggregator.cs
+	nanodb.exe-source\PngTransport\NBPack.cs
+	nanodb.exe-source\Server\DbApiHandler.cs
+	nanodb.exe-source\Server\FileHandler.cs
+	nanodb.exe-source\Server\HttpServerBuilder.cs
+	nanodb.exe-source\Server\MimeType.cs
+____________________________________________________
+Full changes:
+/pages
+	version.txt				- regenerated after recompilation
+	Open_container.html
+		Added parsing container, by URL.
+		Added checkbox to enable/disable preview of loaded image, after downloading by URL.
+		Added function to parse image by URL.
+	index.html
+		Hide "CreatePNG"-tab onclick by last posts item.
+		Add imageInfo for selected custom image. There you can see info, after loading, included "bytes to pack".
+		Add bytes for total and bytes for each post (independent JSON object "var fullhl_bytes = {};").
+		Add info about hashes of random last posts. Now rancom posts can be generated on client-side.
+		Add two input field on last posts tab to specify start index and count of displayed posts.
+		Add variable to save replyTo_Hash+post, when captcha reloading.
+		Add variables to working with this all.
+		Add function to generate random posts.
+		request hashes of all posts with bytelength in GET-query.
+
+
+/scripts
+	checkver.js				- add whitespace.
+	init.js
+		comment console.log()
+		move notifyAboutNotifications() in the end.
+		add max_bytelength_in_container_to_resize
+		add option to collect without saving, but without deleting previous files.
+		turn back POST-query for packing with queue, and comment previous GET-query, without queue.
+		if random_on_client_side - shuffle array with random posts.
+		Unlock button, after createPNG many times.
+		Add function check_avails_once
+		Add modified notifyAboutNotifications function in the then.
+		Add comment.
+		comment interval for retranslate.
+		Add function run_retranslate
+	last.js
+		working with values in inputs, on show last posts tab.
+	nanoclient.js
+		just add '/n', after queue
+	params.js
+		change default values to the values specified in variables, in beginning. This will be setted if config-3.json not hava this value. Of from this.
+	polyfills.js
+		Change comments
+		add polyfill for Math.trunc() function.
+	post.js
+		Add another function replaceAll_search() to replase highlithting in text.
+		Change regexp in function detectURLs(text) to match URLs with cyrillic symbols.
+	search.js
+		Add code $.get('../api/search/'+search) to test first parameter in the Search method in DbApiHandler (commented). Test passed.
+		Add $.post('../api/search', search+'|'+post_count_limit_for_searching)
+		Repair replace URLs when search.
+		Now search is registry independent.
+	reply.js
+			Add reload captcha onlick.
+	2reply.js
+	working_reply.js
+		dump of reply.js.
+
+/nanodb.exe-source	- рассмотреть подробно.
+/bin		changed, after compilation
+/Database
+	PostDb.cs
+		Return bytes in method RangePresent, when only_hashes=with_bytelength
+/PngTransport
+	Aggregator.cs
+		Add do_not_save_and_do_not_delete variable to don't save files, but don't delete previous. (This need to collect from "download" folder).
+		Skip empty strings in proxy.txt
+		Add method DownloadPNG to download PNG only by specified link, and download, using proxy (if specified).
+	NBPack.cs
+		In PNG Create method, max_bytelength value for PNG list - not hardcoded now and can be sent as parameter of POST-query.
+		Rewrite Create PNG method. See changes there.
+		Add shuffle for result list to pack posts randomly - for more anonymize PNG creator.
+		Return hashes of packed posts.
+		Send one notif for extracted post while collect PNG progress...
+Server\
+	DbApiHandler.cs
+		Add new API command: (/api/download-png, url) to download single PNG container, by specified URL.
+		Add method DownloadPNG.
+		Rewrite Search method to add registry-independent searching.
+		Change
+				//if (msg.Contains(searchString))
+        to
+				if (msg.IndexOf(searchString, StringComparison.CurrentCultureIgnoreCase)!=-1)
+			Now searching is registry-independent.
+		Unlock hardcoded post count limit. Now this can be specified as parameter in POST-query.
+			See search.js: $.post('../api/search', search+'|'+post_count_limit_for_searching).
+			Value of post_count_limit_for_searching defined earlier there.
+
+	HttpServerBuilder.cs
+		Add "download" folder as handler for local HTTP-server.
+		Now is possible to open files http://127.0.0.1:7376/download/image.PNG
+		This need to preview and download container in browser, which was been parsed by specified URL.
+
+	FileHandler.cs
+		Add dictionary with mime-types
+				private static IDictionary<string, string> _mappings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase) { //get mime type by file extension
+		This need to return correct mime-type of file in "download" folder.
+		Add filelist there and switch this to PNG-only, by default.
+			Now is possible to make collectPNG from http://127.0.0.1:7376/download/
+			
+	MimeType.cs
+		Add specified string for "dynamic" mime type. This means mime-type select by file extension in "download folder".
+____________________________________________________
+
 
 Code commented. See source code.
 

@@ -24,6 +24,7 @@ function isBase64(str) {//return true, or false
 
 //add hash to queue-array and remove this, using javascript.
 var queue = [];								//empty queue array...
+
 //add hash to queue array
 function queue_add(arr, hash) {
     arr.push(hash);							//push hash to array

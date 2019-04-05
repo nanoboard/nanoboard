@@ -49,11 +49,38 @@ function loadRootThreadHash(hash,pp,cb) {
 */
 }
 
-function showLast(N){
+function showLast(N, from_index=false){
     $.get('../api/pcount')
       .done(function(cnt){
-        cnt = parseInt(cnt);
-        $.get('../api/prange/'+Math.max(cnt-N,0)+'-'+N)
+        if(from_index===false){
+			cnt = parseInt(cnt);
+			total_posts.innerHTML = cnt;
+
+			var si_div = start_index_last_posts_div;	//get hidden div element
+			si_div.style.display = "block";				//show div with input element
+			var lsi = lastli_start_index;				//get input element with for start_index
+			from_index = lsi.value = Math.max(cnt-N,0);	//set value of start index
+			lsi.min = 0;								//only positive numbers.
+			lsi.max = cnt;								//up to post count
+			showN.max = cnt;							//no more than post count...
+			showN.value = (N>cnt) ? cnt : N;			//Set value, if selected 500 or 200 posts, when total post count lesser this values.
+			
+		}else{
+			from_index = Math.max(from_index,0);						//if from_index is negative number this will be 0
+			showN.value = (N>(cnt-from_index)) ? (cnt-from_index) : N;	//Set value			
+		}
+		
+/*
+		console.log(
+					"function showLast: "
+		,	'\n',	"from_index", from_index
+		//,	'\n',	"si_div.style.display", si_div.style.display
+		//,	'\n',	"lsi", lsi
+		//,	'\n',	"lsi.value", lsi.value
+		);
+*/
+
+        $.get('../api/prange/'+from_index+'-'+N)					//start_index = cnt-N || 0 - not negative.
           .done(function(arr){
             active_tab("lastli")
             arr = JSON.parse(arr);

@@ -134,7 +134,6 @@ Changes in "scripts/" folder:
 			First interval is long (hours) - for checking update online.
 			Second interval is short (minutes) for remind, when updates available.
 			Also in settings saved the last version as text, and last update unix timestamp.
-			Change link from link to zip to link to releases page.
 	-	img2base64.js
 			add filename in bb-code '\n' before picture in post.
 	-	init.js
@@ -418,7 +417,10 @@ Full changes:
 
 
 /scripts
-	checkver.js				- add whitespace.
+	checkver.js
+		add whitespace.
+		Change link from link to zip to link to releases page.
+	
 	init.js
 		comment console.log()
 		move notifyAboutNotifications() in the end.

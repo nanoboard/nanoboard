@@ -8,10 +8,10 @@ var _showDeleted = 'true';
 var _showTimestamps = 'true';
 var _treeOffsetPx = 10;
 var _detectURLs = 'true';
-var _checkVersion = 'true';
+var _checkVersion = 'false';							//temporary "false"
 var _instantRetranslation = 'false';					//May working with BitMessage. Default = true, but for me - false.
 var _post_delete_timeout = 3000;
-var _post_count_notification_time = 600;
+var _post_count_notification_time = 2400;				//was been 600 but 2400 for me
 //var _post_count_notification_time = 16000;
 //var _post_count_notification_time = 24000;
 var _deletedOpacity = 0.33;
@@ -101,19 +101,19 @@ word4\n\
     return regarr;
 }
 function reloadParams() {
-  tryGetParam('show_deleted', 					_showDeleted, 							function(v){ _showDeleted = v; });
-  tryGetParam('show_timestamps', 				_showTimestamps, 						function(v){ _showTimestamps = v; });
-  tryGetParam('check_version_update', 			_checkVersion, 							function(v){ _checkVersion = v; });
-  tryGetParam('instant_retranslation', 			_instantRetranslation, 					function(v){ _instantRetranslation = v; });
-  tryGetParam('detect_URLs', 					_detectURLs, 							function(v){ _detectURLs = v; });
-  tryGetParam('post_offset_in_tree_px', 		_treeOffsetPx.toString(), 				function(v){ _treeOffsetPx = parseInt(v); });
-  tryGetParam('post_delete_timeout', 			_post_delete_timeout.toString(), 		function(v){ _post_delete_timeout = parseInt(v); });
-  tryGetParam('post_count_notification_time', 	_post_count_notification_time.toString, function(v){ _post_count_notification_time = parseInt(v); });
-  tryGetParam('spam_filter', 					_spam_filter.join('\n'), 				function(v){ _spam_filter = parseRegExps(v); });
-  tryGetParam('use_spam_filter', 				_use_spam_filter, 						function(v){ _use_spam_filter = v; });
-  tryGetParam('check_updates_every_hours', 		check_updates_every_hours, 				function(v){ check_updates_every_hours = v; });
-  tryGetParam('remind_if_updates_exists', 		remind_if_updates_exists, 				function(v){ remind_if_updates_exists = v; });  
-  tryGetParam('last_update', 					currentUnixTime, 						function(v){ last_update = v; });
+  tryGetParam('show_deleted', 					_showDeleted, 								function(v){ _showDeleted = v; });
+  tryGetParam('show_timestamps', 				_showTimestamps, 							function(v){ _showTimestamps = v; });
+  tryGetParam('check_version_update', 			_checkVersion, 								function(v){ _checkVersion = v; });
+  tryGetParam('instant_retranslation', 			_instantRetranslation, 						function(v){ _instantRetranslation = v; });
+  tryGetParam('detect_URLs', 					_detectURLs, 								function(v){ _detectURLs = v; });
+  tryGetParam('post_offset_in_tree_px', 		_treeOffsetPx.toString(), 					function(v){ _treeOffsetPx = parseInt(v); });
+  tryGetParam('post_delete_timeout', 			_post_delete_timeout.toString(), 			function(v){ _post_delete_timeout = parseInt(v); });
+  tryGetParam('post_count_notification_time', 	_post_count_notification_time.toString(), 	function(v){ _post_count_notification_time = parseInt(v); });
+  tryGetParam('spam_filter', 					_spam_filter.join('\n'), 					function(v){ _spam_filter = parseRegExps(v); });
+  tryGetParam('use_spam_filter', 				_use_spam_filter, 							function(v){ _use_spam_filter = v; });
+  tryGetParam('check_updates_every_hours', 		check_updates_every_hours, 					function(v){ check_updates_every_hours = v; });
+  tryGetParam('remind_if_updates_exists', 		remind_if_updates_exists, 					function(v){ remind_if_updates_exists = v; });  
+  tryGetParam('last_update', 					currentUnixTime, 							function(v){ last_update = v; });
   tryGetParam('last_another_repo_version', 		last_another_repo_version,
 	function(v){
 		last_another_repo_version = v;

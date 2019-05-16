@@ -500,9 +500,14 @@ namespace nboard
 		{
 			string URL = "";
 			int i = 0, interval = 500, max_interval = 5000;	//milliseconds
+			bool downloadFile = false;
+			
 			for(i=0;i<params_.Length;i++){
 				if(params_[i].Contains("DownloadPNG: ")){
 					URL = params_[0].Split(new string [] {"DownloadPNG: "}, StringSplitOptions.None)[1];
+				}else if(params_[i].Contains("DownloadFile: ")){
+					URL = params_[0].Split(new string [] {"DownloadFile: "}, StringSplitOptions.None)[1];
+					downloadFile = true;
 				}else if(i==1){
 					interval = nbpack.NBPackMain.parse_number(params_[1]);
 				}else if(i==2){
@@ -515,61 +520,84 @@ namespace nboard
             client.Headers = _headers;
 			
 			string downloaded_from_URL = "false";
-			
-            client.DownloadDataCompleted += bytes => 
-            {
-                    if (!Directory.Exists("temp")) Directory.CreateDirectory("temp");
-                    if (!Directory.Exists("download")) Directory.CreateDirectory("download");
 
-                    MemoryStream ms = null;
-					Image RAM_container = null;
-					
-					string [] temp = URL.Split('/');
-					string name = temp[temp.Length-1];
-					if(only_RAM==false){
-						File.WriteAllBytes("temp" + Path.DirectorySeparatorChar + name, bytes);
-						File.Move("temp" + Path.DirectorySeparatorChar + name, "download" + Path.DirectorySeparatorChar + name);
-						if(save_files==true){
-							Console.WriteLine("\n"+URL+"\nsaved as "+"download" + Path.DirectorySeparatorChar + name+"\n");
-						}
-                    }
-					else{
-						ms = new MemoryStream(bytes);
-						RAM_container = Image.FromStream(ms);														//image in RAM
-						if(save_files==true){
-							File.WriteAllBytes("download"+ Path.DirectorySeparatorChar + name, ms.ToArray());
-							Console.WriteLine("\n"+URL+"\nsaved as "+name+"\n");
-						}
-					}
-					GC.Collect();
-					Console.WriteLine("Downloaded: " + URL);
-					
-					string filepath = 
-							name.Replace(Path.DirectorySeparatorChar, '/')								//file pathway
-					;
-					downloaded_from_URL = 
-							"Image Downloaded from " + URL
-						+	"<br>"
-						+	"<a href=\""
-						//+	"../"
-						+	"../download/"
-						+	filepath+"\" download=\""+name.Replace("download\\", "")+"\">"
-						+		"<img src=\"../"+filepath+"\"/>"
-						+		"<br>"+name.Replace("download\\", "")
-						+	"</a>"
-					;
-				return;
-			};
-			client.DownloadDataAsync(new System.Uri(URL));
-	
-			i = 0;
-			do{
-				Thread.Sleep(interval);
-				i+=interval;
+			if (!Directory.Exists("temp")) Directory.CreateDirectory("temp");
+			if (!Directory.Exists("download")) Directory.CreateDirectory("download");
+		
+			if(downloadFile==true)
+			{
+/*
+				string remoteUri = URL;
+				string fileName = "ms-banner.gif", myStringWebResource = null;
+				// Create a new WebClient instance.
+				WebClient myWebClient = new WebClient();
+				// Concatenate the domain with the Web resource filename.
+*/
+				string [] splitURL = URL.Split('/');
+				string fileName = "download" + Path.DirectorySeparatorChar + splitURL[splitURL.Length-1], myStringWebResource = null;
+				myStringWebResource = URL;
+				Console.WriteLine("Downloading File \"{0}\" from \"{1}\" .......\n\n", fileName, myStringWebResource);
+				// Download the Web resource and save it into the current filesystem folder.
+				client.DownloadFile(new Uri(myStringWebResource),fileName);		
+				Console.WriteLine("Successfully Downloaded File \"{0}\" from \"{1}\"", fileName, myStringWebResource);
+				string response = "\nDownloaded file saved in the following file system folder:\n\t" + fileName;
+				Console.WriteLine(response);
+				downloadFile = false;
+				return response;
 			}
-			while( (downloaded_from_URL == "false") && (i < max_interval) );
+			else{
+				client.DownloadDataCompleted += bytes => 
+				{
+						MemoryStream ms = null;
+						Image RAM_container = null;
+					
+						string [] temp = URL.Split('/');
+						string name = temp[temp.Length-1];
+						if(only_RAM==false){
+							File.WriteAllBytes("temp" + Path.DirectorySeparatorChar + name, bytes);
+							File.Move("temp" + Path.DirectorySeparatorChar + name, "download" + Path.DirectorySeparatorChar + name);
+							if(save_files==true){
+								Console.WriteLine("\n"+URL+"\nsaved as "+"download" + Path.DirectorySeparatorChar + name+"\n");
+							}
+						}
+						else{
+							ms = new MemoryStream(bytes);
+							RAM_container = Image.FromStream(ms);														//image in RAM
+							if(save_files==true){
+								File.WriteAllBytes("download"+ Path.DirectorySeparatorChar + name, ms.ToArray());
+								Console.WriteLine("\n"+URL+"\nsaved as "+name+"\n");
+							}
+						}
+						GC.Collect();
+						Console.WriteLine("Downloaded: " + URL);
+					
+						string filepath = 
+								name.Replace(Path.DirectorySeparatorChar, '/')								//file pathway
+						;
+						downloaded_from_URL = 
+								"Image Downloaded from " + URL
+							+	"<br>"
+							+	"<a href=\""
+							//+	"../"
+							+	"../download/"
+							+	filepath+"\" download=\""+name.Replace("download\\", "")+"\">"
+							+		"<img src=\"../"+filepath+"\"/>"
+							+		"<br>"+name.Replace("download\\", "")
+							+	"</a>"
+						;
+					return;
+				};
+				client.DownloadDataAsync(new System.Uri(URL));
+	
+				i = 0;
+				do{
+					Thread.Sleep(interval);
+					i+=interval;
+				}
+				while( (downloaded_from_URL == "false") && (i < max_interval) );
 			
-			return downloaded_from_URL;
+				return downloaded_from_URL;
+			}
 		}
 
         private void ParseImage(string address)

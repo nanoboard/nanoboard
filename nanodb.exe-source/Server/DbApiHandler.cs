@@ -35,6 +35,8 @@ namespace NServer
             _handlers["getlastn"] = GetLastNPosts;	//from client 3.1	//get last n posts in thread, or last 3 threads in category, to show this.
             _handlers["delete"] = DeletePost;
             _handlers["add"] = AddPost;
+			_handlers["download-posts"] = Download_Posts;		//download posts by url, from another nanodb server.
+			_handlers["upload-posts"] = Upload_Posts; 			//upload posts to another nanodb server, like Bitmessage-retranslation.
             _handlers["addmany"] = AddPosts;
             _handlers["readd"] = ReAddPost;
             _handlers["replies"] = GetReplies;
@@ -405,7 +407,11 @@ namespace NServer
         // example: prange/90-10 - gets not deleted posts from 91 to 100 (skip 90, take 10)
         private HttpResponse GetPresentRange(string fromto, string only_hashes = null)
 		{
-            var spl = fromto.Split('-');
+			//Console.WriteLine("fromto {0}, only_hashes {1}", fromto, only_hashes); 
+            if(fromto==""){		//if POST-query
+				fromto = only_hashes;	//try to get fromto from second parameter.
+			}
+			var spl = fromto.Split('-');
             //int skip = int.Parse(spl[0]);
             //int count = int.Parse(spl[1]);					//<--- THIS OLD CODE INCORRECT FOR MY "Microsoft.NET\Framework\v4.0.30319\MSBuild.exe"
 				//replace this, using previous function
@@ -529,7 +535,7 @@ namespace NServer
         private HttpResponse Search(string searchString = null, string notUsed = null)	//notUsed contains base64 encoded searchString, when POST-query sent.
         {
 
-			Console.WriteLine("before searchString: "+searchString+" , notUsed: "+notUsed);
+			//Console.WriteLine("before searchString: "+searchString+" , notUsed: "+notUsed);
 
             if(searchString=="" && notUsed!=""){
 				searchString = notUsed;
@@ -539,7 +545,7 @@ namespace NServer
 			string [] splitted = searchString.Split('|');
 			searchString = splitted[0].FromB64();
 
-			Console.WriteLine("after searchString: "+searchString+" , notUsed: "+notUsed);
+			//Console.WriteLine("after searchString: "+searchString+" , notUsed: "+notUsed);
 
 			var found = new List<NDB.Post>();
 			
@@ -609,6 +615,46 @@ namespace NServer
             }
 
             return new HttpResponse(StatusCode.Ok, JsonConvert.SerializeObject(post));
+        }
+
+		//Download posts from another nanodb api, by URL for fast syncronization.
+        private HttpResponse Download_Posts(string GET = null, string POST = null)						//GET-query or POST query
+        {
+			string url = null;		//string with hashes, joined with comma. Default value is null, and this string is empty.
+			
+			if(POST==""){									//if string with second value is empty
+				url = Uri.UnescapeDataString(GET);			//then get hashes from get query
+			}else{											//else, if contens was been send, using POST-query
+				url = Uri.UnescapeDataString(POST);			//get hashes from second parameter
+			}
+			
+			//Console.WriteLine("url {0}", url);
+			
+            var status = _db.DownloadPosts(url); //download posts by URL
+			
+            if (!status)
+            {
+                return new ErrorHandler(StatusCode.BadRequest, "Can't download posts from url.").Handle(null);
+            }
+            return new HttpResponse(StatusCode.Ok, "Posts downloaded without any proxy: "+JsonConvert.SerializeObject(status));
+        }
+
+		//accept posts in JSON from anywhere, and add this to DataBase, after validation.
+        private HttpResponse Upload_Posts(string GET = null, string POST = null) //GET-query or POST query
+        {
+			//for GET-query, need to use encodeURIComponent (Warning! There is limited data-size!)
+			//for POST-query can be sent clear JSON.
+			string JSON = null;		//string with hashes, joined with comma. Default value is null, and this string is empty.
+			if(POST==""){									//if string with second value is empty
+				JSON = Uri.UnescapeDataString(GET);			//then get hashes from get query
+			}else{											//else, if contens was been send, using POST-query
+				JSON = Uri.UnescapeDataString(POST);			//get hashes from second parameter
+			}
+			var status = _db.UploadPosts(JSON); //download posts by URL
+			if (status<=0){
+                return new ErrorHandler(StatusCode.BadRequest, "Can't download posts from url.").Handle(null);
+            }
+            return new HttpResponse(StatusCode.Ok, JsonConvert.SerializeObject(status)+" posts was been accepted.");
         }
 
         private HttpResponse AddPosts(string none, string content)

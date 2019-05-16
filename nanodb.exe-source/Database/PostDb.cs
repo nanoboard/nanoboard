@@ -569,6 +569,95 @@ namespace NDB
             var json = JsonConvert.SerializeObject(index, Formatting.None);
             File.WriteAllText(_index, json);
         }
+		
+		public static bool IsMD5(string input)	//validate hash string.
+		{
+			if (String.IsNullOrEmpty(input))
+			{
+				return false;
+			}
+
+			return System.Text.RegularExpressions.Regex.IsMatch(input, "^[0-9a-fA-F]{32}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+		}
+
+		//download post by URL, using API
+		public bool DownloadPosts(string url){ //URL is the string "http://127.0.0.1:7346/api/" or "http://mydomain.onion:8080/api/"
+		
+			//Console.WriteLine("DownloadPosts: url {0}", url);
+			
+			int max_posts = 40;	//maximum size of HTML page is 2.5 MB = 2621440 bytes / 65535 bytes/post ~ 40 posts
+
+			//get post count, by url
+			var request = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url+"count"); //		api/count
+
+			int posts_count;
+			using (var response = (System.Net.HttpWebResponse)request.GetResponse())
+			{
+				var encoding = Encoding.GetEncoding(response.CharacterSet);
+				using (var responseStream = response.GetResponseStream())
+				using (var reader = new StreamReader(responseStream, encoding))
+				posts_count = nbpack.NBPackMain.parse_number(reader.ReadToEnd());
+			}
+			//Console.WriteLine("posts_count {0}", posts_count);
+			
+			//loading the posts by parts of max_posts
+			for (var i = 0; (i*max_posts)<posts_count; i++){
+					
+					Console.WriteLine("Part: {0}", i);
+					Console.WriteLine(url+"prange/"+(i*max_posts)+"-"+max_posts+"&only_hashes");
+
+				//Loading posts
+					var posts_array = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url+"prange/"+(i*max_posts)+"-"+max_posts);
+
+					string posts;	//define JSON-string
+					using (var response = (System.Net.HttpWebResponse)posts_array.GetResponse())
+					{
+						var encoding = Encoding.GetEncoding(response.CharacterSet);
+						using (var responseStream = response.GetResponseStream())
+						using (var reader = new StreamReader(responseStream, encoding))
+						posts = reader.ReadToEnd();	//write JSON to string
+					}
+					//Console.WriteLine( "result: {0}", posts);
+					List<Post> data = JsonConvert.DeserializeObject<List<Post>>(posts);	//JSON string to list of Posts
+					//Console.WriteLine( "data.Count {0}", data.Count);					//show Length of list with Posts
+					
+					for(var post = 0; post<data.Count; post++){	//for each post in list
+						//try to add this post
+						Console.WriteLine(
+							"Post hash: {0}, "+
+							"md5? {1}, "+
+							"added: {2} ",
+							data[post].hash,
+							IsMD5(data[post].hash),
+							PutPost(data[post], false, false)	//do not allow reput and make full validation
+							//ReputPost(data[post])	//do not allow reput and make full validation
+						);
+					}
+					Console.WriteLine("\n");	//show empty line after end of each part.
+				//End loading posts.
+			}
+			
+			Console.WriteLine("End downloading posts.");
+			return true;
+		}
+		
+		//uploading posts
+		public int UploadPosts(string JSON){ //posts in JSON, like response of http://127.0.0.1:7346/api/prange/0-10
+			List<Post> data = JsonConvert.DeserializeObject<List<Post>>(JSON);	//JSON string to list of Posts
+			for(var post = 0; post<data.Count; post++){	//for each post in list
+				//try to add this post
+				Console.WriteLine(
+					"Post hash: {0}, "+
+					"md5? {1}, "+
+					"added: {2} ",
+					data[post].hash,
+					IsMD5(data[post].hash),
+					PutPost(data[post], false, false)	//do not allow reput and make full validation
+				);
+			}
+			Console.WriteLine("\n");
+			return data.Count;
+		}
         #endregion
     }
 }

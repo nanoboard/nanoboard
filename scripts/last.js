@@ -49,7 +49,8 @@ function loadRootThreadHash(hash,pp,cb) {
 */
 }
 
-function showLast(N, from_index=false){
+function showLast(N, from_index){
+	var from_index = (typeof from_findex === 'undefined') ? false : from_findex;
     $.get('../api/pcount')
       .done(function(cnt){
         if(from_index===false){
@@ -59,15 +60,23 @@ function showLast(N, from_index=false){
 			var si_div = start_index_last_posts_div;	//get hidden div element
 			si_div.style.display = "block";				//show div with input element
 			var lsi = lastli_start_index;				//get input element with for start_index
-			from_index = lsi.value = Math.max(cnt-N,0);	//set value of start index
+
+			from_index =
+			lsi.value = 
+						( (cnt-N) < lsi.value )
+							? Math.max(cnt-N,0)			//set value of start index
+							: lsi.value					//or previous value
+			;
+
 			lsi.min = 0;								//only positive numbers.
 			lsi.max = cnt;								//up to post count
 			showN.max = cnt;							//no more than post count...
 			showN.value = (N>cnt) ? cnt : N;			//Set value, if selected 500 or 200 posts, when total post count lesser this values.
 			
 		}else{
-			from_index = Math.max(from_index,0);						//if from_index is negative number this will be 0
-			showN.value = (N>(cnt-from_index)) ? (cnt-from_index) : N;	//Set value			
+			from_index = Math.max(from_index,0);								//if from_index is negative number this will be 0
+			//showN.value = (N>(cnt-from_index)) ? (cnt-from_index) : N;		//Set value			
+			showN.value = (N>(cnt-from_index)) ? (cnt-from_index) : from_index;	//Set value			
 		}
 		
 /*

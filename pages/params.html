@@ -22,15 +22,20 @@ p {
   margin-left: 50px;
 }
 .checkbox {
+/*
   margin-left: 50px;
+*/
   width: 20px;
   height: 20px;
   outline: 0;
+/*
   margin: 5px;
   position: absolute;
   left: 300px;
   padding-left: 4px;
   display:inline;
+*/
+  left: 10px;
 }
 textarea {
   font-style: normal;
@@ -54,6 +59,58 @@ body {
   font-style: italic;
   line-height: 180%;
 }
+
+
+table {
+	margin-left: 50px;
+    border-collapse: collapse;
+	
+/*
+	background-color: #ffffee;
+*/
+	background-color: important;
+    
+	border: 2px solid #a55;
+}
+tr {
+	border: 2px solid #a55;
+}
+td {
+    position: relative;
+    min-width: 100px;
+    min-height: 5px;
+	border: 1px dotted #a55;
+	
+/*
+	color: #FFFFFF;
+*/
+
+}
+
+textarea {
+    display: block;
+    border: 1px solid #aaa;
+/*
+
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+*/
+    height: 100%;
+/*
+	resize: vertical;
+*/
+
+    min-width: 100px;
+/*
+    min-height: 50px;
+*/
+
+}
+
 </style>
 <script>
 var spam_filter_help_text = '#  Keywords for spam-filter\n// Each word per line:\n';
@@ -128,22 +185,35 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
   function showParams() {
     $.get('../api/params')
       .done(function(arr){
+		
+		//var table = $('<table>');
+        //table.appendTo($('body'));
+		var table = $('#params');
+		
         arr = JSON.parse(arr);
         for (var i = 0; i < arr.length; i++) {
           var param = arr[i];
           if (param == '') continue;
-          var parcont = $('<div>').addClass('parname');
-          parcont.appendTo($('body'));
+          var parcont = $('<tr>');
+//          var parcont = $('<div>').addClass('parname');
+          parcont.appendTo(table);
+//          parcont.appendTo($('body'));
           var x = function(cont,par) {
             $.get('../api/paramget/' + par)
               .done(function(val) {
-                cont.text(beautifyParamName(par) + ((par=='remind_if_updates_exists') ? ' (minutes)' : '') + ':');
+                cont.html(
+					'<td class="parname" align="right" valign="center">&nbsp;'+beautifyParamName(par) + ((par=='remind_if_updates_exists') ? ' (minutes)' : '') + ':'
+					+ '&nbsp;</td>'
+				);
 				if (val == 'true' || val == 'false') {
+					var td = $('<td>');
+					td.appendTo(cont);
                   $('<input>')
                     .addClass('checkbox')
                     .attr('type', 'checkbox')
                     .attr('checked', val == 'true')
-                    .appendTo(cont)
+//                    .appendTo(cont)
+                    .appendTo(td)
                     .change(function(){
                       var elem = $(this);
                       var new_val = elem.is(":checked").toString();
@@ -154,132 +224,157 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
                         });
                     });
                 } else {
-				if(par=="last_update"){
-					cont.html(cont.html() + ' <a href="javascript:void(0)" onclick="checkVersion(true);">Check updates online, now!</a>');
-				}else if(par=='captcha_url'){
-					cont.html(cont.html() + ' <a href="'+val+'">Download captcha, now!</a>');
-				}
-				cont.append('<br/>');
 
-				var title = '';	//define variable for title tooltip
-				var readonly = false;
-				var height = 0;
-				var width = 0;
-				switch(par) {	//set title tooltips for different textareas
-					case 'ip': title = 'IP address to bind...'; break;
-					case 'password': title = 'Your password...'; break;
-					case 'port': title = 'PORT to listen...'; break;
-					case 'places':
-						title = "# put URLs here, one per line. Use \'#\' to comment the line.\n"+
-								'http(s)://imageboard.com:443/thread/number.php?ports=50&sort=date\n'+
-								"http://my_server.local/pngLinks.html\n"+
-								"#etc...";
-						height = 250;	//px
-						width = 1000;
-						break;
-					case 'skins':
-						title = 'Available skins...\n["dark","futaba","photon"]';
-						val = val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]');
-						break;
-					case 'skin': title = 'Current skin...'; break;
-					case 'post_delete_timeout': title = 'Timeout to delete post...'; break;
-					case 'post_count_notification_time':
-						title = 'Hide notification, after [x] milliseconds...\n'+
-								'Also, try to change the parameter "var _post_count_notification_time" in scripts/params.js';
-						break;
-					case 'post_offset_in_tree_px': title = 'Offset for post in the tree...'; break;
-					case 'spam_filter':
-						title = 'Keywords of spam-list... Format:\nWORD1\nword2\\n\n//Word3\\n//(disabled)\n//disabled_wORd\n\\n\\n\nWoRd5...\n(delimiter is \'\\n\')';
-						//console.log("spam_filter - show. val = ", val,	"val=='[\"\"]'", (val=='[""]'));
-						//console.log('val', val, 'help_text: '+val.substring(0, spam_filter_help_text.length));
-						val = (val=='' || val=='[""]') ? '' : JSON.parse(val.replace(/\\/g, '\\\\')).join('\n');	//if serialized JSON in config-3.json, not serialized string.
-						height = ( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
-						//console.log( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
-						//console.log('after replace, val: '+val);
-						break;
-					case 'captcha_pack_file':
-						title = 	'captcha file: captcha.nbc\n\n'
-								+	'Multihasher hashes:\n'
-								+	'CRC32: E5408891\n'
-								+	'MD5: 7E93FE7DB9BC3D70A84F34B4E4FA6257\n'
-								+	'RIPEMD-160: 2A6E1B283B48D9B05649346E1B72ACDA52E874E8\n'
-								+	'SHA-1: 3B81C46C03157FE55BD8F430FEEC9A8BF010C816\n'
-								+	'SHA-256: 0732888283037E2B17FFF361EAB73BEC26F7D2505CDB98C83C80EC14B9680413\n'
-								+	'SHA-384: B23C27C96C1D57DF8168C1E0406DB61B1A79F006997F164D33D2D70F6E4CAE674056885BB980F6E5804AAE03DAD76037\n'
-								+	'SHA-512: FCDF1161543174E4713D791C1FD18F6A64972EC91E9B331833DD4F941D3F88E1A717758B7851F5187EFA76202652AFD174CF8C4D6F8A03B0386284B4032D37F1\n'
-						;
-						break;
-					case 'download_timeout_sec': title = 'Timeout to download containers...'; break;
-					case 'check_updates_every_hours': title = 'Interval to check updates... Hours.'; break;
-					case 'last_update':
-						title = 'Time of last update. Unix timestamp (MM-DD-YYYY hh:mm:ss).';
-						readonly = true;
-						val = val+" ("+convert_unix_timestamp(val)+")";
-						break;
-					case 'last_another_repo_version':
-						title = 'Latest downloaded version (saved in config-3.json)';
-						readonly = true;
-						val = decodeURIComponent(val);
-						break;
-					case 'remind_if_updates_exists':
-						title = 'Interval for check if updates available (minutes).';
-						break;
-					case 'captcha_url': readonly = true; width = 600; break;
-					case 'original_captcha_sha256': readonly = true; break;
+					var td = $('<td>');
+					td.appendTo(cont);
+
+					var title = '';	//define variable for title tooltip
+					var readonly = false;
+					var height = 0;
+					var width = 0;
+					switch(par) {	//set title tooltips for different textareas
+						case 'ip': title = 'IP address to bind...'; break;
+						case 'password': title = 'Your password...'; break;
+						case 'port': title = 'PORT to listen...'; break;
+						case 'places':
+							title = "# put URLs here, one per line. Use \'#\' to comment the line.\n"+
+									'http(s)://imageboard.com:443/thread/number.php?ports=50&sort=date\n'+
+									"http://my_server.local/pngLinks.html\n"+
+									"#etc...";
+							height = 250;	//px
+							width = 500;
+							break;
+						case 'skins':
+							title = 'Available skins...\n["dark","futaba","photon"]';
+							val = val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]');
+							break;
+						case 'skin': title = 'Current skin...'; break;
+						case 'post_delete_timeout': title = 'Timeout to delete post...'; break;
+						case 'post_count_notification_time':
+							title = 'Hide notification, after [x] milliseconds...\n'+
+									'Also, try to change the parameter "var _post_count_notification_time" in scripts/params.js';
+							break;
+						case 'post_offset_in_tree_px': title = 'Offset for post in the tree...'; break;
+						case 'spam_filter':
+							title = 'Keywords of spam-list... Format:\nWORD1\nword2\\n\n//Word3\\n//(disabled)\n//disabled_wORd\n\\n\\n\nWoRd5...\n(delimiter is \'\\n\')';
+							//console.log("spam_filter - show. val = ", val,	"val=='[\"\"]'", (val=='[""]'));
+							//console.log('val', val, 'help_text: '+val.substring(0, spam_filter_help_text.length));
+							val = (val=='' || val=='[""]') ? '' : JSON.parse(val.replace(/\\/g, '\\\\')).join('\n');	//if serialized JSON in config-3.json, not serialized string.
+							height = ( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
+							//console.log( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
+							//console.log('after replace, val: '+val);
+							break;
+						case 'captcha_pack_file':
+							title = 	'captcha file: captcha.nbc\n\n'
+									+	'Multihasher hashes:\n'
+									+	'CRC32: E5408891\n'
+									+	'MD5: 7E93FE7DB9BC3D70A84F34B4E4FA6257\n'
+									+	'RIPEMD-160: 2A6E1B283B48D9B05649346E1B72ACDA52E874E8\n'
+									+	'SHA-1: 3B81C46C03157FE55BD8F430FEEC9A8BF010C816\n'
+									+	'SHA-256: 0732888283037E2B17FFF361EAB73BEC26F7D2505CDB98C83C80EC14B9680413\n'
+									+	'SHA-384: B23C27C96C1D57DF8168C1E0406DB61B1A79F006997F164D33D2D70F6E4CAE674056885BB980F6E5804AAE03DAD76037\n'
+									+	'SHA-512: FCDF1161543174E4713D791C1FD18F6A64972EC91E9B331833DD4F941D3F88E1A717758B7851F5187EFA76202652AFD174CF8C4D6F8A03B0386284B4032D37F1\n'
+							;
+							break;
+						case 'download_timeout_sec': title = 'Timeout to download containers...'; break;
+						case 'check_updates_every_hours': title = 'Interval to check updates... Hours.'; break;
+						case 'last_update':
+							title = 'Time of last update. Unix timestamp (MM-DD-YYYY hh:mm:ss).';
+							readonly = true;
+							val = val+" ("+convert_unix_timestamp(val)+")";
+							break;
+						case 'last_another_repo_version':
+							title = 'Latest downloaded version (saved in config-3.json)';
+							readonly = true;
+							val = decodeURIComponent(val);
+							break;
+						case 'remind_if_updates_exists':
+							title = 'Interval for check if updates available (minutes).';
+							break;
+						case 'captcha_url': readonly = true; width = 550; break;
+						case 'original_captcha_sha256': readonly = true; break;
 						
 
-					default: title = ''; break;
-				}
-					height = ( (height != 0) ? height : ( ( val.split('\n').length + 1 ) * fontSize_in_textareas ) );	//textarea height
-                $('<textarea>')
-                  .attr('title', title)		//add title tooltip to the textarea.
-                  .attr('id', par)
-                  .attr('readonly', readonly)
-                  .val(((par=='spam_filter') ? ( (append_sfht==true) ? spam_filter_help_text : '' ) : '' ) + val)
-                  .css('height', height + 'px')
-				  .css('width', ((width != 0) ? width + 'px' : ''))
-                  .appendTo(cont)
-                  .change(function(){
-                    var elem = $(this);
-                    var new_val = elem.val();
-					if(par=='spam_filter'){
-						//console.log('spam_filter - before: '+new_val);
-						new_val =
-								JSON.stringify(				//save serialized JSON in config-3.json
-									new_val
-									.substring(
-										((append_sfht==true) ? spam_filter_help_text.length : 0)
-										, new_val.length
-									)
-									.split('\n')
-								).replace(/\\\\/g, '\\')
-						;			
-
-						//console.log('spam_filter - after: '+new_val);
-					}else if (par=='skins'){
-						//console.log('new_val', new_val);
-						new_val = new_val.replace(/\n/g, '');
-						//console.log('new_val', new_val);
+						default: title = ''; break;
 					}
-					$.post('../api/paramset/'+par, new_val)
-						.done(function(){
-							elem.val(
-								(par=='spam_filter')
-									? (
-										(append_sfht==true)
-											? spam_filter_help_text
-											: ''
-									)
-									+JSON.parse(new_val.replace(/\\/g, '\\\\')).join('\n')				//save serialized JSON in config-3.json
-//									? new_val															//if no need serialized JSON, just serialized string
-									: (par=='skins')
-										? new_val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]')
-										: new_val
-							);
+						height = ( (height != 0) ? height : ( ( val.split('\n').length + 1 ) * fontSize_in_textareas ) );	//textarea height
+				
+					$('<textarea>')
+						.attr('title', title)		//add title tooltip to the textarea.
+						.attr('id', par)
+						.attr('readonly', readonly)
+						.val(((par=='spam_filter') ? ( (append_sfht==true) ? spam_filter_help_text : '' ) : '' ) + val)
+						.css('height', height + 'px')
+						.css('width', ((width != 0) ? width + 'px' : ''))
+//              		.appendTo(cont)
+						.appendTo(td)
+						.change(function(){
+							var elem = $(this);
+							var new_val = elem.val();
+							if(par=='spam_filter'){
+								//console.log('spam_filter - before: '+new_val);
+								new_val =
+										JSON.stringify(				//save serialized JSON in config-3.json
+											new_val
+											.substring(
+												((append_sfht==true) ? spam_filter_help_text.length : 0)
+												, new_val.length
+											)
+											.split('\n')
+										).replace(/\\\\/g, '\\')
+								;
+
+								//console.log('spam_filter - after: '+new_val);
+							}else if (par=='skins'){
+								//console.log('new_val', new_val);
+								new_val = new_val.replace(/\n/g, '');
+								//console.log('new_val', new_val);
+							}
+							$.post('../api/paramset/'+par, new_val)
+							.done(function(){
+								elem.val(
+									(par=='spam_filter')
+										? (
+											(append_sfht==true)
+												? spam_filter_help_text
+												: ''
+										)
+										+JSON.parse(new_val.replace(/\\/g, '\\\\')).join('\n')				//save serialized JSON in config-3.json
+//										? new_val															//if no need serialized JSON, just serialized string
+										: (par=='skins')
+											? new_val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]')
+											: new_val
+								);
 							
-							pushNotification('Autosaved.');
+								pushNotification('Autosaved.');
+							});
 						});
-                  });
+
+					//console.log('last_update, par = ', par);
+					
+					//console.log('cont.html: ', cont.html());
+					if(par=="last_update"){
+						var newTD = $('<td align="right" valign="center">').appendTo(cont);
+						$('<div style="align:center; display:inline-block;">')
+							.html('&nbsp;<a href="javascript:void(0)" onclick="checkVersion(true);">Check updates online, now!</a>&nbsp;')
+							.appendTo(newTD)
+						;
+					}else if(par=='captcha_url'){
+						var newTD = $('<td align="right">').appendTo(cont);
+						$('<div style="display:inline-block;" valign="center">')
+							.html('&nbsp;<a href="'+val+'">Download captcha, now!</a>&nbsp;')
+							.appendTo(newTD)
+						;
+					}else if(par=='places'){
+						var newTD = $('<td align="right" valign="center">').appendTo(cont);
+						$('<div style="display:inline-block;">')
+							.html('&nbsp;<a href="./generate_HTTP(S)_links.html" target="_blank">Generate HTTP and HTTPS links for places...</a>&nbsp;')
+							.appendTo(newTD)
+						;
+						
+					}
+					//cont.append('<br/>');
+						
 				}
               });
           };
@@ -307,7 +402,7 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 </head>
 
 <body>
-<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.0</sup></span>
+<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.2</sup></span>
 <div id="head-panel" class="container-fluid">
     <div id="navrow" class="row no-gutter">
         <nav class="navbar navbar-default">
@@ -354,12 +449,23 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 <p>Some parameters may require thread page refresh, some (like IP/port) – server <button id='restartb' class="btn btn-warning">restart</button>.</p>
 <p>If you did something wrong with port/ip and server is not accessible, change port/ip in config.json manually.</p>
 <p>Default values for IP/port are 127.0.0.1 and 7346</p>
-<div class="parname">
-Skin:
-<select class="black-text" id='skin-sel'>
-<option>None</option>
-</select>
-<br><a href="./generate_HTTP(S)_links.html" target="_blank">Generate HTTP and HTTPS links for places...</a>
-</div>
+
+<table id="params">
+	<tr>
+		<td align="right" valign="center">
+			<div class="parname">
+				Skin:&nbsp;
+			</div>
+		</td>
+		<td align="left" valign="center">
+			<select class="black-text" id="skin-sel" style="margin-left: 5px;" title="Select style from 'styles'-folder...">
+			<option>None</option>
+			</select>
+		</td>
+		<td>
+		</td>
+	</tr>
+</table>
+	
 </body>
 </html>

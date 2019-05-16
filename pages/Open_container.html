@@ -184,6 +184,23 @@ function readURL_as_dataURL(){
 				parse_PNG_by_dataURL(dataURL, filename, 'download');
 			}
 		);
+
+/*
+//try to download captcha
+	$.post(        '../api/download-png/', 'DownloadFile: '+url+'|'+1000+'|'+1000000)	//DownloadFile: URL|interval|max_interval
+		.done(
+			function(replies){
+				console.log("reply received: ", replies.length);
+				console.log("replies: ", replies);
+				
+				//result.innerHTML = replies;
+				//dataURL = 'data:image/png;base64,'+replies.split('data:image/png;base64,')[1].split('"')[0];
+				//dataURL = replies.split('href="')[1].split('"')[0];
+				//var filename = replies.split('download="')[1].split('"')[0];
+				//parse_PNG_by_dataURL(dataURL, filename, 'download');
+			}
+		);
+*/
 }
 
 function submit_pathway(){

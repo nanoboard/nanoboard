@@ -63,7 +63,7 @@ function no_need_update(){
 
 
 function checkVersion(online) {												//online switch to true after long interval
-  if (_checkVersion != 'true') return;																			//if no need to check version
+  if (_checkVersion != 'true' && online!=true) return;																			//if no need to check version
   $.get(_buildVersion)																							//get version.txt from localhost
     .done(function(bv) {
       $.get('../api/paramget/'+'last_another_repo_version')														//load last another repo version from config-3.json

@@ -21,9 +21,23 @@ function arr_diff (a1, a2) {
     return diff;
 }
 
-var post_count_limit_for_searching = 499;
+//now this value not hardcoded in the method Search in \Server\DbApiHandler.cs
+var post_count_limit_for_searching = 500;
+
+function change_show_max_search(value){
+	console.log('change_show_max_search('+value+')');
+	post_count_limit_for_searching = value;
+}
+
 $(function() {
   $( "#search" ).submit(function( event ) {
+			
+			hide_create_png();	//hide "Create PNG" tab if this was been active.
+			
+			start_index_last_posts_div.style.display = "none";		//hide this div if showed.
+			show_max_search.style.display = "block";				//Show this div if hidden
+			search_show_max.value = post_count_limit_for_searching;	//insert value.
+			
           event.preventDefault();
           location.href="#search"
           if ($('.searchfield').val()!=""){
@@ -38,7 +52,7 @@ $(function() {
               $.post('../api/search', search+'|'+post_count_limit_for_searching)
                 .done(function(arr){
                   $('#searchresult').empty();
-				  console.log('arr', arr);
+//				  console.log('arr', arr);
                   arr = JSON.parse(arr);
                   if (arr.length == 0) {
                     $('#searchresult').append('No results<br/>');
@@ -73,29 +87,34 @@ $(function() {
 
 						//replace by another way...
 						var html = $(this).html().toString();									//get html content
+						
+						console.log('html', html);
+						
 						var replacement = '<span class="word-search">' + search + '</span>';	//html for highlighting
 
 						var doc = document.createElement("html");								//create html element
 						doc.innerHTML = html;													//insert html content, there
 						var links = doc.getElementsByTagName("a");								//get all links by tag name
+						var imgs = doc.getElementsByTagName("img");								//get images.
 						var urls = [];															//define empty array for links
 						var replaced_urls = [];													//define second empty array for replaced links
 
 						for (var i=0; i<links.length; i++) {									//for all links
 						    urls.push(links[i].outerHTML);												//add html of this links - to array
-							
-//							replaced_urls.push(replaceAll(links[i].outerHTML, search, replacement));	//add replaced HTML to second array
 							replaced_urls.push(replaceAll_search(links[i].outerHTML, search, replacement));	//add replaced HTML to second array
+						}
 
-							console.log('replace links: for i', i, 'links.length', links.length);							
+						for (var i=0; i<imgs.length; i++) {										//for all imgs
+							urls.push(imgs[i].outerHTML);										//add html of this imgs - to array
+							replaced_urls.push(replaceAll_search(imgs[i].outerHTML, search, replacement));	//add replaced HTML to second array
 						}
 						
 						var arrays_diff = arr_diff(urls, replaced_urls);						//create array with differences
-						console.log(
-							'urls', urls, 'urls.length', urls.length,
-							'\nreplaced_urls', replaced_urls, 'replaced_urls.length', replaced_urls.length,
-							'\narrays_diff', arrays_diff, 'arrays_diff.length', arrays_diff.length
-						);
+//						console.log(
+//							'urls', urls, 'urls.length', urls.length,
+//							'\nreplaced_urls', replaced_urls, 'replaced_urls.length', replaced_urls.length,
+//							'\narrays_diff', arrays_diff, 'arrays_diff.length', arrays_diff.length
+//						);
 						urls = replaced_urls = []; 												//delete previous two arrays.
 
 //						var replaced_html = replaceAll(html, search, replacement);				//replace all for highlighting found text
@@ -106,8 +125,8 @@ $(function() {
 //						for(d=0; d<=arrays_diff.length/2; d++){		//for all differences
 //						for(d=0; d<arrays_diff.length-1; d += 1){		//for all differences
 						
-							console.log('arrays_diff: for d', d, 'arrays_diff.length', arrays_diff.length);
-							console.log('arrays_diff', arrays_diff);
+//							console.log('arrays_diff: for d', d, 'arrays_diff.length', arrays_diff.length);
+//							console.log('arrays_diff', arrays_diff);
 
 							var doc = document.createElement("html");											//create html element
 							doc.innerHTML = arrays_diff[d];														//insert original link html, there
@@ -117,21 +136,21 @@ $(function() {
 //							links[0].innerHTML = replaceAll(links[0].innerHTML, search, replacement);			//new link = replace only text there inside original link
 //WAS WORKING				links[0].innerHTML = replaceAll_search(links[0].innerHTML, search, replacement);			//new link = replace only text there inside original link
 							
-							console.log(
-								'links', links,
-								'\nlink..... before......: links[0].outerHTML = ', links[0].outerHTML,
-								', \nreplace search = ', search, ' to ',' \nreplacement = ', replacement,
-								'\nin text = links[0].innerHTML = ', links[0].innerHTML
-							);
+//							console.log(
+//								'links', links,
+//								'\nlink..... before......: links[0].outerHTML = ', links[0].outerHTML,
+//								', \nreplace search = ', search, ' to ',' \nreplacement = ', replacement,
+//								'\nin text = links[0].innerHTML = ', links[0].innerHTML
+//							);
 							
 //							links[0].innerHTML = replaceAll_search(links[0].innerHTML, search, replacement);				//new link = replace only text there inside original link
 							links[0].innerHTML = replaceAll_search(links[0].innerHTML, search, replacement);	//new link = replace only text there inside original link
-							console.log(
-								'links', links,
-								'\nlink..... after......: links[0].outerHTML = ', links[0].outerHTML,
-								', \nreplaced search = ', search, ' to ',' \nreplacement = ', replacement,
-								'\nin result text = links[0].innerHTML = ', links[0].innerHTML
-							);
+//							console.log(
+//								'links', links,
+//								'\nlink..... after......: links[0].outerHTML = ', links[0].outerHTML,
+//								', \nreplaced search = ', search, ' to ',' \nreplacement = ', replacement,
+//								'\nin result text = links[0].innerHTML = ', links[0].innerHTML
+//							);
 							
 //							replaced_html = replaceAll(replaced_html, arrays_diff[d+1], links[0].outerHTML);	//replace invalid link to new outerHTML of new link.							
 //							replaced_html = replaceAll_search(replaced_html, arrays_diff[d+1], links[0].outerHTML);	//replace invalid link to new outerHTML of new link.
@@ -139,6 +158,8 @@ $(function() {
 						}
 						
 						console.log('replaced_html', replaced_html);		//show replaced html
+						
+						
 						$(this).html(replaced_html);						//append replaced html
 						
 						//test queries:
@@ -146,17 +167,15 @@ $(function() {
 						//downloading-updates-16.png					//OK
 						//ttps://github.com/Karasiq/nanoboard			//OK
 						//HTtP											//OK!
-						
+						//base64_fragment_in_picture					//Now ok, if "base64_fragment_in_picture" - is inside base64 of picture dataURL...
+
+
 						/*
 Why no highlighting?
 http not HTtP, and split by HTtP not working.
 	Ok... Another function replaceAll_search in post.js must split this good...
-		
-		
 						*/
-						
-						
-						
+
 						});
 					}, 1000);
                   $('img').click(function(){

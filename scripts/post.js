@@ -8,13 +8,13 @@ function replaceAll(text, search, replace) {
 
 function replaceAll_search(text, search, replace) {
 
-		console.log(
-			'replaceAll_search:\n',
-			'text', text, '\n',
-			//'text', text,
-			' search', search,
-			'\nreplace', replace
-		);
+//		console.log(
+//			'replaceAll_search:\n',
+//			'text', text, '\n',
+//			//'text', text,
+//			' search', search,
+//			'\nreplace', replace
+//		);
 	
 	var result = text;
 	if(
@@ -29,7 +29,7 @@ function replaceAll_search(text, search, replace) {
 
 		var match = text.match(regexp);
 		
-		console.log('text.match(regexp) = ', text, '.match(', regexp, ') = \n match = ', match);
+//		console.log('text.match(regexp) = ', text, '.match(', regexp, ') = \n match = ', match);
 
 		if(match!=null && match.length==1 && match[0]!=regexp){
 			replace = replace.split(regexp).join(match[0]);
@@ -57,32 +57,36 @@ function replaceAll_search(text, search, replace) {
 				//result = 'BLABLA';
 				//var count = (result.match(/B/g) || []).length;
 				
-				console.log('try replace ', i, '-th match of ', regexp, ' to ', replace);
-				console.log('before result============', result);
+//				console.log('try replace ', i, '-th match of ', regexp, ' to ', replace);
+//				console.log('before result============', result);
 				var t=0;   
 				result =
 					result.replace(regexp,
 						function (match) {
 							t++;
-							console.log('iiiiiiiiiiiiiiiiiiiiii=============================', i, ', (t-1) = ', (t-1));
-							if(((t-1) === i)){console.log('replace ', match, 'to ', replace, 'in match = ', i);}
+//							console.log('iiiiiiiiiiiiiiiiiiiiii=============================', i, ', (t-1) = ', (t-1));
+
+//							if(((t-1) === i)){
+//								console.log('replace ', match, 'to ', replace, 'in match = ', i);
+//							}
+
 							return ((t-1) === i) ? replace : match;
 						}
 					)
 				;
-				console.log('after result=============', result);
+//				console.log('after result=============', result);
 				//alert(result);
 			}
 //			return result;
 		}
-		console.log('match', text.match(regexp));
-		console.log('search indexOf(//) == -1: now regexp = ', regexp, 'search', search);
+//		console.log('match', text.match(regexp));
+//		console.log('search indexOf(//) == -1: now regexp = ', regexp, 'search', search);
 	}else{
-		console.log('not if........ replace: \nsearch = ', search, ', \nreplace = ', replace);
+//		console.log('not if........ replace: \nsearch = ', search, ', \nreplace = ', replace);
 		result = text.split(search).join(replace);
 	}
 	
-	console.log('text = \n', text, '\nsearch = ', search, '\nreplacement = ', replace, '\nresult = \n', result);
+//	console.log('text = \n', text, '\nsearch = ', search, '\nreplacement = ', replace, '\nresult = \n', result);
 	
   return result;
 }
@@ -133,15 +137,24 @@ function addPlace(place,uuid) {
       arr = arr.split('\n');
       var wasAdded = arr.indexOf(place) != -1;
       if (wasAdded) {
-        $(document.getElementById(uuid)).text('added');
+			var elements = document.querySelectorAll('[id="'+uuid+'"]');
+			for(i=0; i<elements.length; i++){
+				$(elements[i]).text('added');	//add added for all elements
+			}
+//        $(document.getElementById(uuid)).text('added');	//old code
         pushNotification('Was added already.');
         return;
       }
       arr.push(place);
       $.post('../api/paramset/places', arr.join('\n'))
         .done(function(){
-          $(document.getElementById(uuid)).text('added');
+			var elements = document.querySelectorAll('[id="'+uuid+'"]');
+			for(i=0; i<elements.length; i++){
+				$(elements[i]).text('added');	//add added for all elements
+			}
+//        $(document.getElementById(uuid)).text('added');				//old code.
           pushNotification('Added: ' + place);
+			updatePlacesBar_once();
         });
     });
 }
@@ -154,7 +167,11 @@ function delPlace(place,uuid) {
       arr = arr.split('\n');
       var wasAdded = arr.indexOf(place) != -1;
       if (!wasAdded) {
-        $(document.getElementById(uuid)).text('');
+			var elements = document.querySelectorAll('[id="'+uuid+'"]');	//get elements with the same id
+			for(i=0; i<elements.length; i++){
+				$(elements[i]).text('');									//remove "added" for all
+			}
+		//	$(document.getElementById(uuid)).text('');			//old code
         pushNotification('Not present or already deleted.');
         return;
       }
@@ -167,8 +184,16 @@ function delPlace(place,uuid) {
       arr = arr2;
       $.post('../api/paramset/places', arr.join('\n'))
         .done(function(){
-          $(document.getElementById(uuid)).text('');
-          pushNotification('Deleted: ' + place);
+			//console.log('delete: uuid: ', uuid);
+
+			var elements = document.querySelectorAll('[id="'+uuid+'"]');	//get elements with the same id
+			for(i=0; i<elements.length; i++){
+				$(elements[i]).text('');						//remove "added" for all
+			}
+			
+//          $(document.getElementById(uuid)).text('');		//old code
+			pushNotification('Deleted: ' + place);
+			updatePlacesBar_once();
         });
     });
 }
@@ -197,10 +222,13 @@ function detectPlacesCommands(obj) {
       arr = arr.split('\n');
       for (var i = 0; i < matches.length; i++) {
         var value = matches[i].toString();
-        console.log(value);
+        //console.log(value);
         value = value.substring(value.indexOf('http'));
         var wasAdded = arr.indexOf(value) != -1;
-        var uuid = generateUUID();
+        
+		//var uuid = generateUUID();								//old code using random UUID for each link
+		var uuid = Sha256.hash(value);//.substring(0, 8);			//now using sha256 hash there, to add/remove "added" for all links in each post.
+		
         html = replaceAll(html, value+'</a>', value +
           '</a>&nbsp;<a href=javascript:addPlace("'+Base64.encode(value)+'","'+uuid+'")><sup>[+]</sup></a>'+
           '<i><sup id="'+uuid+'">' + (wasAdded ? 'added' : '') + '</sup></i>' +

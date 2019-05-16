@@ -254,7 +254,8 @@ $(function() {
 	  .fail(function(){creationRun = false;});
   });
 
-function check_avails() {																		//run checking avails
+function check_avails(hide) {//hide true when need to hide notif.							//run checking avails
+	var hide = (typeof hide === 'undefined') ? false : hide;
     if (creationRun){																			//if png creating started
 		$.get('../api/png-create-avail')
 		.done(function(data){
@@ -262,9 +263,11 @@ function check_avails() {																		//run checking avails
 			if(data=='Finished.'){
 				$('#png-create').removeClass('disabled');										//this can activated in notifyAboutNotifications function
 				$('#png-create-text').text('Create PNG');										//show crete button
-				pushNotification('PNG creation finished (check your "upload" folder).');
+				if(hide==false){
+					pushNotification('PNG creation finished (check your "upload" folder).');
+				}
 				creationRun = false;
-				setTimeout(check_avails, _post_count_notification_time);						//using long timeout
+				setTimeout(check_avails(hide), _post_count_notification_time);						//using long timeout
 			}else{
 				$('#png-create').addClass("disabled");											//disable button
 				$('#png-create-text').text("Wait for generate...");
@@ -285,9 +288,14 @@ function check_avails() {																		//run checking avails
 			if(data=="Finished."){
 				$('#png-collect').removeClass('disabled');										//enable button
 				$('#collect_text').text(' Collect PNG');
-				pushNotification('PNG collection finished.');
+				if(hide==false){
+					pushNotification('PNG collection finished.');
+					console.log("PNG collection finished... ", 'total_posts_available: ', total_posts_available, 'postCount: ', postCount);
+					total_posts_available = postCount;
+					//console.log("collection finished...");
+				}
 				collectionRun = false;
-				setTimeout(check_avails, _post_count_notification_time);
+				setTimeout(function(){check_avails(hide);}, _post_count_notification_time);
 			}else{
 				$('#png-collect').addClass("disabled");											//disable button
 				$('#collect_text').text('Collection started...');
@@ -301,17 +309,29 @@ function check_avails() {																		//run checking avails
 			
 		});
 	}else{
-		setTimeout(check_avails, _post_count_notification_time);
+		setTimeout(function(){check_avails(hide);}, _post_count_notification_time);
 	}
 }
 
+var hide_first_notif = true;					//true to hide first notif, false to show.
 function check_avails_once(){
+	//console.log('run check avails once...');
 	if(collectionRun || creationRun){
-		check_avails();
+		check_avails(hide_first_notif);
+		//console.log('check_avails('+hide_first_notif+')......');
+
+		if(hide_first_notif==true){
+			setTimeout(
+				function(){
+					hide_first_notif = false;
+				},
+				5000		//static interval to don't show notif about "collect png finished" and "create png finished", and don't show this until the loading page.
+			);
+		}
 	}
 }
 	//setInterval(check_avails, _post_count_notification_time*4);
-	check_avails();																				//run this once.
+	//check_avails();																				//run this once.
 	
 var generated_container_name = "";
 var dont_show_notif = false;
@@ -319,6 +339,7 @@ var add_saved = false;					//add pathway for saved file without replace hashes. 
 var already_saved_to = "";				//this string need to save notif, when file saved, but hashes still not returned.
 
 function notifyAboutNotifications() {
+	//console.log('run check avails from notif.....');
 	check_avails_once();
 	$.get('../notif')
 		.done(function(data){
@@ -413,7 +434,16 @@ function notifyAboutNotifications() {
 				
 //				Create_PNG_result.innerHTML += '<br>'+data;
 				dont_show_notif = true;
+			}else if(data == "Your containers dir is empty! Add container(s)"){
+				Create_PNG_result.innerHTML = 'Your containers dir is empty! Add container(s). You can generate container <a href="http://127.0.0.1:7346/pages/convert-to-PNG.html" target="_blank">here</a>.';
 			}
+/*
+			else if(data.substring(0,29)=="[b][g]Extracted post:[/g][/b]"){
+				console.log('EXTRACTED POST...', _post_count_notification_time);
+				pushNotification(applyFormatting(data), 5000);	//add static timeout to show posts after extract when collect.
+				dont_show_notif = true;
+			}
+*/
 
 			if(dont_show_notif === true){dont_show_notif = false;}
 			else{

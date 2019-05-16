@@ -502,6 +502,94 @@ Server\
 	MimeType.cs
 		Add specified string for "dynamic" mime type. This means mime-type select by file extension in "download folder".
 ____________________________________________________
+Short changes:
+	Add download-posts and upload-posts functions.
+		Now is possible to download database without parsing containers,
+		and upload posts to another server with API, using functions in retranslate.js.
+		See pages/TEST_download-upload-posts.html
+	Add function to download any file, using list of proxies in proxy.txt.
+		Now captcha.nbc can be downloaded using proxy, from anywhere. But github test - failed.
+	Parameters in params.html now displaing as table. Link to check updates online added there.
+	Small-fixes.
+	
+	
+Full changes:
+	Source code:
+		\nanodb.exe-source\Server\DbApiHandler.cs
+			Lines 38-39: 		Add API commands to download-posts and upload-posts in JSON.
+			Lines 410-414: 		read second argument, if this sent as parameter of POST-query.
+			Lines 538, 548:		Comment test strings.
+			Lines 620, 659:		Add methods Download_Posts and Upload_Posts.
+
+		\nanodb.exe-source\Database\PostDb.cs
+			Lines 573-582:		Add function isMD5() to validate hash format.
+			Lines 583-642:		Add function to download posts by any URL with API.
+			Lines 644-660:		Add function to upload posts to API.
+
+		\nanodb.exe-source\PngTransport\Aggregator.cs
+			Lines 499-601: 		Try to rewrite function Method DownloadPNG to download any files (captcha.nbc, as example), using proxies.
+							Add option to download large file, using proxies. For example, captcha.nbc.
+		
+		\nanodb.exe-source\PngTransport\WebClientX.cs
+			Lines 92-96:		Add method DownloadFile for WebClientX, to download file, using proxy.
+
+	Styles:
+		\styles\skins\futaba\nano.css
+			Lines 7-10:			Add background color for tables in futaba skin.
+
+	Scripts:
+		\scripts\checkver.js
+			Line 66:			Enable checkVersion check online onclick by link, if online===true
+		
+		\scripts\init.js
+			Line 257-342:		Update total_posts_available up to postCount after finishing collect PNG.
+								fix default value in function check_avails(hide=false) to make this working in Google Chrome
+
+		
+		\scripts\last.js
+			Lines 52-80:		Changes in function showLast.
+								fix default value in function showLast(N, from_index=false) to make this working in Google Chrome.
+
+		\scripts\nanoclient.js
+			Replace unknown files to links. Now this can be downloaded as txt files with binary code, and renamed then.
+			Add supporting RIFF-files - .webp, .wav, .avi.
+			Fix base64 verification.
+			Insert eye to show-hide posts inside the link. Now this working with other styles. Add spaces. Show-hide functions - rewrited.
+
+		\scripts\params.js
+			Lines 104-116:		Change default params.
+								_checkVersion - true -> false; temporary disabled.
+
+		\scripts\post.js - Comment old test code.
+
+		\scripts\search.js
+			Changed maximum post count to default 500 + add comment.
+			//now this value not hardcoded in the method Search in \Server\DbApiHandler.cs
+			var post_count_limit_for_searching = 500;
+			fix serarhing value in base64 fragment of picture.
+
+	Pages:
+		pages\index.html
+			Add code to display posts onclick or by input hashes. Add code to check hash in input value.
+	
+		pages\Open_container.html
+			Lines 187-203:	Add test code to try download captcha.nbc from github. Fail, because dynamic link...
+
+		pages\params.html
+			Change displaing params as table.
+	
+		pages\version.txt
+		\nanodb.exe
+			Regenerated, after compilation.
+
+		pages\TEST_download-upload-posts.html
+			Added the function for download-posts by custom URL with API and upload-posts to custom URL, using API.
+			See pages/TEST_download-upload-posts.html source code.
+	
+	\scripts\karasiq-queue.jpg
+		remove this file from releases, to make archive smaller.
+
+____________________________________________________
 
 
 Code commented. See source code.

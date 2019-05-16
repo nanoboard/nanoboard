@@ -338,9 +338,9 @@ u/GSjMbGDKA+9d7DMEMHtziZM61c72h/A3foMuoBqRh/AAAAAElFTkSuQmCC\">'
 
 			var Post_hash = element.parentElement.id;	//get Post_hash
 			
-			element.classList.remove("glyphicon-eye-close");
-			element.classList.add("glyphicon-eye-open");
-			element.title = "Click to show this hidden post. Post_hash: "+Post_hash;
+			element.childNodes[0].classList.remove("glyphicon-eye-close");
+			element.childNodes[0].classList.add("glyphicon-eye-open");
+			element.childNodes[0].title = "Click to show this hidden post. Post_hash: "+Post_hash;
 			
 			pushNotification(Post_hash+" hidden now.");							//just show the notification.
 			
@@ -358,9 +358,9 @@ u/GSjMbGDKA+9d7DMEMHtziZM61c72h/A3foMuoBqRh/AAAAAElFTkSuQmCC\">'
 			//element.innerHTML = "Hide";
 
 			var Post_hash = element.parentElement.id;	//get Post_hash
-			element.classList.remove("glyphicon-eye-open");
-			element.classList.add("glyphicon-eye-close");
-			element.title = "Click to hide this post. Post_hash: "+Post_hash;
+			element.childNodes[0].classList.remove("glyphicon-eye-open");
+			element.childNodes[0].classList.add("glyphicon-eye-close");
+			element.childNodes[0].title = "Click to hide this post. Post_hash: "+Post_hash;
 			
 			pushNotification(Post_hash+" showed now.");							//just show the notification.
 			
@@ -420,14 +420,15 @@ function addPost(post, appendFunc, hasShowButton, short) {
     .addClass('post__details'+((hidden_hashlist.indexOf(post.hash)!=-1) ? ' post_type_hidden' : ""))
     .attr('id', post.hash);
 
-    d.append('<span class="glyphicon '+
+    d.append('&nbsp;&nbsp;<a href="javascript:void(0)" onclick="toogle_show_hide(this);">'+
+		'<span class="glyphicon '+
 		(
 			(hidden_hashlist.indexOf(post.hash)!=-1)
 				? 'glyphicon-eye-open " title="Click to show this hidden post. Post_hash: '+post.hash+'"'
 				: 'glyphicon-eye-close " title="Click to hide this post. Post_hash: '+post.hash+'"'
 		)
 		+
-		' aria-hidden="true" onclick="toogle_show_hide(this);">&nbsp;</span>'); 					//add glyphicon to hide-show post.
+		' aria-hidden="true"></span></a>&nbsp;&nbsp;'); 					//add glyphicon to hide-show post.
 	
   if (_depth != 0){
     //d.append('<gr>#' + (short&&_depth!=1?shortenHash(post.hash):post.hash) + '&nbsp;</gr>');	//old code.
@@ -544,11 +545,12 @@ function addPost(post, appendFunc, hasShowButton, short) {
 			//partial sha256 for noname zip files.
 			var fileBaseLink = img.src; // Hope you'll do it right
 			fileBaseLink = 	fileBaseLink.replace('image/jpeg','application/zip');
-							fileBaseLink.replace('image/jpeg','application/zip')
+
 			// Better without substring(). More uinque bytes -> better.
 		//	var fileHash = Sha256.hash(fileBaseLink)
+
 			// Another improvement here: to get hash from decoded file. In that case, we may check integrity easily
-			var file_base64 = fileBaseLink.split("base64,")[0];
+			var file_base64 = fileBaseLink.split("base64,")[1];
 			try{
 				var decoded_file = atob(file_base64);
 				var fileHash = Sha256.hash(decoded_file);
@@ -564,14 +566,71 @@ function addPost(post, appendFunc, hasShowButton, short) {
 				$('<a download='+fileName+' href='+fileBaseLink+'>['+fileName+']</a>')
 			);
 		}
-/*
-		else{
-			console.log("img not zipjpeg - else");
-			console.log('post_content: \n', post_content);
-			console.log('img.src: \n', img.src);
+
+		else if(!img.src.startsWith('data:image/jpeg;base64,/9j/')){//Если не JPEG - вывести ссылку.
+	//		console.log("img not zipjpeg - else");
+	//		console.log('post_content: \n', post_content);
+	//		console.log('img.src: \n', img.src);
 			
+			//partial sha256 for noname zip files.
+			var fileBaseLink = img.src; // Hope you'll do it right
+			fileBaseLink = 	fileBaseLink.replace('image/jpeg','application/octet-stream');
+
+			// Better without substring(). More uinque bytes -> better.
+		//	var fileHash = Sha256.hash(fileBaseLink)
+		
+			// Another improvement here: to get hash from decoded file. In that case, we may check integrity easily
+			var file_base64 = fileBaseLink.split("base64,")[1];
+			
+			//console.log('file_base64', file_base64.substring(0, 24));
+			
+			var add_to_filename = '_binary.txt';
+			
+			var fileName, fileHash, decoded_file;
+			
+			try{
+				decoded_file = atob(file_base64);
+				fileHash = Sha256.hash(decoded_file);
+				
+				if(
+					decoded_file.startsWith('RIFF')
+				){
+					if(decoded_file.substring(8, 12)=="WEBP"){
+						add_to_filename = ".webp";
+						fileBaseLink = fileBaseLink.replace('application/octet-stream', 'image/webp');
+						img.src = fileBaseLink;
+					}else if(decoded_file.substring(8, 12)=="WAVE"){
+						add_to_filename = ".wav";
+						fileBaseLink = fileBaseLink.replace('application/octet-stream', 'audio/vnd.wave');
+						fileName = fileHash + add_to_filename;
+						$(img).replaceWith(
+							$('<a href='+fileBaseLink+' target="_blank">['+fileName+']</a>')
+						);
+					}else if(decoded_file.substring(8, 12)=="AVI "){
+						add_to_filename = ".avi";
+						fileBaseLink = fileBaseLink.replace('application/octet-stream', 'video/vnd.avi');
+						fileName = fileHash + add_to_filename;
+						$(img).replaceWith(
+							$('<a href='+fileBaseLink+' target="_blank">['+fileName+']</a>')
+						);
+					}
+				}else{
+					fileName = fileHash + add_to_filename;
+					//console.log('add_to_filename', add_to_filename, 'fileHash', fileHash, 'fileName', fileName, 'fileBaseLink', fileBaseLink);
+					$(img).replaceWith(
+						$('<a download='+fileName+' href='+fileBaseLink+'>['+fileName+']</a>')
+					);
+				}
+			}
+			catch(err){
+				fileHash = Sha256.hash(fileBaseLink);
+				fileName = fileHash + add_to_filename;
+				console.log("file "+fileName+" has a broken base64. Error: "+err);
+				$(img).replaceWith(
+					$('<a download='+fileName+' href='+fileBaseLink+'>['+fileName+']</a>')
+				);
+			}
 		}
-*/
     }
   }
   if (_showTimestamps == 'false') {

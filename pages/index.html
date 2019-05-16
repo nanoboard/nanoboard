@@ -105,6 +105,13 @@
 </div>
 
 <div id="createPNG" style="display: none; padding: 10px;">
+	<div id="show_post" style="max-width: 100%;">
+		To display post - input post hash:
+		<input id="enter_post_hash" type="text" maxlength="50" size="50"
+		oninput="test_post_hash_input(this);" title="32 hexadecimal symbols.">
+		<input type="submit" value="Display post" onclick="show_post_in_div();">
+	</div>
+	<hr>
     Pack <input id="from_queue" type="number" value="" min="0" onchange="change_values();"/> posts, from queue.<br><br>
     And pack: <input id="from_last_posts" type="number" value="" min="0" onchange="change_beginning();"/> last posts
 	from post with number: <input id="beginning_post_from_last" type="number" value="" min="0" onchange="generate_hash_list();"/>
@@ -117,7 +124,9 @@
 	<div id="imageInfo"></div>
 	<br><br>
     <a type="button" href='javascript:void(0)' id="png-create" class="col-xs-4 btn btn-default"><span class="glyphicon glyphicon-open" aria-hidden="true"></span><span id="png-create-text" class='btn-title hidden-xs hidden-sm'>&nbsp;Create PNG</span></a>
-	Bytes to pack: <div id="bytes_to_pack" style="display:inline-block;"></div>
+	<!--
+		Bytes to pack: <div id="bytes_to_pack" style="display:inline-block;"></div>
+	-->
     <br>
     <br>
     <br>
@@ -159,7 +168,8 @@
             posts - from last
             <div id="posts_random_count" style="display: inline-block;">0</div> posts...
         </div>
-            Hashes of random last posts to pack (without hashes of deleted posts):
+            Hashes of random last posts to pack (without hashes of deleted posts): 
+			<a href="javascript:void(0);" onclick="generate_random_posts();"> click to generate</a>
         <br>
         <div id="hashes_random_last">Click here to update, after some time...</div>
         
@@ -168,12 +178,20 @@
 <div id="page">
 <div style='margin-left: 5px; margin-right: 5px;' id='categories'></div>
 <hr style='margin: 5px' />
-<div id="start_index_last_posts_div" style="display: none;">
-	&nbsp;&nbsp;&nbsp;&nbsp;
-	From start index: <input id="lastli_start_index" type="number" value="" onchange="showLast(document.getElementById('showN').value, this.value)">
-	show: <input id="showN" type="number" value="" min="1" max="500" onchange="showLast(this.value, document.getElementById('lastli_start_index').value)"> posts,
-	in all <div id="total_posts" style="display:inline-block;"></div> posts.
-</div>
+
+	<div id="start_index_last_posts_div" style="display: none;">
+		&nbsp;&nbsp;&nbsp;&nbsp;
+		From start index: <input id="lastli_start_index" type="number" value="" onchange="showLast(document.getElementById('showN').value, this.value)">
+		show: <input id="showN" type="number" value="" min="1" max="500" onchange="showLast(this.value, document.getElementById('lastli_start_index').value)"> posts,
+		in all <div id="total_posts" style="display:inline-block;"></div> posts.
+	</div>
+
+	<div id="show_max_search" style="display: none;">
+		&nbsp;&nbsp;&nbsp;&nbsp;
+		Show max <input id="search_show_max" type="number" value="" min="0" onchange="change_show_max_search(this.value)">
+		posts from all was been found.
+	</div>
+
 <div id='thread'>
 </div>
 <hr/>
@@ -246,7 +264,11 @@ var cpng = document.getElementById('createPNG');
     var piq = document.getElementById('posts_in_queue');
     var Create_PNG_result = document.getElementById('Create_PNG_result');
     var imageInfo = document.getElementById('imageInfo');
-    var bytes_to_pack = document.getElementById('bytes_to_pack');
+	
+    //var bytes_to_pack = document.getElementById('bytes_to_pack');
+    //var CreatePNG_text = document.getElementById('CreatePNG_text');
+	var bytes_to_pack = document.getElementById('png-create-text');
+    
 
     var randlp = document.getElementById('rand_last_posts');
     var pack_random_last_posts = document.getElementById('pack_random_last_posts');
@@ -265,6 +287,112 @@ var cpng = document.getElementById('createPNG');
 	var lastli_start_index = document.getElementById('lastli_start_index');
 	var showN = document.getElementById('showN');
 	var total_posts = document.getElementById('total_posts');
+
+	var show_max_search = document.getElementById('show_max_search');
+	var search_show_max = document.getElementById('search_show_max');
+	
+	var show_post = document.getElementById('show_post');
+	
+	var enter_post_hash = document.getElementById('enter_post_hash');
+	
+function test_post_hash_input(enter_post_hash){
+	var value = enter_post_hash.value.trim();	//trim whitespaces
+	enter_post_hash.value = value;				//update trimmed
+	
+	if( (/^[0-9A-f]{32}/g).test(value) ){		//if value like md5 hash
+		enter_post_hash.style.border = '2px solid lime';	//lime border
+		setTimeout(
+			function(){
+				enter_post_hash.style.border = '';			//discard
+			},
+			500
+		)
+	}else{													//else
+		enter_post_hash.style.border = '2px solid red';		//red border
+		setTimeout(
+			function(){
+				enter_post_hash.style.border = '';			//discard
+			},
+			1000
+		)
+	}
+	//value = '';
+}
+
+
+
+function show_post_in_div(hash){
+
+	var value = enter_post_hash.value;	//copy value from previous input
+	
+	if( typeof hash === 'undefined' ){
+		if( (/^[0-9A-f]{32}/g).test(value) ){
+			hash = value;
+		}
+	}
+	console.log('show_post_in_div(hash)', hash);
+	
+	//get post by hash and display this.
+		//console.log('hash', hash);
+			$.post( '../api/getposts/', hash )
+            .done(function(replies){
+				//console.log('replies', replies);
+
+				var posts = JSON.parse(replies);		//parse posts
+				
+				show_post.innerHTML =
+					'To display post - input post hash:'+
+					'<input id="enter_post_hash" type="text" value="'+value+'" maxlength="50" size="50"'+	//add previous value here
+					'oninput="test_post_hash_input(this);" title="32 hexadecimal symbols.">'+
+					'<input type="submit" value="Display post" onclick="show_post_in_div();">'
+				;
+				
+				console.log('posts', posts);
+				if( posts[0] === null ){
+					show_post.innerHTML +=	'<div class="post" style="padding: 20px; max-width: 100%;">'+
+											'Thread not found. Hash: '+hash+
+											'</div>'
+					;
+					return;
+				}
+				
+				for(post_number=1;post_number<=posts.length;post_number++){
+					var current_message = escapeTags(Base64.decode(posts[post_number-1].message));
+					current_message = detect_files(current_message);			//replace files to links
+					current_message = replace_local_quotes(current_message);			//format nanopost.
+					current_message = applyFormatting(current_message);			//format nanopost.
+
+					//console.log('current_message.length', current_message.length);		//sometimes "NSERROR OUT OF MEMORY"...
+					
+					show_post.innerHTML += '<div class="post" style="padding: 20px; max-width: 100%;">'+
+										"<b>Post hash:</b> "+
+
+										'<a href="javascript:void(0);" onclick="show_post_in_div(&quot;' +
+										posts[post_number-1].hash 
+										+'&quot;);" title="Click to open post/thread/category...">' +
+										posts[post_number-1].hash
+										+'</a>'
+
+										+"; "+
+										'<b>ReplyTo:</b> '+
+
+										'<a href="javascript:void(0);" onclick="show_post_in_div(&quot;' +
+										posts[post_number-1].replyTo
+										+ '&quot;);" title="Click to open post/thread/category...">' +
+										posts[post_number-1].replyTo
+										+ '</a>'
+
+										+'<hr style="display:block;">'+current_message+"</div>";
+				}
+				//document.getElementById("result").innerHTML = replies;		//just append JSON-response
+
+            })
+            ;//end of post query
+	
+	//value = '';
+	
+}
+
 
 //хотел сделать так, чтобы по числу items current_queue наполнялся из queue - items элементами, втекающими из queue, и вытекающими туда.
 //При этом, чтобы изменялась длина queue, по мере наполнения current_queue.
@@ -378,7 +506,11 @@ for(i=-5;i<=(array1.length+array2.length+5);i++){
 */
 
 function show_create_PNG(){
+
+	console.log('show_create_PNG...');
+
     page.style.display = 'none';
+	show_max_search.style.display = "none";
     cpng.style.display = 'block';
     
 	if(total_posts_available==0){
@@ -425,17 +557,32 @@ function hide_create_png(){
     cpng.style.display = 'none';
     $('#png-create-bookmark').removeClass("active");
 	start_index_last_posts_div.style.display = "none";
+	show_max_search.style.display = "none";
 }
 
+/*
 function wait(ms){
 	var start = new Date().getTime();
 	var end = start;
-	while(end < start + ms) {
+	while(end < start + ms) {//sometimes lagging here.
 		end = new Date().getTime();
 	}
 }
+*/
 
 function generate_random_posts(){
+	
+	console.log('generate_random_posts..........');
+	
+	if(fullhl.length==0){
+		setTimeout(
+			function(){
+				generate_random_posts();
+			},
+			2000	//don't using wait function and just repeat after interval
+		);
+		return;
+	}
 	list_random_posts = [];				//clear old random post list
 	//add random posts
 	//var random_posts = 50;
@@ -473,11 +620,6 @@ function generate_random_posts(){
 
 		var index = Math.trunc ( Math.min ( Math.pow ( Math.random(), 0.3 ) * count, count - 1 ) );
 		//console.log('index = ', index);
-		while(fullhl.length==0)
-		{
-			console.log('wait 2000 milliseconds to download fullhl array');
-			wait(2000);
-		}
 		
 		var post_hash = fullhl[index];
 		var bc = parseInt(fullhl_bytes[post_hash]);
@@ -516,6 +658,9 @@ function generate_random_posts(){
 }
 
 function change_values(){
+
+	//console.log('\n\nchange_values..........');
+	
 	if(total_posts_available==0){
 		setTimeout("change_values()", 1000);
 		return;
@@ -589,14 +734,19 @@ function update_hashes_of_last_post(last_posts_hashes, queue, value){
 			bytes_to_pack_now += current_post_bytelength;
 			
             html +=     	'Post №'+(fullhl.indexOf(array[hash])) +
-							': <a href="javascript:void(0);" onclick="_depth=2;loadThread(&quot;'+
+			
+							': <a href="javascript:void(0);"'+
+			//				'onclick="_depth=2;loadThread(&quot;'+
+            				'onclick="show_post_in_div(&quot;'+
                             array[hash]+
-//                            current_post[0]+
-                            '&quot;); hide_create_png();" title="Click to open post/thread/category...">'+
+					//      current_post[0]+
+					
+                            '&quot;);" title="Click to open post/thread/category...">'+
+            //                '&quot;); hide_create_png();" title="Click to open post/thread/category...">'+
                             array[hash]+
-//                            current_post[0]+
+					//		current_post[0]+
                             '</a>'
-//						+	' ('+ fullhl_bytes[array[hash]] + ' bytes)'
+					//	+	' ('+ fullhl_bytes[array[hash]] + ' bytes)'
 						+	' ('+ current_post_bytelength + ' bytes)'
 						+	'<br>'
             ;
@@ -605,7 +755,8 @@ function update_hashes_of_last_post(last_posts_hashes, queue, value){
 		for(i=0; i<current_queue.length; i++){
 			bytes_to_pack_now += parseInt(fullhl_bytes[current_queue[i]]);
 		}
-		bytes_to_pack.innerHTML = bytes_to_pack_now;
+		bytes_to_pack.innerHTML = //bytes_to_pack_now;
+			'Create PNG (Bytes to pack: '+bytes_to_pack_now+')'
 		//console.log('change queue: ', current_queue, bytes_to_pack_now);
         return html;
     }
@@ -646,6 +797,9 @@ function update_hashes_of_last_post(last_posts_hashes, queue, value){
 
 
 function generate_hash_list(){
+	
+	console.log('generate_hash_list...');
+
     var nlp = getlp.value;    			//nlp - number of last posts.
 	from_beginning = startlp.value;		//start post.
 	
@@ -718,7 +872,7 @@ function generate_hash_list(){
 		
 		//console.log('after2: parthl[0]', parthl[0], '3 arrays length: ', rest.concat(curhlp.concat(parthl)).length, ', rest.length', rest.length, ', curhlp.length', curhlp.length, 'parthl.length', parthl.length);
         //console.log('after2: parthl', parthl, '3 arrays: ', rest.concat(curhlp.concat(parthl)), ', rest', rest, ', curhlp', curhlp, 'parthl', parthl);
-		generate_random_posts();
+		//generate_random_posts();
     }
     else{            //load new full array, using GET-query, and update fullhl_bytes
         
@@ -743,12 +897,17 @@ function generate_hash_list(){
         //    '\n full.l', parthl.length
         //);
         
-        //console.log('Loading last posts...');
+        console.log('Loading last posts...', ', total_posts_available: ', total_posts_available);
+		if(total_posts_available==0){total_posts_available = postCount;}
+        console.log('Loading last posts...', ', total_posts_available: ', total_posts_available);
+		
+		
         //$.get(        'http://127.0.0.1:7346/api/prange/?fromto='+(total_posts_available-nlp)+'-'+nlp+'&only_hashes=only_hashes') //return hashes only, using GET-query not json posts...
         //$.get(        'http://127.0.0.1:7346/api/prange/?fromto=0-'+total_posts_available+'&only_hashes=only_hashes') //get all list of posts. Return hashes only, using GET-query not json posts...
         $.get(        'http://127.0.0.1:7346/api/prange/?fromto=0-'+total_posts_available+'&only_hashes=with_bytelength') //get all list of posts. Return hashes only, using GET-query not json posts...
         //http://127.0.0.1:7346/api/prange/0-50/        //here is json posts... Many data...
         .done(function(replies){                        //some test function for response...
+			console.log('replies, after prange: ', replies);
             //console.log(
             //    'number of posts from last: ', nlp,
             //    '\n(cur.length', 'cur.l+full.l)', curhlp.length+parthl.length,
@@ -797,7 +956,7 @@ function generate_hash_list(){
 			rest = result[2];
             update_hashes_of_last_post(curhlp);                                        //update list of hashes in current array...
 			change_values();
-			generate_random_posts();
+			//generate_random_posts();
 
             //generate_hash_list();
         })

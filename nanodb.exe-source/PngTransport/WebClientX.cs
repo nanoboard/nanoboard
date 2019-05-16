@@ -89,6 +89,11 @@ namespace nbpack
             //_wc.DownloadDataAsync(new Uri(uri.AbsoluteUri.Replace("https://", "http://")));
             _wc.DownloadDataAsync(new Uri(uri.AbsoluteUri));	//delete replace.
         }
+		
+        public void DownloadFile(Uri uri, string fileName)	//download large file.
+        {
+            _wc.DownloadFile(new Uri(uri.AbsoluteUri), fileName);
+        }
 
         public WebHeaderCollection Headers
         {

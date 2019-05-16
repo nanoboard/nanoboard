@@ -580,9 +580,17 @@ namespace NDB
 			return System.Text.RegularExpressions.Regex.IsMatch(input, "^[0-9a-fA-F]{32}$", System.Text.RegularExpressions.RegexOptions.Compiled);
 		}
 
+		private bool downloading = false; //true, while downloading.
 		//download post by URL, using API
 		public bool DownloadPosts(string url){ //URL is the string "http://127.0.0.1:7346/api/" or "http://mydomain.onion:8080/api/"
 		
+			while(
+					downloading == true
+				//|| 	uploading == true
+			) {
+				System.Threading.Thread.Sleep(10);
+			}
+			downloading = true;
 			//Console.WriteLine("DownloadPosts: url {0}", url);
 			
 			int max_posts = 40;	//maximum size of HTML page is 2.5 MB = 2621440 bytes / 65535 bytes/post ~ 40 posts
@@ -604,6 +612,7 @@ namespace NDB
 			for (var i = 0; (i*max_posts)<posts_count; i++){
 					
 					Console.WriteLine("Part: {0}", i);
+					System.Threading.Thread.Sleep(10);
 					Console.WriteLine(url+"prange/"+(i*max_posts)+"-"+max_posts+"&only_hashes");
 
 				//Loading posts
@@ -636,27 +645,40 @@ namespace NDB
 					Console.WriteLine("\n");	//show empty line after end of each part.
 				//End loading posts.
 			}
+			downloading = false;
 			
-			Console.WriteLine("End downloading posts.");
+			Console.WriteLine("End downloading posts.\n");
 			return true;
 		}
 		
+		private bool uploading = false;	//true, when uploading in progress.
 		//uploading posts
 		public int UploadPosts(string JSON){ //posts in JSON, like response of http://127.0.0.1:7346/api/prange/0-10
-			List<Post> data = JsonConvert.DeserializeObject<List<Post>>(JSON);	//JSON string to list of Posts
-			for(var post = 0; post<data.Count; post++){	//for each post in list
+			List<Post> posts_data = JsonConvert.DeserializeObject<List<Post>>(JSON);	//JSON string to list of Posts
+			
+			while(
+					uploading == true
+			//	||	downloading == true
+			) {
+				System.Threading.Thread.Sleep(10);
+			}
+			
+			uploading = true;
+			for(var post_index = 0; post_index<posts_data.Count; post_index++){	//for each post in list
 				//try to add this post
 				Console.WriteLine(
 					"Post hash: {0}, "+
 					"md5? {1}, "+
 					"added: {2} ",
-					data[post].hash,
-					IsMD5(data[post].hash),
-					PutPost(data[post], false, false)	//do not allow reput and make full validation
+					posts_data[post_index].hash,
+					IsMD5(posts_data[post_index].hash),
+					PutPost(posts_data[post_index], false, false)	//do not allow reput and make full validation
 				);
 			}
-			Console.WriteLine("\n");
-			return data.Count;
+			uploading = false;
+			
+			Console.WriteLine("End uploading posts.\n");
+			return posts_data.Count;
 		}
         #endregion
     }

@@ -341,6 +341,16 @@ var already_saved_to = "";				//this string need to save notif, when file saved,
 function notifyAboutNotifications() {
 	//console.log('run check avails from notif.....');
 	check_avails_once();
+	/*
+		When "Collect PNG" running,
+		The content of posts in parsed containers, after downloading this files -
+		this content contains in the notifications.
+		There can be base64 of images, etc...
+		If downloading PNG is faster, and update notifications slower,
+		the usage of memory is growing, because not all notifications downloaded
+		using /notif query, and before this - this is stored in the nanodb-server memory.
+		This can return OutOfMemoryException for many pictures and fast collect.
+	*/
 	$.get('../notif')
 		.done(function(data){
 			//if(data.indexOf("Saved PNG to /upload/")!==-1){		//Make button clickable, after receive last notification.
@@ -449,8 +459,10 @@ function notifyAboutNotifications() {
 			else{
 				pushNotification(applyFormatting(data), _post_count_notification_time);
 			}
+			//console.log('notif received - short timeout');
 			setTimeout(notifyAboutNotifications, 100);			//short timeout if notify received.
 		}else{
+			//console.log('notif not received - long timeout');
 			setTimeout(notifyAboutNotifications, _post_count_notification_time);
 		}
     })

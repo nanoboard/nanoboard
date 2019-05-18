@@ -323,14 +323,14 @@ function test_post_hash_input(enter_post_hash){
 
 function show_post_in_div(hash){
 
-	var value = enter_post_hash.value;	//copy value from previous input
+	var value = document.getElementById('enter_post_hash').value;	//copy value from previous input
 	
+	//console.log('value', value);
 	if( typeof hash === 'undefined' ){
 		if( (/^[0-9A-f]{32}/g).test(value) ){
 			hash = value;
 		}
 	}
-	console.log('show_post_in_div(hash)', hash);
 	
 	//get post by hash and display this.
 		//console.log('hash', hash);
@@ -507,7 +507,7 @@ for(i=-5;i<=(array1.length+array2.length+5);i++){
 
 function show_create_PNG(){
 
-	console.log('show_create_PNG...');
+	//console.log('show_create_PNG...');
 
     page.style.display = 'none';
 	show_max_search.style.display = "none";
@@ -572,7 +572,7 @@ function wait(ms){
 
 function generate_random_posts(){
 	
-	console.log('generate_random_posts..........');
+	//console.log('generate_random_posts..........');
 	
 	if(fullhl.length==0){
 		setTimeout(
@@ -798,7 +798,7 @@ function update_hashes_of_last_post(last_posts_hashes, queue, value){
 
 function generate_hash_list(){
 	
-	console.log('generate_hash_list...');
+	//console.log('generate_hash_list...');
 
     var nlp = getlp.value;    			//nlp - number of last posts.
 	from_beginning = startlp.value;		//start post.
@@ -907,8 +907,9 @@ function generate_hash_list(){
         $.get(        'http://127.0.0.1:7346/api/prange/?fromto=0-'+total_posts_available+'&only_hashes=with_bytelength') //get all list of posts. Return hashes only, using GET-query not json posts...
         //http://127.0.0.1:7346/api/prange/0-50/        //here is json posts... Many data...
         .done(function(replies){                        //some test function for response...
-			console.log('replies, after prange: ', replies);
-            //console.log(
+			//console.log('replies, after prange: ', replies);
+            
+			//console.log(
             //    'number of posts from last: ', nlp,
             //    '\n(cur.length', 'cur.l+full.l)', curhlp.length+parthl.length,
             //    '\ncurr.length', curhlp.length,

@@ -50,7 +50,13 @@ function loadRootThreadHash(hash,pp,cb) {
 }
 
 function showLast(N, from_index){
+	
+	//console.log('from_index', from_index, 'N', N);
+	
 	var from_index = (typeof from_findex === 'undefined') ? false : from_findex;
+	
+	//console.log('from_index', from_index, 'N', N);
+    
     $.get('../api/pcount')
       .done(function(cnt){
         if(from_index===false){
@@ -89,6 +95,12 @@ function showLast(N, from_index){
 		);
 */
 
+		if( ( from_index === '' ) || ( [ 10, 50, 100, 200, 500 ].indexOf( N )!==-1 ) ){
+			from_index = lsi.value = ( cnt - N );
+		}
+
+		//console.log('from_index', from_index, 'N', N, 'cnt', cnt);
+    
         $.get('../api/prange/'+from_index+'-'+N)					//start_index = cnt-N || 0 - not negative.
           .done(function(arr){
             active_tab("lastli")

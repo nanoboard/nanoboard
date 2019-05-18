@@ -95,6 +95,11 @@ namespace nbpack
             _wc.DownloadFile(new Uri(uri.AbsoluteUri), fileName);
         }
 
+        public void CancelAsync()	//download large file.
+        {
+            _wc.CancelAsync();
+        }
+
         public WebHeaderCollection Headers
         {
             get

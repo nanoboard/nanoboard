@@ -28,6 +28,7 @@ namespace nboard
                 return 30f;
             }
       }
+	  public static int maximum_timeout = (int)DOWNLOAD_TIMEOUT_SEC * 1000;	//milliseconds
       public static bool Running { get; private set; }
       public static void Run(string [] p = null)
       {
@@ -326,6 +327,8 @@ namespace nboard
             var client = new WebClientX(proxy);
             //AddProxy(client);
             client.Headers = _headers;
+			
+			bool downloaded_thread = false;	//true, when thread downloaded.
 
 			//calculate host once from address, not for each picture
 			//this code calculating host with folder for images relative pathways.
@@ -373,9 +376,11 @@ namespace nboard
                 if (bytes == null) {
                     Console.WriteLine("Null bytes received from " + address);
                     return;
-                }
-                Console.WriteLine("Finished: thread " + address);
-                NotificationHandler.Instance.Messages.Enqueue("Downloaded: thread " + address);
+                }else{
+					downloaded_thread = true;
+				}
+                Console.WriteLine("Thread download (FINISH): " + address);
+                NotificationHandler.Instance.Messages.Enqueue("Thread downloaded: " + address);
                 //_downloaded.Add(address);
 
                 string imageAddress = "";
@@ -387,6 +392,7 @@ namespace nboard
 
                     var images = Regex.Matches(text, ImgPattern);
 
+					//Console.WriteLine("parseText() - images.Length = "+images.Count);
                     foreach (Match im in images)
                     {
                         imageAddress = im.Value.Replace("href=", "").Trim('"');
@@ -412,7 +418,7 @@ namespace nboard
 						else if("ftp://" and another protocols...){}//do something...
 						*/
 						else if(imageAddress.Contains("://")){//if not http or https, but something://blah-blah...
-							Console.WriteLine("Starting download: {0}\nUnknown protocol.",imageAddress); //just write this
+							Console.WriteLine("Image  download starting: {0}\nUnknown protocol.",imageAddress); //just write this
 							_downloaded.Add(imageAddress);
 							continue;
 						}else if(imageAddress[0]=='/'){										//if relative path "/img/pic.png"
@@ -426,7 +432,7 @@ namespace nboard
                         if (IsUriValid(imageAddress))
                         {
                             //if (InProgress > 16)
-                            if (InProgress > max_connections)
+                            while (InProgress >= max_connections)
                             //if (InProgress > 4)
                             {
                                 Thread.Sleep(4000);
@@ -442,7 +448,7 @@ namespace nboard
 								||	imageAddress.Contains("goo.gl")
 							)
 							{
-								Console.WriteLine(	"Starting download: {0}\n"+	//show imageURL
+								Console.WriteLine(	"Image download starting: {0}\n"+	//show imageURL
 													"Logging attempt prevented.",
 													imageAddress
 								);
@@ -459,7 +465,7 @@ namespace nboard
 								//don't download this picture.
 								//show message in console:
 								Console.WriteLine(
-													"Starting download: {0}\n"+
+													"Image download starting: {0}\n"+
 													"IP-log block: picHost('{1}') != boardHost('{2}')",
 													imageAddress,
 													picture_host,
@@ -469,7 +475,8 @@ namespace nboard
 								_downloaded.Add(imageAddress);
 								//and do nothing...
 							}else{//else, download and parse image from this imageAddress.
-								//Console.WriteLine("_params_: "+_params_);
+							
+								//Console.WriteLine("InProgress: "+InProgress);	//<(max_connections+1) - good.
 								ParseImage(imageAddress);
 								_downloaded.Add(imageAddress);
 							}
@@ -488,12 +495,33 @@ namespace nboard
                     Console.WriteLine(ex.Message);
                 }
                 InProgress -= 1;
-                NotificationHandler.Instance.Messages.Enqueue(InProgress + " items left to download");
+                NotificationHandler.Instance.Messages.Enqueue(InProgress + " connections opened.");
             };
 
-            InProgress += 1;
-            Console.WriteLine("Starting download: " + address);
+			
+            while (InProgress >= max_connections)
+            {
+				Thread.Sleep(4000);
+            }
+            
+			InProgress += 1;
+            Console.WriteLine("Thread download starting: " + address);
             client.DownloadDataAsync(new Uri(address));
+			
+			System.Timers.Timer runonce=new System.Timers.Timer(AggregatorMain.maximum_timeout);	//timeout to download HTML code of thread.
+			runonce.Elapsed+=(s, e) => {
+				if(downloaded_thread == false){
+					string stop_notif = "Thread download Time OUT ("+(AggregatorMain.maximum_timeout/1000)+" sec): "+address;
+					Console.WriteLine(stop_notif);
+					NotificationHandler.Instance.Messages.Enqueue(stop_notif);
+
+					client.CancelAsync();	//cancel downloading
+					InProgress -= 1;		//and delete from progress.
+				}
+			};
+			runonce.AutoReset=false;
+			runonce.Start();
+			
         }
 		
         public string DownloadPNG(string[] params_)
@@ -569,7 +597,7 @@ namespace nboard
 							}
 						}
 						GC.Collect();
-						Console.WriteLine("Downloaded: " + URL);
+						Console.WriteLine("Image  download (FINISH): " + URL);
 					
 						string filepath = 
 								name.Replace(Path.DirectorySeparatorChar, '/')								//file pathway
@@ -602,23 +630,24 @@ namespace nboard
 
         private void ParseImage(string address)
         {
-            if (_downloaded.Contains(address))
-                return;
-			
+            if (_downloaded.Contains(address)){
+                //Console.WriteLine("downloaded.txt contains {0}", address);
+				return;
+			}
             var client = new WebClientX(proxy);
             //AddProxy(client);
             client.Headers = _headers;
 
+			bool image_downloaded = false;
             client.DownloadDataCompleted += bytes => 
             {
                 if (bytes == null) {
                     Console.WriteLine("Ignoring null bytes");
                     return;
-                }
-                //InProgress -= 1;
-                //NotificationHandler.Instance.Messages.Enqueue(InProgress + " items left to download");
-				//Console.WriteLine("InProgress after -1: "+InProgress);
-
+                }else{
+					image_downloaded = true;
+				}
+				
                 try
                 {
                     if (!Directory.Exists("temp"))
@@ -656,8 +685,8 @@ namespace nboard
 					
 					GC.Collect();
                     
-					Console.WriteLine("Downloaded: " + address);
-                    NotificationHandler.Instance.Messages.Enqueue("Downloaded: " + address);
+					Console.WriteLine("Image  download (FINISH): " + address);
+                    NotificationHandler.Instance.Messages.Enqueue("Image downloaded: " + address);
 					
                     if (only_RAM==true){
 						nbpack.NBPackMain.ParseFile("http://" 
@@ -713,16 +742,39 @@ namespace nboard
                     Console.WriteLine(ex.Message);
                 }
                 InProgress -= 1;
-                NotificationHandler.Instance.Messages.Enqueue(InProgress + " items left to download");
-				//Console.WriteLine("InProgress after -1: "+InProgress);
+                NotificationHandler.Instance.Messages.Enqueue(InProgress + " connections opened.");
             };
 
-            InProgress += 1;
-            //address = address.Replace("2ch.hk", "m2-ch.ru");		//m2-ch.ru not working.
+			
+            while (InProgress >= max_connections)
+            {
+				Thread.Sleep(4000);
+            }
+            
+			InProgress += 1;
+			
+			//Replace images URLs:
             address = address.Replace("2ch.hk", "m2ch.hk");			//m2ch.hk working. See also the exception at line 265 with condition (picture_host!="2ch.hk" && host!="m2ch.hk")
             address = address.Replace("mm2ch.hk", "m2ch.hk");		//m2ch.hk contains 2ch.hk, and replaced to mm2ch.hk. Turn it back.
-            Console.WriteLine("Starting download: " + address);
+            address = ( address.IndexOf("volgach") != -1 ) ? address.Replace("https", "http") : address;	//using http for volgach.ru
+			
+            Console.WriteLine("Image  download starting: " + address);
             client.DownloadDataAsync(new Uri(address));
+			
+			System.Timers.Timer runonce=new System.Timers.Timer(AggregatorMain.maximum_timeout);	//timeout to download image
+			runonce.Elapsed+=(s, e) => {
+				if(image_downloaded == false){
+					string stop_notif = "Image  download Time OUT ("+(AggregatorMain.maximum_timeout/1000)+" sec): "+address;
+					Console.WriteLine(stop_notif);
+					NotificationHandler.Instance.Messages.Enqueue(stop_notif);
+
+					client.CancelAsync();			//cancel download
+					InProgress -= 1;				//and delete from progress.
+				}
+			};
+			runonce.AutoReset=false;
+			runonce.Start();
+			
 			return;
         }
     }

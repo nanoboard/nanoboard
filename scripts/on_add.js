@@ -4,7 +4,7 @@ var _base64scale = 1 + 1/3.0;
 var _maxPostSize = 65536*_base64scale + 32 + 32 + 'hashreplyTomessage{},,,"""""":::   \n\n\n'.length + 100;
 
 function httpPost(uri, data) {
-	console.log('on_add.js: httppost('+uri+', '+data+')');
+	console.log('on_add.js: httppost(\''+uri+'\', \''+data+'\')');
   var x = new XMLHttpRequest();
   x.open('POST', uri);
   x.send(data);

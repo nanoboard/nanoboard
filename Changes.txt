@@ -590,6 +590,62 @@ Full changes:
 		remove this file from releases, to make archive smaller.
 
 ____________________________________________________
+Changes:
+\nanodb.exe-source\Database\PostDb.cs
+	Fix uploading and downloading.
+	Add two variables and rename variables inside methods.
+	Now this methods not running until another process in progress.
+
+\pages\TEST_download-upload-posts.html
+	Uncomment all methods for test.
+	Now all tests working if database was deleted before running nanodb.exe
+
+\pages\version.txt
+	Updated, after recompilation.
+____________________________________________________
+10 files changed.
+Changes:
+	\nanodb.exe - recompiled exe.
+	\changes.txt - update changes.
+
+	\nanodb.exe-source\PngTransport\Aggregator.cs
+		- Repair PNG collection - "Collect PNG":
+			Now downloading threads will be stopped if no any response after timeout of timer.
+			Default timeout = DOWNLOAD_TIMEOUT_SEC - and this value can be changed in Settings.
+			Console notification text - changed.
+		- No more than "max_connection" items will be added to downloading list.
+		- Same for downloading images, before parsing.
+		- Now I don't see the OutOfMemoryException within all process "Collect PNG",
+			But this can be because base64 there is in notifications.
+			When downloading and parsing fast, and this updating loading slowly,
+			usage of memory is growing in nanodb.exe server.
+		- change https to http for volgach.ru. Now images downloading there.
+		- Maybe need to add some headers, because many HTTPS threads return request-timeout...
+
+	\nanodb.exe-source\PngTransport\WebClientX.cs
+		Add CancelAsync() for WebClient in WebClientX.
+	
+	\pages\index.html
+		Fix value for input, when this is a first input of hash.
+		Comment some test console.log()
+		
+	\pages\version.txt
+		Regenerated after recompilation.
+		
+	\pages\TEST_download-upload-posts.html
+		Just add descriptions.
+		
+	\scripts\init.js
+		Add comments.
+		
+	\scripts\last.js
+		Fix undefined parameter from_index in POST-query, when selected the item
+		with LastN post in the list, and when page was been updated.
+		Add new from_index as first value of POST input and add it to input field.
+	
+	\scripts\on_add.js
+		Add quotes.
+____________________________________________________
 
 
 Code commented. See source code.

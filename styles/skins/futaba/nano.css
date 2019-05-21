@@ -190,7 +190,7 @@ a:hover {
   border-style: dotted;
 }
 
-sp, sp a  {
+sp, sp a, sp gr, sp b, sp i, sp u, sp s, sp sub, sp sup {
 /*background color is #f0e0d6*/
 
   background: #faeaea;
@@ -208,6 +208,10 @@ sp, sp a  {
   font-size: 16px;
 }
 
+a sub, a sup {
+	color: inherit;
+}
+
 sp:hover {
 /*
   background-color: #000;
@@ -216,6 +220,22 @@ sp:hover {
   background: #f0e0d6;
 
   color: inherit;
+}
+
+gr:hover {
+	background: #f0e0d6;
+	color: #117743;
+}
+
+b:hover, i:hover, u:hover, s:hover, sup:hover, sub:hover {
+/*
+	background: #f0e0d6;
+*/
+
+/*
+	background: inherit;
+*/
+	color: inherit;
 }
 
 .post-inner {

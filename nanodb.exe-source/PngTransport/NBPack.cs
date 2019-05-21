@@ -440,22 +440,72 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
             GC.Collect();
             try
             {
+				int posts_added = 0;
                 foreach (var p in posts)
                 {
 					//if(bypassValidation){ Console.WriteLine("Captcha file not found. bypassValidation = "+bypassValidation+"now..."); }
-                    bool added = PostDatabase.PutPost(p, true, bypassValidation);
+                    bool added = false;
+					try{
+						added = PostDatabase.PutPost(p, true, bypassValidation);
+					}catch(Exception ex){
+						Console.WriteLine("Try to PutPost: "+ex);
+					}
 
                     if (added)
                     {
-                        NServer.NotificationHandler.Instance.
-                            Messages.Enqueue(	"[b][g]Extracted post:[/g][/b] "
-											+	Encoding.UTF8.GetString(Convert.FromBase64String(p.message)));
+					/*
+						try{
+							NServer.NotificationHandler.Instance.
+								Messages.Enqueue(
+									//"[b][g]Extracted post:[/g][/b] "
+									//+	Encoding.UTF8.GetString(Convert.FromBase64String(p.message))	//display post
+
+									"[b][g]Extracted post:[/g][/b] "
+									+	p.hash															//only hash
+								);
+						}
+						catch(Exception ex){	//here sometimes catch srcIndex for fast collect
+							Console.WriteLine("Try to add notification: "+ex + "\nstring.Length" + Encoding.UTF8.GetString(Convert.FromBase64String(p.message)).Length);
+						}
+					*/
+						posts_added++;
                     }
+/*
+				//or don't display posts and just display added posts:
+					try{
+						NServer.NotificationHandler.Instance.
+							Messages.Enqueue(
+										"[b][g]Contains posts:[/g][/b] "			//Display contains posts
+									+	posts.Length +								//posts in container
+										". Added: "
+							//		+	posts_added									//added posts
+							//		+	"posts."
+							
+							//or this notification
+									+
+									(
+										(posts_added==posts.Length)					//if all posts added
+											? "All"									//display "All"
+											:	posts_added +						//or display added posts
+												", Not added: " +					//and not added
+												(posts.Length - posts_added)		//value, then.
+												+(
+													( ( posts.Length - posts_added ) != 0 )
+														? " (maybe already exist)"
+														: ""
+												)
+									)
+							);
+					}
+					catch(Exception ex){
+						Console.WriteLine("Try to add notification: "+ex);	//sometimes error: srcIndex
+					}
+*/
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("NBPack.cs: ParseFile(Image RAM) - try to add posts: "+e.Message);							//here catch "out of memory".
+                Console.WriteLine("NBPack.cs: ParseFile(Image RAM) - try to add posts: "+e.Message);	//here catch "OutOfMemoryException" for notifs.
             }
 			return;
         }

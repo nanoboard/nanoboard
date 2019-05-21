@@ -359,7 +359,9 @@ function show_post_in_div(hash){
 				for(post_number=1;post_number<=posts.length;post_number++){
 					var current_message = escapeTags(Base64.decode(posts[post_number-1].message));
 					current_message = detect_files(current_message);			//replace files to links
-					current_message = replace_local_quotes(current_message);			//format nanopost.
+					if(_detectURLs === 'true'){
+						current_message = replace_local_quotes(current_message);			//format nanopost.
+					}
 					current_message = applyFormatting(current_message);			//format nanopost.
 
 					//console.log('current_message.length', current_message.length);		//sometimes "NSERROR OUT OF MEMORY"...

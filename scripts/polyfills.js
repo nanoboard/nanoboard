@@ -88,6 +88,7 @@ if (!String.prototype.endsWith) {
 }());
 //END polifyll for array.slice()
 
+
 //Math.trunc polyfill. Ceil if negative, floor if positive + another cases.
 if (!Math.trunc) {
 	Math.trunc = function(v) {
@@ -107,6 +108,7 @@ if (!Math.trunc) {
 		//  null     ->  0		
 	};
 }
+
 
 //Array surfle (mix elements in array)
 function shuffle(arra1) {
@@ -128,5 +130,36 @@ function shuffle(arra1) {
 //Usage: 
 //var myArray = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 //console.log(shuffle(myArray));
+
+
+//String.includes polyfill - ECMAScript 2015
+if (!String.prototype.includes) {
+  String.prototype.includes = function(search, start) {
+    'use strict';
+    if (typeof start !== 'number') {
+      start = 0;
+    }
+    
+    if (start + search.length > this.length) {
+      return false;
+    } else {
+      return this.indexOf(search, start) !== -1;
+    }
+  };
+}
+
+
+//String.startsWith polyfill - ECMAScript 6
+if (!String.prototype.startsWith) {
+  Object.defineProperty(String.prototype, 'startsWith', {
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: function(searchString, position) {
+      position = position || 0;
+      return this.indexOf(searchString, position) === position;
+    }
+  });
+}
 
 //The End.

@@ -12,6 +12,8 @@ namespace NDB
 	//Define this.
 	public class DTComparer : IComparer<DateTime> {
         public int Compare(DateTime x, DateTime y) {
+			//System.Threading.Thread.Sleep(5);
+            //Console.WriteLine(x+" < - > "+y+", x.Year = "+x.Year+", y.Year"+y.Year);	//too many comparations after loading the page, if GetLastNAnswers fast = false;
             long ticks = (x - y).Ticks;
             if (ticks < 0) return -1;
             if (ticks > 0) return 1;
@@ -507,10 +509,10 @@ namespace NDB
         }
 
 		//from client 3.1 - get last n posts in thread
-        public List<Post> GetLastNAnswers(string hash, int n)
+        public List<Post> GetLastNAnswers(string hash, int n, bool fast = false)
         {
-            List<Post> res = new List<Post>();
-            if (!_rrefs.ContainsKey(hash)) return res;
+            List<Post> res_ln = new List<Post>();
+            if (!_rrefs.ContainsKey(hash)) return res_ln;
             
             var stack = new Stack<List<DbPostRef>>();
             stack.Push(_rrefs[hash]);
@@ -521,40 +523,120 @@ namespace NDB
 
                 foreach (var reply in elem.ToArray())
                 {
-                    res.Add(GetPost(reply.hash));
-
+					var post = GetPost(reply.hash);
+					if(fast==true){
+						if( ( DateTime.Now.Year - post.date.Year) > 2 ){
+							continue;
+						}
+					}
+					
+                    res_ln.Add(post);
                     if (_rrefs.ContainsKey(reply.hash))
                         stack.Push(_rrefs[reply.hash]);
                 }
             }
                         
-            //res=res.OrderBy<Post, DateTime>(a => a.date, Comparer<DateTime>.Create((a, b) => (DateTime.Compare(a, b)))).ToList(); //unstable in .NET v4.0
-			res = res.OrderBy<Post, DateTime>(a => a.date, new DTComparer()).ToList();
-			//res = res.OrderByDescending<Post, DateTime>(a => a.date).ToList();	//maybe working in .NET v4.0
+            //	res_ln = res_ln.OrderBy<Post, DateTime>(a => a.date, Comparer<DateTime>.Create((a, b) => (DateTime.Compare(a, b)))).ToList(); //unstable in .NET v4.0
+				res_ln = res_ln.OrderBy<Post, DateTime>(a => a.date, new DTComparer()).ToList();
+			//	res_ln = res_ln.OrderByDescending<Post, DateTime>(a => a.date).ToList();	//maybe working in .NET v4.0
+			//	Console.WriteLine("res_ln.Count = "+res_ln.Count); //shorter, when bool fast = true
 
-            if (n == 0) return res;
-            return res.Count < n ? res : res.GetRange(res.Count - n, n);
+            if (n == 0) return res_ln;
+            return (res_ln.Count < n) ? res_ln : res_ln.GetRange(res_ln.Count - n, n);
         }
 
-        public Post[] GetReplies(string hash)
+        public Post[] GetReplies(string hash)	//Get replies for thread (hash)
         {
-            if (!_rrefs.ContainsKey(hash))
+			if (!_rrefs.ContainsKey(hash)){
                 return new Post[0];
+			}
             var res = new Post[_rrefs[hash].Count];
             var rrefs = _rrefs[hash].ToArray();
 
-            for (int i = 0; i < rrefs.Length; i++)
+            for (int i = 0; i < rrefs.Length; i++){
                 res[i] = GetPost(rrefs[i].hash);
-            if (GetPost(hash).replyto == "bdd4b5fc1b3a933367bc6830fef72a35")
-			
+			}
+	
+			System.Threading.Thread.Sleep(10);
+			if (
+					GetPost(hash).replyto == "bdd4b5fc1b3a933367bc6830fef72a35"		//if thread and reply to root post
+				||	GetPost(hash).replyto == "f682830a470200d738d32c69e6c2b8a4"		//or if this is root post and reply to this post
+			){	//do this all
+
 //                res = res.OrderBy<Post, DateTime>((a) => GetLastNAnswers(a.hash, 1).Count>0?GetLastNAnswers(a.hash,1).Last().date:a.date,
 //                    Comparer<DateTime>.Create((a, b) => DateTime.Compare(a, b))).ToArray();		//unstable in .NET Framework 4.0
 
 //                res = res.OrderByDescending<Post, DateTime>((a) => (GetLastNAnswers(a.hash, 1).Count>0)?GetLastNAnswers(a.hash,1).Last().date:a.date).ToArray(); //maybe working in .NET 4.0
 
-                res = res.OrderBy<Post, DateTime>((a) => GetLastNAnswers(a.hash, 1).Count>0?GetLastNAnswers(a.hash,1).Last().date:a.date,
-                    new DTComparer()).ToArray();		//unstable in .NET Framework 4.0
 
+//                res = res.OrderBy<Post, DateTime>((a) => GetLastNAnswers(a.hash, 1).Count>0?GetLastNAnswers(a.hash,1).Last().date:a.date,
+//                    new DTComparer()).ToArray();		//unstable in .NET Framework 4.0
+
+				var temp_res = res;
+				temp_res =
+					temp_res.OrderBy<Post, DateTime>(
+						(a)
+						=>
+						{
+							try{
+								DateTime last_date =
+										( GetLastNAnswers(a.hash, 1, true).Count > 0 )		//fast
+											? GetLastNAnswers(a.hash,1, true).Last().date	//fast
+											: a.date
+								;
+						
+								last_date = ( ( DateTime.Now - last_date ).Ticks < 0 )		//if unix timestamp lesser than 0
+										?	DateTime.Parse("01.01.0001 0:00:00")				//seems like fake date - remove
+										:	last_date											//or leave
+								;
+								//Console.WriteLine("last time: "+last_date);
+								return last_date;
+							}
+							catch(Exception ex){
+								Console.WriteLine("PostDb.cs, GetReplies, OrderBy: "+ex);
+								return DateTime.Parse("01.01.0001 0:00:00");
+							}
+						}
+						,
+						new DTComparer()
+					)
+					.Reverse().ToArray()			//now ok.
+				;
+				System.Threading.Thread.Sleep(10);	//wait 10 milliseconds
+				res = temp_res;
+				
+/*
+				//display array with hashes of thread and date of last post for which this was been sorted.
+				Console.WriteLine("Array, before return:");
+				for(var i=0; i<res.Length; i++){
+					DateTime last_date;
+					try{
+						last_date =
+								( GetLastNAnswers(res[i].hash, 1, true).Count > 0 )		//fast
+									? GetLastNAnswers(res[i].hash,1, true).Last().date	//fast
+									: res[i].date
+						;
+				
+						last_date = ( ( DateTime.Now - last_date ).Ticks < 0 )	//if unix timestamp lesser than 0
+								?	DateTime.Parse("01.01.0001 0:00:00")				//seems like fake - remove
+								:	last_date											//or leave
+						;
+					}
+					catch(Exception ex){
+						Console.WriteLine("PostDb.cs, GetReplies, OrderBy: "+ex);
+						last_date = DateTime.Parse("01.01.0001 0:00:00");
+					}
+					Console.WriteLine(
+						"res[i].hash: "
+						+res[i].hash
+						+", res[i].date: "
+						+last_date
+					);
+				}
+				//Dates from new - to old now. OK.
+*/
+
+			}
             return res;
         }
 

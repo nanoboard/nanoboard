@@ -685,31 +685,46 @@ namespace nboard
 					
 					GC.Collect();
                     
-					Console.WriteLine("Image  download (FINISH): " + address);
-                    NotificationHandler.Instance.Messages.Enqueue("Image downloaded: " + address);
-					
-                    if (only_RAM==true){
-						nbpack.NBPackMain.ParseFile("http://" 
-							+ Configurator.Instance.GetValue("ip", "127.0.0.1") 
-							+ ":"
-							+ Configurator.Instance.GetValue("port", "7346"),
-							Configurator.Instance.GetValue("password", Configurator.DefaultPass),
-							RAM_container																//Image in RAM
-						);
-					}else{
-						nbpack.NBPackMain.ParseFile("http://" 
-							+ Configurator.Instance.GetValue("ip", "127.0.0.1") 
-							+ ":"
-							+ Configurator.Instance.GetValue("port", "7346"),
-							Configurator.Instance.GetValue("password", Configurator.DefaultPass),
-							"download" + Path.DirectorySeparatorChar + name								//file pathway
-							, save_files
-						);						
+					try{
+						Console.WriteLine("Image  download (FINISH): " + address);
+						NotificationHandler.Instance.Messages.Enqueue("Image downloaded: " + address);
+					}
+					catch(Exception ex){
+						Console.WriteLine("Aggregator.cs - ParseImage: Try to add notif: "+ex+"\n address: "+address+"\n\n");
 					}
 
-					if(only_RAM!=false){
-						ms.Dispose();
-						RAM_container.Dispose();																		//Image in RAM. Try flush RAM, after parsing.
+					try{
+						if (only_RAM==true){
+							nbpack.NBPackMain.ParseFile("http://" 
+								+ Configurator.Instance.GetValue("ip", "127.0.0.1") 
+								+ ":"
+								+ Configurator.Instance.GetValue("port", "7346"),
+								Configurator.Instance.GetValue("password", Configurator.DefaultPass),
+								RAM_container																//Image in RAM
+							);
+						}else{
+							nbpack.NBPackMain.ParseFile("http://" 
+								+ Configurator.Instance.GetValue("ip", "127.0.0.1") 
+								+ ":"
+								+ Configurator.Instance.GetValue("port", "7346"),
+								Configurator.Instance.GetValue("password", Configurator.DefaultPass),
+								"download" + Path.DirectorySeparatorChar + name								//file pathway
+								, save_files
+							);						
+						}
+					}
+					catch(Exception ex){
+						Console.WriteLine("Aggregator.cs - parseImage: Try to parseFile: "+ex);
+					}
+
+					try{
+						if(only_RAM!=false){
+							ms.Dispose();
+							RAM_container.Dispose();																		//Image in RAM. Try flush RAM, after parsing.
+						}
+					}
+					catch(Exception ex){
+						Console.WriteLine("Aggregator.cs - ParseImage: Try to dispose: "+ex);
 					}
 					
                     //_downloaded.Add(address);
@@ -739,7 +754,7 @@ namespace nboard
                     Console.WriteLine("Error downloading url: " + address);
 //                    if (e.Error != null)
 //                        Console.WriteLine(e.Error.Message);
-                    Console.WriteLine(ex.Message);
+                    Console.WriteLine("Exception: "+ex.Message+", InProgress: "+InProgress);
                 }
                 InProgress -= 1;
                 NotificationHandler.Instance.Messages.Enqueue(InProgress + " connections opened.");

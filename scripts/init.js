@@ -121,7 +121,7 @@ $.ajax({
 		if (data != postCount) {
 			if (postCount != 0) {
 			var countStr = (data - postCount).toString();
-			pushNotification(countStr + ' post' + numSuffix(countStr) + ' added.', _post_count_notification_time);
+			pushNotification(countStr + ' post' + numSuffix(countStr) + ' added to database.', _post_count_notification_time);
 			}
 			postCount = data;
 			$('#statusd').html('<a href=javascript:void(0)>Posts (including deleted): '+postCount+'</a>');
@@ -160,6 +160,10 @@ $(function() {
 	
 	//This need to try run collect from "download" folder: http://127.0.0.1:7346/download/
 	$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|do_not_save_and_do_not_delete|"+max_connections))	//test save, from RAM, without deleting and adding posts. max_connections = 10.
+	//Success!
+	
+	//collect to download folder:
+//	$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|save_files|"+max_connections))	//test save, from RAM, without deleting and adding posts. max_connections = 10.
 	//Success!
 
 	.done(

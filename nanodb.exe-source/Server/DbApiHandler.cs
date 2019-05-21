@@ -484,7 +484,8 @@ namespace NServer
             List<NDB.Post> posts;
             try
             {
-                posts = _db.GetLastNAnswers(hash, Convert.ToInt32(n));
+                //posts = _db.GetLastNAnswers(hash, Convert.ToInt32(n)); //not always correct. Return error when value = 5.
+                posts = _db.GetLastNAnswers(hash, nbpack.NBPackMain.parse_number(n));	//now ok.
             }
             catch(Exception e)
             {

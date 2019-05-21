@@ -646,6 +646,123 @@ Changes:
 	\scripts\on_add.js
 		Add quotes.
 ____________________________________________________
+21.05.2019	(18 files changed.)
+Short changes:
+	Fix bump for threads. Add Fast comparing.
+	Fix srcIndex and OutOfMemoryException errors when parsing and collect PNG from http://02ch.su/b/res/7379.html
+	Add new bb-codes [o], [quote], [sub], [sup], [code]
+	Fix styles when this codes inside spoiler (for dark and futaba only).
+	Add code of the post in separate hidden <pre> and button to show-hide this code.
+	Add links to thread and post in the search.
+	Add searching by post hash.
+	Fix replacement links for posts. Replace HTML-code inside to HTML entitiex before replacement.
+	Do not replace_hash to local quote if this the part of another hash.
+	Exclude PNG and GIF files from change this to hash_binary.txt. Exclude icon with link to download_as_binary.html. Now this displayed as images.
+	Add tilda to regexg for detectURLs. Now URLs with ~ will be parsed good.
+	Add polyfills for String.includes и String.StartsWith to support this in old browsers.
+_____________________________________________________________________
+Full Changes:
+Source code:
+	\nanodb.exe-source\Database\PostDb.cs
+			Fix bump for threads:
+		Lines	15-16:		Add two commented string in DTComparer to see how often this calling. So often...
+		Lines	511-547:	Method GetLastNAnswers changed.
+								Add bool fast = false to skip old posts, make array length lesser, and comparing faster.
+								Rename res to res_ln to don't conflict with res in GetReplies method.
+								Add if(fast==true){ and skip posts with date oldest than 2 years old }.
+									Now, res_ln.Count not so large, and comparing faster.
+								Add output of res_ln.Count in console.
+		Lines	548-641:	Method GetReplies - changed.
+		550, 552, 556, 558:		Add figure brackets.
+				560, 605:		Add sleep 10 milliseconds.
+					563:		Add hash f682830a470200d738d32c69e6c2b8a4 as replyTo for post bdd4b5fc1b3a933367bc6830fef72a35
+				572, 573:		Comment previous comparer.
+				575, 607:		Rewrite this comparer. 
+									Using temp_res now, to don't rewrite previous res.
+									Add skip date in future,
+									using GetLastNAnswers(fast=true),
+									and return unsetted date on catch.
+					603:			Add .Reverse()
+				608, 637:		Add commented code to see sorted array and dates by which this was been sorted.
+				
+	\nanodb.exe-source\PngTransport\Aggregator.cs
+				688, 728:		Add try-catch for all stadies of parsing.
+				757:			Add display InProgress when catch.
+
+	\nanodb.exe-source\PngTransport\NBPack.cs
+			Disable notifications and fix srcIndex error and OutOfMemoryException.
+		Lines 436-512:		Method ParseFile rewrited.
+				443:			Add int posts_added = 0;
+			448-452:			Add try-catch for PutPost
+			456-470:			Add try-catch and comment sent notification.
+									Now no posts with post-content in notifications, and this was been disabled.
+									Now no any catch with srcIndex and OutOfMemoryException.
+			471:				Just increment posts_added++;
+			473-503:			Show numbers of available posts, added posts and skipped posts - in notif only.
+									try-catch added, code commented.
+	
+	\nanodb.exe-source\Server\DbApiHandler.cs
+			487-488:		Change Convert.ToInt32 to nbpack.NBPackMain.parse_number. Now value "5" parsing good.
+			
+			
+	\pages\index.html
+			362-364:		Just add _detectURLs === 'true' to disable replace local quotes, when Detect URLs = false in Settings.
+
+	\pages\TEST_download-upload-posts.html
+			41-44:			Add console.log with synthesis the link with escaped URL.
+							This link can be used to initialize downloading from API of remote nanodb.exe.
+							Downloading test passed. Non existing posts was been successfully added.
+			
+	\scripts\init.js	 - small fix of text and add post.query to save pictures in download folder. save_files parameter there.
+							After disable posts in notification - collect from thread http://02ch.su/b/res/7379.html
+							is successfully, also success for saving all pictures in download,
+							and collect from http://127.0.0.1:7346/download/ then successfully too.
+							No any srcIndex errors and OutOfMemoryException.
+							
+	\scripts\last.js	 - Add links for thread and post for posts in list of last posts.
+	
+	\scripts\nanoclient.js
+						Fix some bugs in parsing.
+		Line 129:		Add replacing html-code inside post to html-entities. Now HTML inside the post - will be displaying as HTML-code.
+		Lines 427-442:	Add show_hide_post_code(hash) - to show code of the post, by hash of this post.
+							Now this display in separate hidden <pre>.
+							Also, available the button for switch post content and code of post.
+		Lines 523-527:	Add figure brackets.
+		Lines 566-568:	Add figure brackets. replace_local_quotes only when _detectURLs === 'true' in "Settings"
+		Lines 581-600:	Append hidden <pre> with the code of post.
+		Lines 641-647:	Exclude PNG and GIF signatures from replacing. Now PNG and GIF images displaying as images.
+		Lines 671-681:	Exclude icon to download as binary. Now this not replaced.
+		Lines 874-915:	Rewrite tabs in code, add figure brackets.
+		
+	\scripts\polyfills.js
+		Lines 133-163:	Add two polyfills for "String.includes" and "String.startsWith"
+
+	\scripts\post.js
+		Line 250:		Add tilda "~" to URL regexp in detectURLs. Now URL's with tilda will be parsed.
+		Lines 262-290:	Exclude closed bracket if another not found in url, and dot in the end of URL.
+							Now this URL will be splitted before replacement.
+		Line 305,326:		Add addition_string, after replacement.
+		Lines: 363-373:	Add new bb-codes [o], [quote], [sub], [sup], [code].
+
+	\scripts\reply.js
+		Line 597:		Change client version from 3.1 to 3.2
+		Line 629-697:	Add double quotes and add buttons for tags [o], [quote], [sub], [sup], [code] in reply window.
+		
+	\scripts\search.js
+		Lines 50-274:	Search by hash and return post/thread/cathegory, if search query seems like hash of post.
+		
+	\styles\skins\dark\nano.css
+		Lines 149-182:	Fix tags style inside spoiler.
+		
+	\styles\skins\futaba\nano.css
+		Lines 193-239:	Fix tags style inside spoiler.
+
+	\pages\version.txt - changed, after recompilation.
+
+	\nanodb.exe - recompiled win32 (x86) exe.
+	
+	\changes.txt - add this changes.
+_____________________________________________________________________
 
 
 Code commented. See source code.

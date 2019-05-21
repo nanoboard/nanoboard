@@ -594,7 +594,7 @@ function addReplyForm(id) {	// это хэш поста к которому от
     .insertAfter($('#' + id))
     .css('margin-left', parseInt($('#' + id).css('margin-left')) + _treeOffsetPx + 'px')
     .append($('<div>').addClass('reply')
-      .append($('<textarea oninput="check_base64(this);" onclick="check_base64(this);">').val('[g]' + new Date().toUTCString() + ', client: 3.1[/g]\n'))
+      .append($('<textarea oninput="check_base64(this);" onclick="check_base64(this);">').val('[g]' + new Date().toUTCString() + ', client: 3.2[/g]\n'))
       .append($('<br>'))
       .append($('<button>')
         .addClass('reply-button btn btn-danger ')
@@ -626,39 +626,74 @@ function addReplyForm(id) {	// это хэш поста к которому от
         $('#scale').click()
         })))
       .append('<hr><div id="length" style="display: inline-block;"></div><br>Format selection: ')
-      .append($('<a href=javascript:void(0)>')
+      .append($('<a href="javascript:void(0)">')
         .html('<b>[b]</b>')
         .click(function(){
           var sel = $(this).parent().find('textarea').selection();
           $(this).parent().find('textarea').selection('replace', {text: '[b]' + sel + '[/b]'});
         })
       )
-      .append($('<a href=javascript:void(0)>')
+      .append($('<a href="javascript:void(0)">')
         .html('<i>[i]</i>')
         .click(function(){
           var sel = $(this).parent().find('textarea').selection();
           $(this).parent().find('textarea').selection('replace', {text: '[i]' + sel + '[/i]'});
         })
       )
-      .append($('<a href=javascript:void(0)>')
+      .append($('<a href="javascript:void(0)">')
         .html('<span style=text-decoration:underline>[u]</span>')
         .click(function(){
           var sel = $(this).parent().find('textarea').selection();
           $(this).parent().find('textarea').selection('replace', {text: '[u]' + sel + '[/u]'});
         })
       )
-      .append($('<a href=javascript:void(0)>')
+      .append($('<a href="javascript:void(0)">')
+        .html('<span style=text-decoration:overline>[o]</span>')
+        .click(function(){
+          var sel = $(this).parent().find('textarea').selection();
+          $(this).parent().find('textarea').selection('replace', {text: '[o]' + sel + '[/o]'});
+        })
+      )
+      .append($('<a href="javascript:void(0)">')
         .html('<span style=text-decoration:line-through>[s]</span>')
         .click(function(){
           var sel = $(this).parent().find('textarea').selection();
           $(this).parent().find('textarea').selection('replace', {text: '[s]' + sel + '[/s]'});
         })
       )
-      .append($('<a href=javascript:void(0)>')
-        .html('[spoiler]')
+      .append($('<a href="javascript:void(0)">')
+        .html('<sp>[spoiler]<sp>')
         .click(function(){
           var sel = $(this).parent().find('textarea').selection();
           $(this).parent().find('textarea').selection('replace', {text: '[spoiler]' + sel + '[/spoiler]'});
+        })
+      )
+      .append($('<a href="javascript:void(0)">')
+        .html('<gr>[quote]</gr>')
+        .click(function(){
+          var sel = $(this).parent().find('textarea').selection();
+          $(this).parent().find('textarea').selection('replace', {text: '[quote]' + sel + '[/quote]'});
+        })
+      )
+      .append($('<a href="javascript:void(0)">')
+        .html('<sub>[sub]</sub>')
+        .click(function(){
+          var sel = $(this).parent().find('textarea').selection();
+          $(this).parent().find('textarea').selection('replace', {text: '[sub]' + sel + '[/sub]'});
+        })
+      )
+      .append($('<a href="javascript:void(0)">')
+        .html('<sup>[sup]</sup>')
+        .click(function(){
+          var sel = $(this).parent().find('textarea').selection();
+          $(this).parent().find('textarea').selection('replace', {text: '[sup]' + sel + '[/sup]'});
+        })
+      )
+      .append($('<a href="javascript:void(0)">')
+        .html('<pre style="display: inline;">[code]</pre>')
+        .click(function(){
+          var sel = $(this).parent().find('textarea').selection();
+          $(this).parent().find('textarea').selection('replace', {text: '[code]' + sel + '[/code]'});
         })
       )
     );

@@ -38,6 +38,10 @@ and then posts can be loading part by part...
 
 
 //downloading posts from remote API...
+
+			console.log('Get link with encodeURIComponent')
+			console.log('http://127.0.0.1:7346/api/download-posts/'+encodeURIComponent('http://127.0.0.1:7347/api/')); //encodeURIComponent encoding the URL to source-server.
+			
 			//POST
 			$.post('http://127.0.0.1:7346/api/download-posts', encodeURIComponent('http://127.0.0.1:7346/api/'))	//using POST-query to get posts in range
             .done(function(posts){

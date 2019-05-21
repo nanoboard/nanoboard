@@ -247,21 +247,50 @@ function detectURLs(text) {
 //  var matches = text.match(/https?:\/\/[A-Za-z%&\?\-=_\.0-9\/:#]+/g);	//old code not matching cyrillic symbols. "https://wiki.1chan.ca/Наноборда"
 
 	//New regexp
-	var matches = text.match(/(https?|ftps?|mailto|gopher|tox|irc|skype|magnet):?:\/\/(-\.)?[^\s\/?\.#<>]?[А-яЁёA-z0-9%&()@\?\!\$\'\*\+\,\;\-=_\.\/:#]+/g);
+	var matches = text.match(/(https?|ftps?|mailto|gopher|tox|irc|skype|magnet):?:\/\/(-\.)?[^\s\/?\.#<>]?[А-яЁёA-z0-9%~&()@\?\!\$\'\*\+\,\;\-=_\.\/:#]+/g);
 	//cyrillic symbols in url - OK
 	//more protocols - OK
 	//dot " ", ".", "!", "?", ":", in the end of sentence not skiped. Can be "The link is http://example.org/index.html!!!" -> "http://example.org/index.html"
 	//")" not skip when "(" not found in url earlier. Can be: "https://example.com/my(text).html))))))))" -> "https://example.com/my(text).html"
+	
+	//console.log('post.js - detectURLs(), mathes: ', matches);
 
   var you_re=new RegExp(".*youtube\.com.*")
   if (matches != null) {
     for (var i = 0; i < matches.length; i++) {
       var value = matches[i].toString();
+	  
+		//console.log('post.js detectURLs(), before replacement: matches['+i+']', value);
+		var addition_string = '';
+		if(
+				(value.indexOf(')')	!==	-1)			//if closing bracket found in URL
+			&&	(value.indexOf('(')	===	-1)			//and if opened bracket not found in URL
+		){
+			addition_string = value.substring(value.indexOf(')'), value.length);
+			value = value.substring(0, value.indexOf(')'));	//leave URL before closed bracket.
+		}
+		
+		if(
+				(value.indexOf('(')	!==	-1)
+			&&	(value.indexOf(')')	===	-1)
+		){
+			addition_string = value.substring(value.indexOf('('), value.length);
+			value = value.substring(0, value.indexOf('('));	//leave URL before closed bracket.			
+		}
+		
+		if(value[value.length-1] === '.'){
+			addition_string = '.';
+			value = value.substring(0, value.length-1);			 //remove dot in the end, if exist
+		}
+		
+		//console.log('post.js detectURLs(), after replacement: matches['+i+']', value);
+		//console.log('addition_string', addition_string);
+	  
+	  
       if (you_re.test(value))
       {
-        value ='<a class="vd-vid" href="'+value+'"><span class="glyphicon glyphicon-play" aria-hidden="true"></span>'+value+'</a>'
+        value ='<a class="vd-vid" href="'+value+'"><span class="glyphicon glyphicon-play" aria-hidden="true"></span>'+value+'</a>';
         text = replaceAll(text, matches[i], value);
-
       }
       else
       {
@@ -273,7 +302,7 @@ function detectURLs(text) {
 			
 			//do not do the double replace...
 			//value = matches[i].toString();									//value for finding and replace. (defined earlier)
-			var link = get_link(value);		//the link from value to insert
+			var link = get_link(value)+addition_string;		//the link from value to insert
 			var start_index = 0;												//increment start_index to search substrings, from this start_index
 			
 			for(j=0; j<matches.length; j++){									//for each url in array
@@ -294,7 +323,7 @@ function detectURLs(text) {
 							typeof maybe_post !== 'undefined'
 						&& 	(/[A-Fa-f0-9]{32}/g.test(maybe_post))
 					){
-						link = get_link(value, maybe_post);		//using post number inside the link, but leave link text.
+						link = get_link(value, maybe_post)+addition_string;		//using post number inside the link, but leave link text.
 					}
 					text = 
 							text.substring(0, start_index)									//substring by start_index
@@ -331,6 +360,17 @@ function applyFormatting(text) {
   text = text.replace(/\[pow=[a-f0-9]{256}\]/gim, '');
   text = text.replace(/\[sp(oiler|)\]/gim, '[x]');
   text = text.replace(/\[\/sp(oiler|)\]/gim, '[/x]');
+  text = text.replace(/\[quote\]/gim, '<gr>&gt;');
+  text = text.replace(/\[\/quote\]/gim, '</gr>');
+  text = text.replace(/\[code\]/gim, '<pre>');
+  text = text.replace(/\[\/code\]/gim, '</pre>');
+  text = text.replace(/\[sup\]/gim, '<sup>');
+  text = text.replace(/\[\/sup\]/gim, '</sup>');
+  text = text.replace(/\[sub\]/gim, '<sub>');
+  text = text.replace(/\[\/sub\]/gim, '</sub>');
+  text = text.replace(/\[o\]/gim, '<span style=text-decoration:overline>');
+  text = text.replace(/\[\/o\]/gim, '</span>');
+
   var tags = 'biusxg';
   for (var x = 0; x < tags.length; x++) {
     var ch = tags.charAt(x);

@@ -132,6 +132,8 @@ function numSuffix(numStr) {
 		var extract_16bytes_hex = 	/[A-Fa-f0-9]{32}/g;			//Regular Expression to extract 32 hex symbols (16 bytes) from string. 
 		var test_hex_char = 		/[A-Fa-f0-9]/;				//Regular Expression to test one char. Is hex or not...
 		var hex_array = str.match(extract_16bytes_hex);			//array with hex strings...
+		
+		//console.log('hex_array', hex_array);
 
 		var index = 0;											//start index is 0
 		var temp_index = 0;										//index in the string, where current array element (hex) was been found
@@ -186,16 +188,28 @@ function numSuffix(numStr) {
 					(
 							!test_hex_char.test(str[start_hex+32])						//not hex
 						&&	str[start_hex+32] !== ']'									//and not ']'
+						&&	!(/[0-9A-z-]/).test(str[start_hex+32])						//exclude this all characters
+						&&	(															//and
+								(typeof str[start_hex-1] !== 'undefined')				//if previous char not undefined
+							&&	!test_hex_char.test(str[start_hex-1])					//and not hex
+						)
 					)
 			){																			//replace this
+				//console.log('str[start_hex-1]: ', str[start_hex-1]);					//show first char
+				//console.log('str[start_hex+32]: ', str[start_hex+32]);				//show last char
+				
 				real_hex = str.substring(start_hex, start_hex+32);						//get real hex
 				str = str.substring(0, start_hex) + qoute_prefix(real_hex) + str.substring(start_hex+32, str.length);	//add quote
 				temp_index+=(qoute_prefix(real_hex).length-32);							//move index to search from this
 			}
 			else{																		//else, if hex char
 				//console.log('last char is hex symbol, previous hex is not a hash from post. Do not replace...');  //do not replace.
+				//console.log('nanoclient.js, replace_local_quotes() - else: str.substring(start_hex, start_hex+32); ', str.substring(start_hex, start_hex+32), 'str[start_hex+32]: ', str[start_hex+32]);
 			}
 		}
+
+		//console.log('replace_local_quotes - str:', str);
+
 		return str;
 	}//end replace function
 	//run this:
@@ -265,14 +279,19 @@ function detect_files(post_content){
 			var html_link = '<a href="data:'+filetype+';base64,'+maybe_base+'" download="'+filename+'">['+filename+']</a>'
 			//and add link to download this as binary,
 			//with green button as base64 encoded PNG image to this link - without tab symbols.
-			+'<a href="/pages/download_as_binary.html" target="_blank">\
+
+//icon to download as binary:
+
+			+'<a href="/pages/download_as_binary.html" target="_blank" title="If need to save base64 as file with another filename.ext">\
 <img src="\
 data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/\
 9hAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABCElEQVQ4jZ3TMUoDQRjF8V+SRURExQN4Ai+gFkkjegqxsQwSQcQiMGgrIugJvEB6beIRcgUPIBoExSJY7MRk\
 18kG/WBZ9r3v/75hZqcmVcEBLrESlSG6gvtyay0BL+ANiyXnE6uCr2mxnpifJWBRy8piKiClzfSqmv8d8KcVTDYx2MBafJ5mBDTxilfBcznxEIMKWPQGOE\
 ot6QLXFfC47tAdfzR+5D5aHuQ/z1YF3BYmQqNgT0KWsT0PzgOCfS0v+j6mQh6xhJ3Yd4PjAhysa2nW0cNmITZvPMMpztEpT45ML8NI6uxz4OqXXqxRJr9p\
 u/GSjMbGDKA+9d7DMEMHtziZM61c72h/A3foMuoBqRh/AAAAAElFTkSuQmCC\">'
-			+'</a>';
+			+'</a>'
+
+			;
 
 			//console.log('link - generated sucessfully...\n', 'html_link: ', html_link);																//show stage and this link...
 
@@ -405,7 +424,27 @@ u/GSjMbGDKA+9d7DMEMHtziZM61c72h/A3foMuoBqRh/AAAAAElFTkSuQmCC\">'
 		
 //end functions to hide-show posts and save in LocalStorage
 
+function show_hide_post_code(hash){
+	var pre_element = document.getElementById('pre_'+hash);
+	pre_element.style.display = (pre_element.style.display === 'none') ? 'block' : 'none';
+
+	var post_div = document.getElementById('post_'+hash);
+	post_div.style.display = (post_div.style.display === 'none') ? 'block' : 'none';
+
+	var link = document.getElementById('code_'+hash);
+	link.innerHTML = ((post_div.style.display === 'none') && (pre_element.style.display === 'block'))
+						?
+							'<span class="glyphicon glyphicon-tags" aria-hidden="true" title="Hide code"></span>'
+							//"Hide code"
+						:
+							'<span class="glyphicon glyphicon-file" aria-hidden="true" title="Show code"></span>'
+							//"Show code";
+}
+
 function addPost(post, appendFunc, hasShowButton, short) {
+
+	//console.log('post',post);
+
   if (_use_spam_filter=='true' && post.hash != _categories){
     for (i in _spam_filter){
         if (_spam_filter[i].test(escapeTags(Base64.decode(post.message)))) return false;
@@ -420,6 +459,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
     .addClass('post__details'+((hidden_hashlist.indexOf(post.hash)!=-1) ? ' post_type_hidden' : ""))
     .attr('id', post.hash);
 
+	//add show-hide post button
     d.append('&nbsp;&nbsp;<a href="javascript:void(0)" onclick="toogle_show_hide(this);">'+
 		'<span class="glyphicon '+
 		(
@@ -429,7 +469,13 @@ function addPost(post, appendFunc, hasShowButton, short) {
 		)
 		+
 		' aria-hidden="true"></span></a>&nbsp;&nbsp;'); 					//add glyphicon to hide-show post.
-	
+		
+	//add show-hide code button
+	d.append('&nbsp;<a id="code_'+post.hash+'" href="javascript:void(0);" onclick="show_hide_post_code(\''+
+					post.hash
+				+'\');"><span class="glyphicon glyphicon-file" aria-hidden="true" title="Show code"></span></a>&nbsp;&nbsp;'
+	);
+
   if (_depth != 0){
     //d.append('<gr>#' + (short&&_depth!=1?shortenHash(post.hash):post.hash) + '&nbsp;</gr>');	//old code.
     d.append('<gr>' + (add_remove(queue, post.hash, '', true, true)) + '&nbsp;</gr>');
@@ -474,10 +520,11 @@ function addPost(post, appendFunc, hasShowButton, short) {
     d.append(showLink);
     $.get('../api/threadsize/' + post.hash)
       .done(function(size){
-        if (size == '0')
+        if (size == '0'){
           showLink.html('<span class="glyphicon glyphicon-comment not-avail" aria-hidden="true"></span><span class="btn-title not-avail">&thinsp;0</span>');
-        else
+        }else{
           showLink.html('<span class="glyphicon glyphicon-comment" aria-hidden="true"></span><span class="btn-title">&thinsp;'+size+' – Show</span>');
+		}
       });
   }
   d.append('&nbsp;');
@@ -516,16 +563,41 @@ function addPost(post, appendFunc, hasShowButton, short) {
   var post_content = escapeTags(Base64.decode(post.message));
   //console.log('At beginning, post_content was been: \n', post_content);				//Value of post_content at beginning, with description
 
-	post_content = replace_local_quotes(post_content);	//replace posts to local links.
+	if(_detectURLs === 'true'){
+		post_content = replace_local_quotes(post_content);	//replace posts to local links.
+	}
 	post_content = detect_files(post_content);			//replace files to links
   
 
   var inner = $('<div>')
+	.attr('id', 'post_'+post.hash)
     .addClass('post-inner')
     .addClass('post__message')
 //    .html(applyFormatting(escapeTags(Base64.decode(post.message))))											//old code
-    .html(applyFormatting(post_content))																		//<--- HERE using replaced contend of post
+    .html(
+		applyFormatting(post_content)											//<--- HERE using replaced contend of post
+	)
     .appendTo(d);
+	
+	d.append('<pre id="pre_'	+
+									post.hash
+									+ '"style="display: none;">'
+			+	'Post hash: '		+			post.hash + '\n'
+			+	'ReplyTo: '			+			post.replyTo + '\n'
+			+	'Date: '			+			post.date + '(added in version 3.1 to sort posts) \n'
+			+	'Message: '			+ '\n_________\n'	+
+				Base64.decode(post.message)
+				.replace(	//replace HTML code to entities, to do not replase links, after.
+					/[\u00A0-\u9999<>\&]/gim,
+					function(i) {
+						return '&#'+i.charCodeAt(0)+';';
+					}
+				)
+			+
+		'</pre>'
+	)
+	;
+
   detectPlacesCommands(inner);
   d.find('img').click(function(){
     $(this).toggleClass('full');
@@ -566,6 +638,13 @@ function addPost(post, appendFunc, hasShowButton, short) {
 				$('<a download='+fileName+' href='+fileBaseLink+'>['+fileName+']</a>')
 			);
 		}
+		
+		else if(img.src.indexOf('iVBORw0K')!==-1){	//skip PNG by base64 signature
+			//do not replace PNG image
+		}
+		else if(img.src.indexOf('R0lGODlh')!==-1){	//skip GIF by base64 signature
+			//do not replace GIF image
+		}
 
 		else if(!img.src.startsWith('data:image/jpeg;base64,/9j/')){//Если не JPEG - вывести ссылку.
 	//		console.log("img not zipjpeg - else");
@@ -589,8 +668,16 @@ function addPost(post, appendFunc, hasShowButton, short) {
 			var fileName, fileHash, decoded_file;
 			
 			try{
+				
 				decoded_file = atob(file_base64);
 				fileHash = Sha256.hash(decoded_file);
+				
+				//fileHash = Sha256.hash(img.src);	//dataURL hash.
+				
+				if(//if icon to download_as_binary.html
+						fileHash==='5c99aa0a72257895f2bc292d29db9caea14485e19dce4327e60adfbec3cbf92e'	//if hash of base64
+					||	fileHash==='a9646873a1d7e4aa81b1aa264dbc374f0451730566ebc50ce0a2235ff5845731'	//or if hash of dataURL
+				){ return; }	//do not nothing
 				
 				if(
 					decoded_file.startsWith('RIFF')
@@ -784,38 +871,48 @@ function loadThread(hash, highlight) {
                   $(first).detach().insertBefore(sorted[0]);
               })
             );
-	   $('#thread').append(
-            $('<a id="thread_top">')
-              .attr('href','javascript:void(0)')
-              .html('<span class="glyphicon glyphicon-remove" aria-hidden="true"></span>Delete All')
-              .click(function(){
-                if (confirm('Are you sure you want delete all posts that you currently see?')) {
-                  $('.glyphicon-trash').click();
-                }
-              })
-            );
+		$('#thread').append(
+			$('<a id="thread_top">')
+			.attr('href','javascript:void(0)')
+			.html('<span class="glyphicon glyphicon-remove" aria-hidden="true"></span>Delete All')
+			.click(
+				function(){
+					if (confirm('Are you sure you want delete all posts that you currently see?')) {
+						$('.glyphicon-trash').click();
+					}
+				}
+			)
+		);
 
-          addPost(post, function(d){ d.appendTo($('#thread')); }, false, false);
-          if (_depth == 1) arr.reverse();
-          for (var i = 0; i < arr.length; i++) {
-            var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
-            if (_showDeleted == 'false' && deleted) continue;
-            var p = addPost(arr[i], function(d) {d.appendTo($('#thread'));}, true)
-            if (p){
-                p.css('margin-left',  _treeOffsetPx + 'px');
-                if (deleted) p.css({ opacity: _deletedOpacity});
-                if (highlight == arr[i].hash) {
-                  p.addTemporaryClass('high', 8000);
-                }
-                if (_depth > 1) {
-                  loadReplies(arr[i].hash, 2, highlight);
-                }
-				if(_depth==1)	//from client 3.1	
-				{
-					AddBriefView(arr[i].hash, deleted, highlight);
+			addPost(post, function(d){ d.appendTo($('#thread')); }, false, false);
+			if (_depth == 1 || _depth == 0){
+				//without reverse.
+				//arr.reverse();	//was been reverse, but reverse now inside PostDb.cs, GetReplies()
+			}else{
+				arr.reverse();	//maybe need to reverse another, but seems like good, without it.
+			}
+			for (var i = 0; i < arr.length; i++) {
+				//console.log('nanoclient.js: arr: ', arr[i].hash, arr[i]);
+				var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
+				if (_showDeleted == 'false' && deleted){continue;}
+				var p = addPost(arr[i], function(d) {d.appendTo($('#thread'));}, true)
+				if (p){
+					p.css('margin-left',  _treeOffsetPx + 'px');
+					if (deleted){
+						p.css({ opacity: _deletedOpacity});
+					}
+					if (highlight == arr[i].hash) {
+						p.addTemporaryClass('high', 8000);
+					}
+					if (_depth > 1) {
+						loadReplies(arr[i].hash, 2, highlight);
+					}
+					if(_depth==1)	//from client 3.1	
+					{
+						AddBriefView(arr[i].hash, deleted, highlight);
+					}
 				}
 			}
-          }
           vid_show()
         });
     });

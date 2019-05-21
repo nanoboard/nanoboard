@@ -23,10 +23,10 @@ function loadRootThread(hash) {
 function loadRootThreadHash(hash,pp,cb) {
   $.post('../api/find-thread/' + hash, _categories)
     .done(function(res){
-      cb(res,pp);
+      cb(res,pp,hash);
     })
     .fail(function(){
-      cb(null,pp);
+      cb(null,pp,hash);
     });
 /*
   var first = hash;
@@ -96,7 +96,7 @@ function showLast(N, from_index){
 */
 
 		if( ( from_index === '' ) || ( [ 10, 50, 100, 200, 500 ].indexOf( N )!==-1 ) ){
-			from_index = lsi.value = ( cnt - N );
+			from_index = lsi.value = ( ( ( cnt - N ) < 0 ) ? 0 : ( cnt - N ) );
 		}
 
 		//console.log('from_index', from_index, 'N', N, 'cnt', cnt);
@@ -118,32 +118,87 @@ function showLast(N, from_index){
               $('#thread').empty();
 //3.1
 //              $('#'+threadId).empty();
-            } else { return; }
+            } else {return;}
             for (var i = arr.length - 1; i >= 0; i--) {
 //3.0
               var p = addPost(arr[i], function(d) { d.appendTo($('#thread')); }, false);
 //3.1
 //              var p = addPost(arr[i], function(d) { d.appendTo($('#'+threadId)); }, false);
-              if (arr[i].hash != _categories && 
-                  arr[i].replyTo != _categories && 
-                  arr[i].replyTo != _rootpost &&
-                  p
-                  ) {
-                loadRootThreadHash(p.attr('id'), p,
-                  function(h,pp) {
-                  pp.append(
-                    $('<a>')
+				if (
+						arr[i].hash != _categories
+					&&	arr[i].replyTo != _categories
+					&&	arr[i].replyTo != _rootpost
+					&&	p
+				){
+				  
+					//if post is reply for existing root thread
+					loadRootThreadHash(
+						p.attr('id'),
+						p,
+						function(h,pp,post_hash) {
+							pp.append(
+								$('<a>')
 //3.0
-                      .attr('href', '#thread' + h)
+								.attr('href', '#thread' + ( (h == null) ? post_hash : h ) )
 //3.1
-//                      .attr('href', '#'+threadId + h)
-                      .html('<span class="glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span><span class="btn-title">&thinsp;'+(h == null ? 'Thread Not Found' : 'Thread')+'</span>')
-                      .click(function(){
-                        //loadRootThread($(this).parent().attr('id'));
-                      })
-                    );
-                  });
-              }
+//              		        .attr('href', '#'+threadId + h)
+								.html(
+									'<span class="glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span>'+
+									'<span class="btn-title">&thinsp;'
+									+
+										(h == null ? 'Thread Not Found' : 'Thread')
+									+
+									'</span>'
+								)
+								.click(function(){
+									//loadRootThread($(this).parent().attr('id'));
+								})
+							);
+					
+							pp.append(
+								$('<a>')
+								.attr('href', '#thread' + post_hash)
+								.html(
+									'&nbsp;&nbsp;&nbsp;<span class="glyphicon glyphicon-paperclip" aria-hidden="true"></span>'+
+									'<span class="btn-title">&thinsp;POST</span>'
+								)
+								.click(function(){
+									//loadRootThread($(this).parent().attr('id'));
+								})
+							);
+						}
+					);
+				}else{
+					//if post is not reply for existing root thread, and root thread not found
+					
+					//Append "Thread not found"
+					$('#'+arr[i].hash).append(
+						$('<a>')
+							.attr('href', '#thread' + arr[i].hash )
+							.html(
+								'<span class="glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span>'+
+								'<span class="btn-title">&thinsp;'
+								+'Thread Not Found'+
+								'</span>'
+							)
+							.click(function(){
+								//loadRootThread($(this).parent().attr('id'));
+							})
+					);
+
+					//Append "Link to single post"
+					$('#'+arr[i].hash).append(
+						$('<a>')
+						.attr('href', '#thread' + arr[i].hash)
+						.html(
+							'&nbsp;&nbsp;&nbsp;<span class="glyphicon glyphicon-paperclip" aria-hidden="true"></span>'+
+							'<span class="btn-title">&thinsp;POST</span>'
+						)
+						.click(function(){
+							//loadRootThread($(this).parent().attr('id'));
+						})
+					);
+				}
             }
             vid_show()
           });

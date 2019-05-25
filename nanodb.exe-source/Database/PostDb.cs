@@ -175,6 +175,10 @@ namespace NDB
         */
 		private void UpdateDbRef(DbPostRef r)
 		{
+			if(_free.Contains(r.hash)){
+				_free.Remove(r.hash);
+				return;
+			}
 			bool isNew = !_refs.ContainsKey(r.hash);
 			_refs[r.hash] = r;
 			if (!r.deleted && _deleted.Contains(r.hash)) {
@@ -217,6 +221,10 @@ namespace NDB
                 foreach (var diff in diffs)
                 {
                     var r = JsonConvert.DeserializeObject<DbPostRef>(diff);
+                    if(r.replyTo=="deleted_forever"){ //if post was been deleted forever
+						_free.Add(r.hash);				//add 		hash 	to 		_free
+						_refs.Remove(r.hash);			//remove 	hash	from 	_refs
+					}
                     UpdateDbRef(r);
                 }
 
@@ -392,6 +400,9 @@ namespace NDB
 
                     for (int i = 0; i < _free.Count; i++)
                     {
+						if(!_refs.ContainsKey(freeArr[i])){
+							continue; //because deleted posts removed from _refs
+						}
                         var fr = _refs[freeArr[i]];
 
                         if (fr.length >= r.length)
@@ -440,11 +451,25 @@ namespace NDB
         */
         public bool DeletePost(string hash)
         {
-            if (!_refs.ContainsKey(hash) || _deleted.Contains(hash))
-                return false;
+            if ( !_refs.ContainsKey(hash) ){		//if post cann't be deleted
+                return false;						//do not do nothing
+			}
+			else if ( _deleted.Contains(hash) ){	//if post already deleted
+				//Remove this from DB...
+				_deleted.Remove(hash);
+				_free.Add(hash);					//add to this list.
+				_refs[hash].deleted = true;														//modify values
+				_refs[hash].replyTo = "deleted_forever";
+				FileUtil.Write(_data, new byte[_refs[hash].length], _refs[hash].offset);		//0.db3
+				FileUtil.Append(DiffFile, JsonConvert.SerializeObject(_refs[hash]) + "\n");		//diff-3.list
+				_refs.Remove(hash);
+				return true;
+			}
+
+			//else set deleted and leave in database.
             _refs[hash].deleted = true;
-            FileUtil.Write(_data, new byte[_refs[hash].length], _refs[hash].offset);
-            FileUtil.Append(DiffFile, JsonConvert.SerializeObject(_refs[hash]) + "\n");
+            FileUtil.Write(_data, new byte[_refs[hash].length], _refs[hash].offset);		//0.db3
+            FileUtil.Append(DiffFile, JsonConvert.SerializeObject(_refs[hash]) + "\n");		//diff-3.list
             if (_cache.ContainsKey(hash))
                 _cache.Remove(hash);
             _deleted.Add(hash);
@@ -512,8 +537,16 @@ namespace NDB
         public List<Post> GetLastNAnswers(string hash, int n, bool fast = false)
         {
             List<Post> res_ln = new List<Post>();
-            if (!_rrefs.ContainsKey(hash)) return res_ln;
-            
+			if(_free.Contains(hash)){				//if post deleted forever
+				return res_ln;							//return empty list
+			}
+            else if ( !_rrefs.ContainsKey(hash) ){	//if post, thread, cathegory - no have replies
+				return res_ln;							//return empty list
+            }
+		//	else if( _deleted.Contains(hash) ){		//if post deleted first time
+		//		return res_ln;							//return empty list
+		//	}
+
             var stack = new Stack<List<DbPostRef>>();
             stack.Push(_rrefs[hash]);
 
@@ -523,7 +556,17 @@ namespace NDB
 
                 foreach (var reply in elem.ToArray())
                 {
+					if(_free.Contains(reply.hash)){
+						continue;
+					}
+					
 					var post = GetPost(reply.hash);
+					if(post==null){
+						continue;						
+					}
+				//	else if(post.date==null){
+				//		continue;
+				//	}
 					if(fast==true){
 						if( ( DateTime.Now.Year - post.date.Year) > 2 ){
 							continue;
@@ -547,8 +590,11 @@ namespace NDB
 
         public Post[] GetReplies(string hash)	//Get replies for thread (hash)
         {
-			if (!_rrefs.ContainsKey(hash)){
-                return new Post[0];
+			if (!_rrefs.ContainsKey(hash)){	//if post not have replies
+                return new Post[0];				//return empty post
+			}
+			if(_free.Contains(hash)){		//if post deleted_forever
+				return new Post[0];				//return empty post
 			}
             var res = new Post[_rrefs[hash].Count];
             var rrefs = _rrefs[hash].ToArray();
@@ -579,6 +625,7 @@ namespace NDB
 						=>
 						{
 							try{
+								if(a == null) {return DateTime.Parse("01.01.0001 0:00:00");}
 								DateTime last_date =
 										( GetLastNAnswers(a.hash, 1, true).Count > 0 )		//fast
 											? GetLastNAnswers(a.hash,1, true).Last().date	//fast
@@ -649,7 +696,19 @@ namespace NDB
             var index = new Index();
             index.indexes = _refs.Values.ToArray();
             var json = JsonConvert.SerializeObject(index, Formatting.None);
-            File.WriteAllText(_index, json);
+
+            File.WriteAllText("2"+_index, json);				//write to another file.
+			var indexString = File.ReadAllText("2"+_index);		//read this to compare.
+			if(json==indexString){								//if equals
+				File.Delete(_index);								//remove index
+
+				FileInfo fi = new FileInfo("2"+_index);				//read fileInfo for 2_index
+				if (fi.Exists)											//if exists
+				{
+					fi.MoveTo(_index);									//rename to _index.
+				}
+			}
+			//File.WriteAllText(_index, json);							//old code - just write, but sometimes NUL bytes there writed.
         }
 		
 		public static bool IsMD5(string input)	//validate hash string.

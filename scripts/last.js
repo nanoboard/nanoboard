@@ -122,6 +122,10 @@ function showLast(N, from_index){
             for (var i = arr.length - 1; i >= 0; i--) {
 //3.0
               var p = addPost(arr[i], function(d) { d.appendTo($('#thread')); }, false);
+			  
+				if (arr[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+					p.css({ opacity: _deletedOpacity});
+				}
 //3.1
 //              var p = addPost(arr[i], function(d) { d.appendTo($('#'+threadId)); }, false);
 				if (

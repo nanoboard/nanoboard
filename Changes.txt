@@ -763,6 +763,108 @@ Source code:
 	
 	\changes.txt - add this changes.
 _____________________________________________________________________
+_____________________________________________________________________
+(25.05.2019) Changed 15 files:
+
+Short changes:
+	styles - Fix styles for bb-codes and link, inside spoiler and quote. Make spoiler more hidden and links inside spoiler.
+	Add preview post in reply window, before send it.
+	Add swich for preview button (show-hide).
+	Add hide preview onclick on some button.
+	Add closing powModal and captcha modal onclick outside.
+	Add autosend captcha onpress EnterKey. If captcha invalid this will be requested again.
+	Add exit to compile.bat, Add start_compile.bat to compile from command-line.
+	Fix deleting the posts. Now this deleting by two steps. Deleted with half-opacity, to show replies, and deleted forever.
+_____________________________________________________________________
+Full changes:
+nanodb.exe-source\Database\PostDb.cs
+		Fix post deletion. Now posts can be removed by two steps - deleted with show replies, and deleted_forever.
+		Fix _index rewrite (sometimes NULL bytes there).
+	Lines 178 - 181: 	Do not add deleted forever post for updating database.
+	Lines 224 - 227: 	If post have replyTo:"deleted_forever" add to _free and remove from _refs.
+	Lines 403 - 405:	Skip deleted_forever posts which not contains in _refs. Maybe, need to add just deleted posts...
+	Lines 454 - 473:	DeletePost method - rewrited.
+							Skip post don't Contains in _refs (nothing to delete).
+							If already deleted - delete forever.
+							Remove from _deleted, add to _free, update values in _refs, rewrite 0.db3 and diff-3.list, and remove from _refs.
+							Add comments to for first delete actions.
+	Lines 540 - 548:	GetLastNAnswers method - rewrited.
+							return empty posts:
+								if hash contains in _free - (for deleted forever)
+								if hash not contains in _rrefs - (no any reply)
+								or if hash contains in _deleted. (maybe no need to exclude this)...
+	Lines 558 - 568:	If post deleted forever - skip this.
+						if post == null - skip this.
+	Lines 596 - 598:	GetReplies method - rewrited. Skip deleted_forever posts.
+	Line	628:		Return default date if (a == null)
+	Lines 699 - 711:	Flush method rewrited. Write _index (index-3.json) after verification, because sometimes there is null bytes.
+	
+nanodb.exe-source\Server\DbApiHandler.cs
+	Line 489:			Try to add fast GetReplies, but code was been commented.
+	Line 699:			Add 999 times to try to delete post (was been 100).
+	Line 709:			Add i to timeout to make timeout dynamic, up to 15 seconds.
+	Line 719:			Add text with hash for server response.
+
+nanodb.exe-source\compile.bat
+	Line 69. Add exit to close window on press by any key.
+	
+nanodb.exe-source\start_compile.bat
+	Add start compile.bat to run this from command line.
+		Now, compilation can be runned by next steps:
+		1. WinKey+R -> cmd.exe
+		2. cd [path_to start_compile.bat]
+		3. start_compile.bat
+		4. Wait compilation. Press any key in the end.
+		5. Window closed. Success. No any WMICTempBatchFile.bat created and WMIC working good in this case.
+
+
+\scripts\api.js
+	Lines 23 - 30: 	function deletePostFromDb changed.
+						Add get-query and console.log when this .done
+\scripts\last.js
+	Lines 125 - 128:	Add opacity for posts, deleted once.
+
+\scripts\nanoclient.js
+	Lines 481 - 484:	Remove <gr>.
+	Lines 728 - 730:	Add opacity for posts, deleted once.
+	Line 740:			skip, when arr[i]===null, was been break at first, but continue now.
+	Lines 763:			commented console.log
+	Line 767:			Add comment.
+	Lines 771 - 775:	Add opacity for posts, deleted once.
+	Line 909:			if(arr[i]===null)continue;
+
+\scripts\post.js
+	Lines 9 - 39:		Remove test console.log
+	Lines 219 - 226:	skip '[' in url.
+	Line 320:			Add style for <pre> with code.
+
+\scripts\reply.js
+	Lines 477 - 497:	In function validate_symbols - add autosend captcha, when '\n' in the end (Enter key pressed).
+	Lines 512 - 536:	Add function to close powModal and captchaModal onclick outside, like for "Insert image" modal.
+	Lines 537 - 648:	rewrite fuction generate_captcha.
+	Lines 667 - 674:	Add remove preview, onclick by button.
+	Lines 684 - 701:	Add Show/Hide Preview button.
+	Lines 709 - 712:	Add remove preview, onclick by button.
+	Line 779:			Add style for <pre> for button with [code]
+
+\scripts\search.js
+	Lines 104 - 106:	Add opacity for posts, deleted once.
+
+\styles\skins\futaba\nano.css
+	Lines 193 - 204:	Fix color for spoiler. Make this more hidden.
+	Lines 210 - 214:	Now background color of spoiler will be transparent onhover.
+	Lines 216 - 220:	Add tags in spoiler.
+	Lines 221 - 241:	Add slow hover for links and fast hide this. Now link in spoiler more hidden.
+	Lines 243 - 246:	Add show <pre> ([code]) in spoiler, on hover.
+	Lines 248 - 261:	Add style for <gr> and styling other tags inside [quote]
+
+\pages\index.html
+	Line 239:			Just change text for preview button, when reply window opened.
+
+\pages\version.txt 		- changed after recompilation.
+\nanodb.exe				- changed, after recompilation.
+\Changes.txt			- Add this changes.
+_____________________________________________________________________
 
 
 Code commented. See source code.

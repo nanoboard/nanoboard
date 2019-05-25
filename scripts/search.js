@@ -101,6 +101,9 @@ $(function() {
 											},
 											false
 										);
+										if (arr[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+											p.css({ opacity: _deletedOpacity});
+										}
 										if (
 												arr[i].hash != _categories
 											&&	arr[i].replyTo != _categories

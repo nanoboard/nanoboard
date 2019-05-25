@@ -66,3 +66,4 @@ set /p ="%DOW% %Mon%  %Day% %TIME:~0,-3% EST %YEAR%!\n!"<nul >> "../pages/versio
 
 ::don't close window, after all
 pause
+exit

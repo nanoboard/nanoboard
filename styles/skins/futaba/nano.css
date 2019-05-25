@@ -190,22 +190,17 @@ a:hover {
   border-style: dotted;
 }
 
-sp, sp a, sp gr, sp b, sp i, sp u, sp s, sp sub, sp sup {
-/*background color is #f0e0d6*/
+sp {
+/* 		real background color	*/
+/*	background: 	#f0e0d6;	*/
+/* 		the same color for text	*/
+/*	color: 			#f0e0d6;	*/
 
-  background: #faeaea;
-  color: #faeaea;
-
-/*
-  background-color: #000;
-  color: #000;
-*/
-/*
-  background: #F0D0B6;
-  color: #F0D0B6;
-*/
-  font-family: serif;
-  font-size: 16px;
+	background: 	#f7e7e7;
+	color: 			#f7e7e7;
+	
+	font-family: serif;
+	font-size: 16px;
 }
 
 a sub, a sup {
@@ -213,29 +208,56 @@ a sub, a sup {
 }
 
 sp:hover {
-/*
-  background-color: #000;
-  color: white;
-*/
-  background: #f0e0d6;
-
-  color: inherit;
+/*  background: #f0e0d6; */
+	background-color: transparent;
+	color: inherit;
 }
 
+/*tags, inside spoiler*/
+sp gr, sp b, sp i, sp u, sp s, sp sub, sp sup, sp pre, sp span{
+	background: inherit;
+	color: inherit;
+}
+sp a:hover{
+	background: inherit;
+	color: #dd0000;
+	
+	-webkit-transition: all 5s ease-in;
+	-moz-transition: all 5s ease-in;
+	-o-transition: all 5s ease-in;
+	-ms-transition: all 5s ease-in;
+	transition: all 5s ease-in;
+}
+
+sp a:not(:hover){
+	background: #f0e0d6;
+	color: #f0e0d6;
+
+	-webkit-transition: all 0s ease-in;
+	-moz-transition: all 0s ease-in;
+	-o-transition: all 0s ease-in;
+	-ms-transition: all 0s ease-in;
+	transition: all 0s ease-in;
+}
+
+sp pre:hover {
+	background: #f5f5f5;
+	color: #000000;
+}
+
+/*tags inside quote:*/
 gr:hover {
 	background: #f0e0d6;
 	color: #117743;
 }
 
-b:hover, i:hover, u:hover, s:hover, sup:hover, sub:hover {
-/*
-	background: #f0e0d6;
-*/
-
-/*
+gr b, gr i, gr u, gr s, gr sup, gr sub, gr span {
 	background: inherit;
-*/
 	color: inherit;
+}
+gr pre{
+	background: #f5f5f5;
+	color: #000000;
 }
 
 .post-inner {

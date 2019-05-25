@@ -478,10 +478,10 @@ function addPost(post, appendFunc, hasShowButton, short) {
 
   if (_depth != 0){
     //d.append('<gr>#' + (short&&_depth!=1?shortenHash(post.hash):post.hash) + '&nbsp;</gr>');	//old code.
-    d.append('<gr>' + (add_remove(queue, post.hash, '', true, true)) + '&nbsp;</gr>');
+    d.append((add_remove(queue, post.hash, '', true, true)) + '&nbsp;');
   }
   else{
-    d.append('<gr>' + (add_remove(queue, post.hash, '', true)) + '&nbsp;</gr>');	
+    d.append((add_remove(queue, post.hash, '', true)) + '&nbsp;');	
   }
   if (_depth != 0) {
     $('<a>')
@@ -725,6 +725,9 @@ function addPost(post, appendFunc, hasShowButton, short) {
 		d.find('br').first().remove();
     d.find('g').css('display','none');
   }
+	if (post.message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+		d.css({ opacity: _deletedOpacity});
+	}
   return d;
 }
 
@@ -734,6 +737,10 @@ function loadReplies(hash, offset, highlight) {
       arr = JSON.parse(arr);
       if (arr.length == 0) return;
       for (var i = arr.length-1; i >= 0; i--) {
+		
+		//if(arr[i]===null) break;	//wrong captcha was been with this error.
+        if(arr[i]===null) continue;
+		
         var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
         if (_showDeleted == 'false' && deleted) continue;
         var p = addPost(arr[i], function(d) { d.insertAfter($('#'+hash)); }, false)
@@ -753,13 +760,19 @@ function loadReplies(hash, offset, highlight) {
 //3.1
 function AddBriefView(hash, deleted, highlight)
 {
+	//console.log('AddBriefView - hash:', hash);
 	$.post('../api/getlastn/' + hash, '3').done(function(brief)
 	{						
 		brief = JSON.parse(brief);
-		brief.reverse();
+		brief.reverse();	//maybe no need reverse...
 		if(brief.length==0) return;
 		for(var i=0;i<brief.length;i++)
 		{
+			if (brief[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){//for deleted posts
+				deleted = true;										//show deleted post with opacity
+				//continue;											//skip deleted posts
+			}
+			
 			var p1=addPost(brief[i], function(d){d.insertAfter($('#'+hash));}, false, true);
 			if(p1)
 			{
@@ -893,6 +906,7 @@ function loadThread(hash, highlight) {
 			}
 			for (var i = 0; i < arr.length; i++) {
 				//console.log('nanoclient.js: arr: ', arr[i].hash, arr[i]);
+				if(arr[i]===null)continue;
 				var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
 				if (_showDeleted == 'false' && deleted){continue;}
 				var p = addPost(arr[i], function(d) {d.appendTo($('#thread'));}, true)

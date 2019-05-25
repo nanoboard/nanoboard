@@ -486,6 +486,7 @@ namespace NServer
             {
                 //posts = _db.GetLastNAnswers(hash, Convert.ToInt32(n)); //not always correct. Return error when value = 5.
                 posts = _db.GetLastNAnswers(hash, nbpack.NBPackMain.parse_number(n));	//now ok.
+                //posts = _db.GetLastNAnswers(hash, nbpack.NBPackMain.parse_number(n), true);		//fast GetLastNAnswers()
             }
             catch(Exception e)
             {
@@ -695,7 +696,7 @@ namespace NServer
         
             lock (_lockObj)
             {
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < 999; i++)
                 {
                     try
                     {
@@ -705,7 +706,7 @@ namespace NServer
                     }
                     catch
                     {
-                        Thread.Sleep(15);
+                        Thread.Sleep(i*15);
                     }
                 }
             }
@@ -715,7 +716,7 @@ namespace NServer
                 return new ErrorHandler(StatusCode.BadRequest, "No such post.").Handle(null);
             }
 
-            return new HttpResponse(StatusCode.Ok, "");
+            return new HttpResponse(StatusCode.Ok, "Post "+hash+" was been deleted.");
         }
 
         public HttpResponse Handle(HttpRequest request)

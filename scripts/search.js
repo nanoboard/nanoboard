@@ -29,6 +29,20 @@ function change_show_max_search(value){
 	post_count_limit_for_searching = value;
 }
 
+var dots = window.setInterval(
+	function() {
+		var wait = document.getElementById("wait");
+		if(wait !== null){
+			var search_text = "Wait SEARCH";
+			if ( wait.innerHTML.length >= search_text.length+33 ) 
+				wait.innerHTML = search_text;
+			else 
+				wait.innerHTML += ".";
+		}
+	},
+	100
+);
+
 $(function() {
   $( "#search" ).submit(function( event ) {
 			
@@ -46,7 +60,7 @@ $(function() {
               $('#thread').append('<hr>');
               $('#thread').append('<div id="searchresult"></div>');
               $('#searchresult').empty();
-              $('#searchresult').append('<img style="border: 0px" src="../images/spinner.gif">');
+              $('#searchresult').append('<h1 id="wait">Wait SEARCH...</h1>');
               
 				if( ( ( /[A-Fa-f0-9]{32}/g ).test( $('.searchfield').val() ) ) ){	//if search query seems like post hash
 					
@@ -79,7 +93,7 @@ $(function() {
 									//console.log('arr', arr);
 									
 									if (arr.length == 0) {
-										$('#searchresult').append('No results<br/>');
+										$('#searchresult').append('<h1>No results</h1><br/>');
 										return;
 									} else { 
 										$('#searchresult')
@@ -146,7 +160,11 @@ $(function() {
 								}
 							)
 						}
-					);
+					)
+					.fail(function(){
+						$('#searchresult').html('<h1>No results</h1><br/>');
+						return;
+					});
 
 				}else{	//else if query not seems like post hash - search this inside posts.
 					var search = Base64.encode($('.searchfield').val());
@@ -160,7 +178,7 @@ $(function() {
 								//console.log('arr', arr);
 								arr = JSON.parse(arr);
 								if (arr.length == 0) {
-									$('#searchresult').append('No results<br/>');
+									$('#searchresult').append('<h1>No results</h1><br/>');
 									return;
 								} else { 
 									$('#searchresult')

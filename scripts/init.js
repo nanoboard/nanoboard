@@ -10,6 +10,9 @@ function stripTags(text) {
   return text;
 }
 
+var list_of_categories_hashes = [];	//list of hashes the post of categories.
+//Need to select subcategories, to add link to category. See "function append_thread_and_post_links", in nanoclient.js
+
 function updateCategoriesBar() {
   $('#categories').empty();
   $.get('../api/replies/' + _categories)
@@ -17,8 +20,10 @@ function updateCategoriesBar() {
 	  replies = JSON.parse(replies);
 	  for (var i = 0; i < replies.length; i++){
 	    var reply = replies[i];
-	    if (reply.message != 'cG9zdCB3YXMgZGVsZXRlZA==' && stripTags(applyFormatting(Base64.decode(reply.message)))!=='') // if category post was deleted or empty - skip
+	    if (reply.message != 'cG9zdCB3YXMgZGVsZXRlZA==' && stripTags(applyFormatting(Base64.decode(reply.message)))!==''){ // if category post was deleted or empty - skip
 	       $('#categories').append('<a href="#category'+reply.hash+'">['+stripTags(applyFormatting(Base64.decode(reply.message)))+']</a> ');	//else - show category
+		   list_of_categories_hashes.push(reply.hash);	//and save the hash of category post.
+		}
 	  }
     });
 }
@@ -93,14 +98,18 @@ var update_post_count = false;				//true when need to regular update, false - st
 function update_Post_count_once(){
 	var to_false_count = !update_post_count;
 	update_post_count = true;
-	if(to_false_count==true){notifyAboutPostCount();}
+	if(to_false_count==true){notifyAboutPostCount(true);}
 	update_post_count = !to_false_count;
 }
 
-function notifyAboutPostCount() {
-	//console.log('update_post_count', update_post_count);
-	if(update_post_count==false){ return; }
-	
+function notifyAboutPostCount(update_param) {
+//	console.log('update_post_count', update_post_count);
+	if( update_post_count == false ){
+		if( update_param !== true ){
+			return;
+		}
+	}
+
 	$.get('../api/count')
 /*
 $.ajax({
@@ -117,22 +126,23 @@ $.ajax({
 */
 	.done(function(data){
 		data = parseInt(data);
-		//console.log('total posts: '+data);
+//		console.log('total posts: '+data);
 		if (data != postCount) {
 			if (postCount != 0) {
-			var countStr = (data - postCount).toString();
-			pushNotification(countStr + ' post' + numSuffix(countStr) + ' added to database.', _post_count_notification_time);
+				var countStr = (data - postCount).toString();
+				pushNotification(countStr + ' post' + numSuffix(countStr) + ' added to database.', _post_count_notification_time);
 			}
 			postCount = data;
-			$('#statusd').html('<a href=javascript:void(0)>Posts (including deleted): '+postCount+'</a>');
-			setTimeout(notifyAboutPostCount, 1000);
+			setTimeout(function(){notifyAboutPostCount();}, 1000);
 		}else{
-			setTimeout(notifyAboutPostCount, _post_count_notification_time);
+			setTimeout(function(){notifyAboutPostCount();}, _post_count_notification_time);
 		}
+		$('#statusd1').html('<a href="javascript:void(0);" onclick="notifyAboutPostCount(true);">Posts (including deleted once): '+postCount+'</a>');
+		$('#statusd2').html('<a href="javascript:void(0);" onclick="notifyAboutPostCount(true);">Posts (including deleted once): '+postCount+'</a>');
     })
     .fail(function(){
       pushNotification('Connection to server lost.', 900);
-	  setTimeout(notifyAboutPostCount, _post_count_notification_time);
+	  setTimeout(function(){notifyAboutPostCount(true);}, _post_count_notification_time);
     });
 }
 
@@ -148,7 +158,7 @@ $(function() {
 	collectionRun = true;
 
 	update_post_count = true;		//when collect - update post count
-	notifyAboutPostCount();			//run update post count, and repeat by interval.
+	notifyAboutPostCount(true);			//run update post count, and repeat by interval.
 	
     //$.get('../api/png-collect')																//collect, using RAM, without saving files. Max_connections = 6 (by default)
     //$.get('../api/png-collect'+'/'+"collect_using_files|save_files|16")						//collect, using files, with saving this, and do it with max_connections = 16

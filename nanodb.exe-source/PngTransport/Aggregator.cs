@@ -15,20 +15,66 @@ namespace nboard
 {
     public class AggregatorMain 
     {
-      private static float DOWNLOAD_TIMEOUT_SEC
-        {
-            get
-            { 
-                var timeoutStr = Configurator.Instance.GetValue("download_timeout_sec", "30");
-                float timeout = 0;
-                if (float.TryParse(timeoutStr, out timeout))
-                {
-                    return timeout;
-                }
-                return 30f;
-            }
-      }
-	  public static int maximum_timeout = (int)DOWNLOAD_TIMEOUT_SEC * 1000;	//milliseconds
+		private static float DOWNLOAD_TIMEOUT_SEC
+		{
+			get
+			{ 
+				var timeoutStr = Configurator.Instance.GetValue("download_timeout_sec", "30");
+				float timeout = 0;
+				if (float.TryParse(timeoutStr, out timeout))
+				{
+					if(timeout==0){
+						timeout = (float)nbpack.NBPackMain.parse_number(timeoutStr);
+						if(timeout==0){
+							return 30f;
+						}else{
+							return timeout;
+						}
+					}
+					return timeout;
+				}
+				return 30f;
+			}
+		}
+
+		private static long collect_memory_limit_to_wait	//bytes
+		{
+			get
+			{ 
+				long default_mem_limit =
+				(
+					(
+						(long)(30)				//default max limit - 200 Megabytes
+					)
+					*
+					(
+						(long)(1024 * 1024)		//* 1024 KByte/MegaByte * 1024 Bytes/KiloByte
+					)
+				);
+				
+				var memory_limit = Configurator.Instance.GetValue(
+					"collect_memory_limit_to_wait",
+					default_mem_limit.ToString()					//=209715200 -> .ToString()
+				);
+				float mem_limit = 0;
+				if (float.TryParse(memory_limit, out mem_limit))
+				{
+					if(mem_limit==0){
+						mem_limit = (long)nbpack.NBPackMain.parse_number(memory_limit);
+						if(mem_limit==0){
+							return (long)default_mem_limit;
+						}else{
+							return (long)mem_limit;
+						}
+					}
+					return (long)mem_limit;
+				}
+				return (long)default_mem_limit;
+			}
+		}
+
+	  public static int maximum_timeout = (int)DOWNLOAD_TIMEOUT_SEC * 1000;		//milliseconds
+      public static long maximum_collect_memory_limit_to_wait = (long)collect_memory_limit_to_wait;	//bytes
       public static bool Running { get; private set; }
       public static void Run(string [] p = null)
       {
@@ -51,14 +97,17 @@ namespace nboard
             progStaySec = 0;
             lastProg = agg.InProgress;
           }
-          if (progStaySec > DOWNLOAD_TIMEOUT_SEC)
-          {
-            WebClientX.Interrupt();
-            agg.InProgress = 0;
-          }
+// Old code - this is a greatest historical value.
+//          if (progStaySec > DOWNLOAD_TIMEOUT_SEC)
+//          {
+//            WebClientX.Interrupt();
+//            agg.InProgress = 0;
+//          }
         }
         Running = false;
-        Console.WriteLine("Finished.");
+		WebClientX.Interrupt();	//Interrupt here
+		Console.WriteLine("Finished.");
+		return;
       }
     }
 
@@ -477,6 +526,16 @@ namespace nboard
 							}else{//else, download and parse image from this imageAddress.
 							
 								//Console.WriteLine("InProgress: "+InProgress);	//<(max_connections+1) - good.
+								
+								while(
+									GC.GetTotalMemory(true)								//true, means try to collect garbage, before calculating total memory used.
+									>
+									AggregatorMain.maximum_collect_memory_limit_to_wait	//default value is 200 MBytes, but this can be customized.
+								){
+									//Console.WriteLine(GC.GetTotalMemory(false)+" memory used over limit "+AggregatorMain.maximum_collect_memory_limit_to_wait+". Wait 0.5 second for "+imageAddress+"...");
+									System.Threading.Thread.Sleep(500);
+								}
+			
 								ParseImage(imageAddress);
 								_downloaded.Add(imageAddress);
 							}
@@ -495,7 +554,7 @@ namespace nboard
                     Console.WriteLine(ex.Message);
                 }
                 InProgress -= 1;
-                NotificationHandler.Instance.Messages.Enqueue(InProgress + " connections opened.");
+//                NotificationHandler.Instance.Messages.Enqueue(InProgress + " connections opened.");
             };
 
 			
@@ -596,7 +655,7 @@ namespace nboard
 								Console.WriteLine("\n"+URL+"\nsaved as "+name+"\n");
 							}
 						}
-						GC.Collect();
+						//GC.Collect();
 						Console.WriteLine("Image  download (FINISH): " + URL);
 					
 						string filepath = 
@@ -629,6 +688,184 @@ namespace nboard
 		}
 
         private void ParseImage(string address)
+        {
+			if (_downloaded.Contains(address)){
+                //Console.WriteLine("downloaded.txt contains {0}", address);
+				return;
+			}
+			
+			bool image_downloaded = false;
+            
+//			using(var client = new WebClient()){
+//				client.Proxy = proxy;
+			using(var client = new WebClientX(proxy)){
+			
+				client.Headers = _headers;
+				
+				while (InProgress >= max_connections)
+				{
+					Thread.Sleep(4000);
+				}
+            
+				InProgress += 1;
+			
+				//Replace images URLs:
+				address = address.Replace("2ch.hk", "m2ch.hk");			//m2ch.hk working. See also the exception at line 265 with condition (picture_host!="2ch.hk" && host!="m2ch.hk")
+				address = address.Replace("mm2ch.hk", "m2ch.hk");		//m2ch.hk contains 2ch.hk, and replaced to mm2ch.hk. Turn it back.
+				address = ( address.IndexOf("volgach") != -1 ) ? address.Replace("https", "http") : address;	//using http for volgach.ru
+			
+				Console.WriteLine("Image  download starting: " + address);
+				//client.DownloadDataAsync(new Uri(address));
+
+				System.Timers.Timer runonce=new System.Timers.Timer(AggregatorMain.maximum_timeout);	//timeout to download image
+				runonce.Elapsed+=(s, e) => {
+					if(image_downloaded == false){
+						string stop_notif = "Image  download Time OUT ("+(AggregatorMain.maximum_timeout/1000)+" sec): "+address;
+						Console.WriteLine(stop_notif);
+						NotificationHandler.Instance.Messages.Enqueue(stop_notif);
+
+						client.CancelAsync();			//cancel download
+						InProgress -= 1;				//and delete from progress.
+						return;
+					}
+				};
+				runonce.AutoReset=false;
+				runonce.Start();
+
+				byte[] bytes = client.DownloadData(address);
+
+				if (bytes == null) {
+                    Console.WriteLine("Ignoring null bytes");
+                    return;
+                }else{
+					image_downloaded = true;
+				}
+				
+                try
+                {
+                    if (!Directory.Exists("temp"))
+                    {
+                        Directory.CreateDirectory("temp");
+                    }
+
+                    if (!Directory.Exists("download"))
+                    {
+                        Directory.CreateDirectory("download");
+                    }
+
+                    MemoryStream ms = null;
+					Image RAM_container = null;
+					string name = null;
+
+					if(only_RAM==false){
+						//Old code. 																				file pathway
+						name = Guid.NewGuid().ToString().Trim('{', '}')+".png";
+						File.WriteAllBytes("temp" + Path.DirectorySeparatorChar + name, bytes);
+						File.Move("temp" + Path.DirectorySeparatorChar + name, "download" + Path.DirectorySeparatorChar + name);
+						if(save_files==true){
+							Console.WriteLine("\n"+address+"\nsaved as "+"download" + Path.DirectorySeparatorChar + name+"\n");
+						}
+                    }
+					else{
+						ms = new MemoryStream(bytes);
+						RAM_container = Image.FromStream(ms);														//image in RAM
+						if(save_files==true){
+							var name_ms = "download" + Path.DirectorySeparatorChar + Guid.NewGuid().ToString().Trim('{', '}')+".png";
+							File.WriteAllBytes(name_ms, ms.ToArray());
+							Console.WriteLine("\n"+address+"\nsaved as "+name_ms+"\n");
+						}
+					}
+					//Console.WriteLine("only_RAM = "+only_RAM+", save_files = "+save_files+", max_connections = "+max_connections);
+					
+					//GC.Collect();
+                    
+					try{
+						Console.WriteLine("Image  download (FINISH): " + address);
+						NotificationHandler.Instance.Messages.Enqueue("Image downloaded: " + address);
+					}
+					catch(Exception ex){
+						Console.WriteLine("Aggregator.cs - ParseImage: Try to add notif: "+ex+"\n address: "+address+"\n\n");
+					}
+
+					try{
+						//client.CancelAsync();			//cancel download
+						//client.Dispose();				//Dispose WebClient
+
+						//GC.Collect();
+						//GC.WaitForPendingFinalizers();
+						//GC.Collect();
+
+						//long usedMemory = GC.GetTotalMemory(false);
+						//Console.WriteLine("Memory used: "+usedMemory);	//Not so much, like in following method ParseImage2
+
+						if (only_RAM==true){
+							nbpack.NBPackMain.ParseFile("http://" 
+								+ Configurator.Instance.GetValue("ip", "127.0.0.1") 
+								+ ":"
+								+ Configurator.Instance.GetValue("port", "7346"),
+								Configurator.Instance.GetValue("password", Configurator.DefaultPass),
+								RAM_container																//Image in RAM
+							);
+						}else{
+							nbpack.NBPackMain.ParseFile("http://" 
+								+ Configurator.Instance.GetValue("ip", "127.0.0.1") 
+								+ ":"
+								+ Configurator.Instance.GetValue("port", "7346"),
+								Configurator.Instance.GetValue("password", Configurator.DefaultPass),
+								"download" + Path.DirectorySeparatorChar + name								//file pathway
+								, save_files
+							);						
+						}
+					}
+					catch(Exception ex){
+						Console.WriteLine("Aggregator.cs - parseImage: Try to parseFile: "+ex);
+					}
+
+					try{
+						if(only_RAM!=false){
+							ms.Dispose();
+							RAM_container.Dispose();																		//Image in RAM. Try flush RAM, after parsing.
+						}
+					}
+					catch(Exception ex){
+						Console.WriteLine("Aggregator.cs - ParseImage: Try to dispose: "+ex);
+					}
+					
+                    try
+                    {
+                        NDB.FileUtil.Append(Downloaded, address + "\n");
+                    }
+                    catch
+                    {
+						Console.WriteLine("Can't append to downloaded.");
+                        System.Threading.Thread.Sleep(1000);
+
+                        try
+                        {
+                            NDB.FileUtil.Append(Downloaded, address + "\n");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("downloaded.txt appending error:\n" + e.ToString());
+                        }
+                    }
+                }
+
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error downloading url: " + address);
+//                    if (e.Error != null)
+//                        Console.WriteLine(e.Error.Message);
+                    Console.WriteLine("Exception: "+ex.Message+", InProgress: "+InProgress);
+                }
+                InProgress -= 1;
+//                NotificationHandler.Instance.Messages.Enqueue(InProgress + " connections opened.");
+				return;
+			}
+		}
+
+		//old code + modifications. Just as history, and maybe to work with this in future:
+        private void ParseImage2(string address)
         {
             if (_downloaded.Contains(address)){
                 //Console.WriteLine("downloaded.txt contains {0}", address);
@@ -683,7 +920,7 @@ namespace nboard
 					}
 					//Console.WriteLine("only_RAM = "+only_RAM+", save_files = "+save_files+", max_connections = "+max_connections);
 					
-					GC.Collect();
+					//GC.Collect();
                     
 					try{
 						Console.WriteLine("Image  download (FINISH): " + address);
@@ -694,6 +931,8 @@ namespace nboard
 					}
 
 					try{
+//commented parsing of image.
+/*
 						if (only_RAM==true){
 							nbpack.NBPackMain.ParseFile("http://" 
 								+ Configurator.Instance.GetValue("ip", "127.0.0.1") 
@@ -712,6 +951,12 @@ namespace nboard
 								, save_files
 							);						
 						}
+*/
+						long usedMemory = GC.GetTotalMemory(false);
+						Console.WriteLine("ParseFile commented. Memory used: "+usedMemory);
+						//This eating many Random Access Memory, even when parsing is commented, and this memory usage is growing...
+						//Problem somewhere in WebClientX.
+						//Made this IDisposable, and runned this with DownloadData in "using(webClientX){}"
 					}
 					catch(Exception ex){
 						Console.WriteLine("Aggregator.cs - parseImage: Try to parseFile: "+ex);
@@ -757,7 +1002,7 @@ namespace nboard
                     Console.WriteLine("Exception: "+ex.Message+", InProgress: "+InProgress);
                 }
                 InProgress -= 1;
-                NotificationHandler.Instance.Messages.Enqueue(InProgress + " connections opened.");
+//                NotificationHandler.Instance.Messages.Enqueue(InProgress + " connections opened.");
             };
 
 			

@@ -542,7 +542,7 @@ namespace NServer
             if(searchString=="" && notUsed!=""){
 				searchString = notUsed;
             }else{
-				searchString = searchString;
+				//searchString = searchString;	//fix compile warning
 			}
 			string [] splitted = searchString.Split('|');
 			searchString = splitted[0].FromB64();
@@ -692,7 +692,7 @@ namespace NServer
 
         private HttpResponse DeletePost(string hash, string notUsed = null)
         {
-            bool deleted = false;
+            int deleted = 0;
         
             lock (_lockObj)
             {
@@ -710,13 +710,14 @@ namespace NServer
                     }
                 }
             }
-
-            if (!deleted)
-            {
+			if 			( deleted == 0 )	{
                 return new ErrorHandler(StatusCode.BadRequest, "No such post.").Handle(null);
+            }else if	( deleted == 1 )	{
+			    return new HttpResponse(StatusCode.Ok, "Post "+hash+" was been deleted once.");
+            }else if	( deleted == 2 )	{
+			    return new HttpResponse(StatusCode.Ok, "Post "+hash+" was been deleted forever.");
             }
-
-            return new HttpResponse(StatusCode.Ok, "Post "+hash+" was been deleted.");
+			return new HttpResponse(StatusCode.Ok, "Post "+hash+" just deleted.");
         }
 
         public HttpResponse Handle(HttpRequest request)

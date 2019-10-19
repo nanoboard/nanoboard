@@ -17,7 +17,8 @@ function recursivelySendParentsArray(post, arr) {
       data = JSON.parse(data);
       var str = JSON.stringify(arr);
       if (str.length >= _transportMsgLimit - _maxPostSize) {
-        console.log('sending to transport: ' + str);
+        console.log('Try to send through Bitmessage Transport: ' + "random post");
+        //console.log('sending to transport: ' + str);
         httpPost(transportUri, str);
         arr = [];
       }
@@ -26,7 +27,8 @@ function recursivelySendParentsArray(post, arr) {
     })
     .fail(function() {  // 404 - means we've reached the top
       var str = JSON.stringify(arr);
-      console.log('sending to transport: ' + str);
+      console.log('Try to send through Bitmessage Transport: ' + "random post");
+      //console.log('sending to transport: ' + str);
       httpPost(transportUri, str);
     });
 }

@@ -540,7 +540,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
         }
         var undo = false;
         d.append(
-          $('<button>')
+          $('<button id="undo'+post.hash+'">')
             .text('Undo')
             .click(function(){
               undo = true;
@@ -553,7 +553,18 @@ function addPost(post, appendFunc, hasShowButton, short) {
         setTimeout(function(){
           if (undo) return;
           deletePostFromDb(post.hash);
-          d.remove();
+		  console.log(post, '\n', "(post.message === 'cG9zdCB3YXMgZGVsZXRlZA==')", (post.message === 'cG9zdCB3YXMgZGVsZXRlZA=='));
+			if((post.message === 'cG9zdCB3YXMgZGVsZXRlZA==')){
+//				console.log('try to remove d');
+				d.remove();
+			}else{
+				post.message = 'cG9zdCB3YXMgZGVsZXRlZA==';
+//				console.log('try to add deleted post with opacity');
+//				console.log('d', d);
+				d.find('#post_'+post.hash).html(Base64.decode('cG9zdCB3YXMgZGVsZXRlZA=='));
+				d.css({ opacity: _deletedOpacity});
+				d.find('#undo'+post.hash).hide();
+			}
           pushNotification('A post was deleted forever.');
         }, _post_delete_timeout);
       }));
@@ -566,7 +577,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
 	if(_detectURLs === 'true'){
 		post_content = replace_local_quotes(post_content);	//replace posts to local links.
 	}
-	post_content = detect_files(post_content);			//replace files to links
+	//post_content = detect_files(post_content);			//replace files to links
   
 
   var inner = $('<div>')
@@ -639,8 +650,9 @@ function addPost(post, appendFunc, hasShowButton, short) {
 			);
 		}
 		
-		else if(img.src.indexOf('iVBORw0K')!==-1){	//skip PNG by base64 signature
-			//do not replace PNG image
+		else if(img.src.indexOf('iVBORw0K')!==-1){				//find PNG by base64 signature
+			console.log("png found")
+			img.src = (img.src).replace('image/jpeg','image/png')	//replace type for PNG-image.
 		}
 		else if(img.src.indexOf('R0lGODlh')!==-1){	//skip GIF by base64 signature
 			//do not replace GIF image
@@ -677,7 +689,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
 				if(//if icon to download_as_binary.html
 						fileHash==='5c99aa0a72257895f2bc292d29db9caea14485e19dce4327e60adfbec3cbf92e'	//if hash of base64
 					||	fileHash==='a9646873a1d7e4aa81b1aa264dbc374f0451730566ebc50ce0a2235ff5845731'	//or if hash of dataURL
-				){ return; }	//do not nothing
+				){ return; }	//do nothing
 				
 				if(
 					decoded_file.startsWith('RIFF')
@@ -731,6 +743,82 @@ function addPost(post, appendFunc, hasShowButton, short) {
   return d;
 }
 
+function append_thread_and_post_links(p, post, is_found_thread_string){
+	/*
+		Tree of posts:
+		00000000000000000000000000000000 (not available, root)
+			root post (hidden)
+				Categories (post about ability to create catecories, this is a reply for root post)
+					Category (boards, this is a replies for this post, like in thread)
+						Threads in category (are replies in category)
+							posts in threads (are replies in thread)
+								posts-replies for posts (are replies for posts, like in threads)
+								thread not found for this posts, but this posts can be a threads, if there will be replies.
+		So, now, need to move by this tree...
+		posts can be a threads, so threads as replies in cathegory, will be a "subcategories", but this is just threads...
+	*/	
+	//console.log("post", post.hash, post.replyTo, is_found_thread_string);
+
+	if(post.replyTo === "00000000000000000000000000000000"){			//if root post
+		is_found_thread_string = "Root Post";
+	}else if( post.hash === _categories ){								//if categories
+		is_found_thread_string = "Categories";
+	}else if( post.replyTo === _categories ){							//if category
+		is_found_thread_string = "Category";
+	}else if(list_of_categories_hashes.indexOf(post.replyTo)!==-1){		//if subcategory (thread)
+		is_found_thread_string = "Subcategory";
+	}else if( is_found_thread_string !== "Thread" ){			//if just post
+		is_found_thread_string = "Unanswered post";
+	}else{																//else, just post, which contains replies, and this is like thread.
+		is_found_thread_string = "Thread";		
+	}
+	
+	//console.log("post", post.hash, post.replyTo, is_found_thread_string);
+
+	//Append "Thread not found"
+	p.append(
+		$('<a>')
+		.attr('href', '#'+ (is_found_thread_string=="Categories"?"category":"thread") + ( (is_found_thread_string=="Root Post")? post.hash : post.replyTo) )
+		.html(
+			'<span class="glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span>'+
+			'<span class="btn-title">&thinsp;'
+			+
+			(
+				(is_found_thread_string=="Root Post")
+				?"Root Post"
+				:(is_found_thread_string=="Categories")
+					?"Root Post"
+					:(is_found_thread_string=="Category")
+						?"Categories"
+						:(is_found_thread_string=="Subcategory")
+							?"Category"	//subcategory - this is a reply to category.
+							:"Thread"	//else, unanswered posts are replies to another posts, and this is a threads for this posts.
+			)
+			+
+			'</span>'
+		)
+		.click(function(){
+			//loadRootThread($(this).parent().attr('id'));
+		})
+	);
+
+	//Append "Link to single post"
+	p.append(
+		$('<a>')
+		.attr('href', '#thread' + post.hash)
+		.html(
+			'&nbsp;&nbsp;&nbsp;<span class="glyphicon glyphicon-paperclip" aria-hidden="true"></span>'+
+			'<span class="btn-title">&thinsp;'
+			+
+			(is_found_thread_string === "Subcategory" ? "Thread" : is_found_thread_string)
+			+'</span>'
+		)
+		.click(function(){
+			//loadRootThread($(this).parent().attr('id'));
+		})
+	);
+}
+
 function loadReplies(hash, offset, highlight) {
   $.get('../api/replies/' + hash)
     .done(function(arr){
@@ -751,6 +839,7 @@ function loadReplies(hash, offset, highlight) {
             if (highlight == arr[i].hash) {
               p.addTemporaryClass('high', 8000);
             }
+			append_thread_and_post_links(p, arr[i], "Unanswered post")
         }
       }
       vid_show()
@@ -782,6 +871,7 @@ function AddBriefView(hash, deleted, highlight)
 				  p1.addTemporaryClass('high', 8000);
 				}
 			}
+			append_thread_and_post_links(p1, brief[i], "Unanswered post")
 		}
 	});
 }
@@ -897,15 +987,17 @@ function loadThread(hash, highlight) {
 			)
 		);
 
-			addPost(post, function(d){ d.appendTo($('#thread')); }, false, false);
+			p2 = addPost(post, function(d){ d.appendTo($('#thread')); }, false, false);
+			append_thread_and_post_links(p2, post, "Category")
 			if (_depth == 1 || _depth == 0){
 				//without reverse.
 				//arr.reverse();	//was been reverse, but reverse now inside PostDb.cs, GetReplies()
 			}else{
 				arr.reverse();	//maybe need to reverse another, but seems like good, without it.
 			}
+//			console.log("arr.length", arr.length);
 			for (var i = 0; i < arr.length; i++) {
-				//console.log('nanoclient.js: arr: ', arr[i].hash, arr[i]);
+//				console.log('nanoclient.js: arr: ', arr[i].hash, arr[i]);
 				if(arr[i]===null)continue;
 				var deleted = Base64.decode(arr[i].message) == _postWasDeletedMarker;
 				if (_showDeleted == 'false' && deleted){continue;}
@@ -926,6 +1018,7 @@ function loadThread(hash, highlight) {
 						AddBriefView(arr[i].hash, deleted, highlight);
 					}
 				}
+				append_thread_and_post_links(p, arr[i], "Thread")
 			}
           vid_show()
         });

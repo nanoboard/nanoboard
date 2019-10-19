@@ -1,5 +1,5 @@
 * {
-  font-family: 'Tahoma', sans-serif;
+  font-family: 'Verdana', sans-serif;
   font-size: 13px;
 }
 
@@ -90,7 +90,7 @@
 }
 
 gr {
-  color: #4f4;
+  color: green;
 }
 
 g {
@@ -106,8 +106,8 @@ textarea {
 }
 
 .post {
-  background-color: #444852;
-  border: 1px solid #111;
+  background-color: #ddd;
+  border: 1px solid #aaa;
   border-radius: .4em;
   margin: .4em 0;
   max-width: 600px;
@@ -117,9 +117,7 @@ textarea {
 .reply-div {
   display: inline-block;
 }
-.black-text {
-  color: black;
-}
+
 img {
   border: 1px dotted white;
   max-width: 200px;
@@ -132,10 +130,6 @@ img {
   border-width: 0;
 }
 
-a {
-  text-decoration: none;
-  color: darkorange;
-}
 
 a:hover {
   color: salmon;
@@ -147,12 +141,8 @@ a:hover {
 }
 
 sp {
-/*
-  background-color: #000;
-  color: #000;
-*/
-  background-color: #384244;
-  color: #384244;
+  background-color: #ccc;
+  color: #ccc;
 }
 
 sp a, sp gr, sp b, sp i, sp u, sp s, sp sub, sp sup, sp pre, sp span {
@@ -182,8 +172,8 @@ sp a:hover{
 }
 
 sp a:not(:hover){
-	background: #384244;
-	color: #384244;
+	background: #ccc;
+	color: #ccc;
 	padding: 2px;
 	-webkit-transition: all 0s ease-in;
 	-moz-transition: all 0s ease-in;
@@ -193,13 +183,13 @@ sp a:not(:hover){
 }
 
 sp pre:hover {
-	background: #ddd;
+	background: #f5f5f5;
 	color: #000000;
 }
 
 gr:hover{
 	background: inherit;
-	color: #4f4;
+	color: green;
 }
 
 gr b, gr i, gr u, gr s, gr sup, gr sub, gr span {
@@ -207,23 +197,15 @@ gr b, gr i, gr u, gr s, gr sup, gr sub, gr span {
 	color: inherit;
 }
 gr pre{
-	background: #ddd;
+	background: #f5f5f5;
 	color: #000000;
 }
 
 b:hover, i:hover, u:hover, s:hover, sup:hover, sub:hover {
-/*
-	background: #f0e0d6;
-*/
-
-/*
-	background: inherit;
-*/
 	color: inherit;
 }
 
 .post-inner {
-  font-family: Tahoma;
   word-break: normal;
   overflow: auto;
   max-height: 40em;

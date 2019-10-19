@@ -865,7 +865,129 @@ nanodb.exe-source\start_compile.bat
 \nanodb.exe				- changed, after recompilation.
 \Changes.txt			- Add this changes.
 _____________________________________________________________________
+(19.10.2019) Changed 23 files 1 file added - in 11 folders:
 
+Changes and additions:
+	Source code:
+		\nanodb.exe-source\PngTransport\NBPack.cs
+			Fix showing the part of dataURL, in catch, if image not parsed correctly, and if this was been parsed from dataURL.
+			No long base64 in console, now.
+			Fix some compile warnings
+
+		\nanodb.exe-source\Server\DbApiHandler.cs
+			Change type for variable "deleted" from bool to int and add additional cases for response when post is deleted.
+			Fix some compile warnings
+
+		\nanodb.exe-source\Server\FileHandler.cs
+			Add title tooltip for h1-element on the page http://IP:PORT/download
+
+		\nanodb.exe-source\Database\Post.cs
+			Fix some compile warnings
+
+		\nanodb.exe-source\Database\PostDb.cs
+			Fix post deletion. Now posts are deleted by two steps. "Delete once" (replies availale in this case) and "Delete forever".
+			Add two additional bool variables to lock files _index and DiffFile, while data is writting there.
+				Switch this to true before each read and write operation, and turn back to false, after.
+				Wait while this is true, and don't read-write, while file is locked.
+			Add the same variable PutPostBusy to don't call PutPost, while it still working.
+				Turn this to true, after call this method, and to false, before each return.
+			Comment the code in the method Flush(), and turn back old code. Maybe this will not write null bytes, if file will be unlocked.
+			Now, there is no any throw exceptions, about file is busy by another process...
+	
+		\nanodb.exe-source\PngTransport\WebClientX.cs
+			Fix OutOfMemoryException:
+				Make WebClientX IDisposable
+				remove bytes - set bytes = null, in DownloadDataAsync, after check e.Result
+				Add some strings to clear memory, in the end of DownloadDataCompleted
+				Add new method DownloadData + curl downloading there.
+				Add new method Dispose to dispose WebClient.
+
+	This still eating many memory...
+		\nanodb.exe-source\PngTransport\Aggregator.cs
+			Fix DOWNLOAD_TIMEOUT_SEC when float.TryParse not working.
+			Fix OutOfMemoryException:
+				Copy method ParseImage, and rename this to ParseImage2
+				Rewrite parseImage to using DownloadData, not DownloadDataAsync with DownloadDataCompleted...
+			Now memory usage not so large.
+				Add memory limit as parameter in config, now this can be customized in the settings (bytes). Default value - 200 MBytes.
+					Now the program wait the garbage collecting,
+					before run another thread of downloading,
+					if this limit was been reached until collectPNG runned.
+			Comment WebClientX.Interrupt() in _Main, and add this before "Finished"
+				Now collectPNG will be processed even after stop the program, or disconnected from Internet.
+				WebClients are pending in the memory, connections is opened.
+				This will be closed for each WebClient, after DOWNLOAD_TIMEOUT_SEC
+			Comment notifs about opened connections. Was been added - just for test.
+	
+	HTML, CSS, JS:
+		\pages\index.html
+			Change version to 3.2
+			Update post count, when this was been changed, after deletion of the post, for example.
+			Update array with byte-lengths of posts, if post-count was been changed.
+			comment test console.log()
+			Add link to draw image in canvas.
+			Add second div with post count, in the top of the page.
+
+		\pages\draw_image.html
+			add page to draw image in canves. This can return file as PNG-picture to download, or xmg-code to insert this image in the post.
+
+		\scripts\api.js
+			Update post count and show title tooltip, when post is deleted.
+
+		\scripts\init.js
+			Add array list_of_categories_hashes, to save the hashes of the posts with categories and find supcategories.
+			show notification, if count of posts - changed.
+			Update post count in the div in the top of the page.
+
+		\scripts\nanoclient.js
+			fix post deletion and add function append_thread_and_post_links
+
+		\scripts\on_add.js
+			Don't show long JSON in console.log, when try to using BitMessage transport. Just notify.
+
+		\scripts\reply.js
+			Add preview for post, before sent.
+			Remove elements powModal and captchaModal onclick outside this, like for modal for "Attach image".
+			function check_base64. Add update preview while textarea is editing, if preview is opened.
+			add left padding for preview.
+			Add function focus_in_the_end_of_last_textarea
+			Hide reply-div and textarea, after post was been sent.
+
+		\scripts\post.js
+			fix function detectImages when the same image posted many times.
+				Now this available in preview without errors. Array with indexes generated additionally.
+			fix detect_files in preview - function applyFormatting. Now the link to files are showing in preview.
+			replace type to "image/png", for PNG pictures, if PNG signature found in base64.
+
+		\scripts\search.js
+			remove image \images\spinner.gif, and add text notify "Wait SEARCH...", to nanomize nanoboard source.
+			add function interval in var dots to move the dots for this notify.
+			Add in 3 places, the text notify if nothing not found, to don't continue rotate spinner, when 404 response was been received.
+
+		\scripts\params.js
+			Add default places, and default skin - "futaba". This will be updated, if there will be empty values, when config.json deleted, for example...
+			Add autoreload the page after set the default values.
+
+		\styles\skins\futaba\nano.css
+			Add resize for post div.
+			Add padding for spoiler.
+			Add resize: none; for .post-inner
+			Add id's for two divs for post-count, in the top and in the bottom.
+
+		\styles\skins\photon\nano.css
+		\styles\nano.css
+		\styles\skins\dark\nano.css
+			Fix spoilers and quotes dark, photon and default skin. Style two divs statusd1, and statusd2.
+
+	Other:
+		\nanodb.exe - changed after re-compilation.
+
+		\pages\version.txt - generated after re-compilation.
+
+		\Changes.txt - this text added.
+		
+	That's all.
+_____________________________________________________________________
 
 Code commented. See source code.
 

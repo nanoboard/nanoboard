@@ -27,6 +27,8 @@ namespace NDB
     {
         private readonly string _index = "index-3.json";  // name of index file
         private const string DiffFile = "diff-3.list";    // name of file that keeps changes to the index
+		private bool _index_locked = false;
+		private bool DiffFile_locked = false;
         private readonly string DeletedStub = "post was deleted".ToB64();   // this message returned when someone asks for deleted post
         private const string DataPrefix = "";   // will be prepended to a data chunk name
         private const string DataSuffix = ".db3"; // data chunk extension
@@ -155,17 +157,19 @@ namespace NDB
         */
         private void AddDbRef(DbPostRef r)
         {
+			if(_refs.ContainsKey(r.hash) || r.replyTo == "deleted_forever"){return;}	//skip contains ref, if exist
             _refs[r.hash] = r;
             // ensure there is a list for replies:
             if (!_rrefs.ContainsKey(r.replyTo))
                 _rrefs[r.replyTo] = new List<DbPostRef>();
             _rrefs[r.replyTo].Add(r); // add as reply to it's parent
-            if (r.deleted)
+            if (r.deleted && r.replyTo!="deleted_forever")
                 _deleted.Add(r.hash);
             // if this offset-length (file area) is not used yet, mark it as free
             if (r.deleted && r.length > 0)
                 _free.Add(r.hash);
-            _ordered.Add(r.hash);
+			if((r.replyTo=="deleted_forever")) return;	//don't deleted_forever to ordered posts...
+			_ordered.Add(r.hash);
         }
 
         // reading diff
@@ -176,9 +180,12 @@ namespace NDB
 		private void UpdateDbRef(DbPostRef r)
 		{
 			if(_free.Contains(r.hash)){
-				_free.Remove(r.hash);
-				return;
+				if(!_deleted.Contains(r.hash)){	//if deleted_forever and not deleted once
+					_free.Remove(r.hash);		//don't add
+					return;						//and return
+				}
 			}
+			if( r.replyTo == "deleted_forever" ) return;	//don't add posts deleted_forever
 			bool isNew = !_refs.ContainsKey(r.hash);
 			_refs[r.hash] = r;
 			if (!r.deleted && _deleted.Contains(r.hash)) {
@@ -188,13 +195,13 @@ namespace NDB
 				_rrefs[r.replyTo] = new List<DbPostRef>();
             if (isNew) 
                 _rrefs[r.replyTo].Add(r);
-			if (r.deleted)
+			if (r.deleted && r.replyTo!="deleted_forever")
 				_deleted.Add(r.hash);
 			if (r.deleted && r.length > 0)
 				_free.Add(r.hash);
             if (r.deleted && r.length == 0)
                 _free.Remove(r.hash);
-			if (isNew)
+			if (isNew && !r.deleted)
 				_ordered.Add(r.hash);
 		}
 
@@ -205,7 +212,11 @@ namespace NDB
         {
 			if (File.Exists (_index)) 
 			{
+				while(_index_locked){System.Threading.Thread.Sleep(10);}
+				_index_locked = true;
 				var indexString = File.ReadAllText(_index);
+				_index_locked = false;
+
 				var refs = JsonConvert.DeserializeObject<Index> (indexString).indexes;
 
 				foreach (var r in refs) 
@@ -216,7 +227,10 @@ namespace NDB
 
             if (File.Exists(DiffFile))
             {
+				while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+				DiffFile_locked = true;
                 var diffs = File.ReadAllLines(DiffFile);
+				DiffFile_locked = false;
 
                 foreach (var diff in diffs)
                 {
@@ -228,7 +242,10 @@ namespace NDB
                     UpdateDbRef(r);
                 }
 
+				while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+				DiffFile_locked = true;
                 File.WriteAllText(DiffFile, "");
+				DiffFile_locked = false;
             }
 
 			Flush();
@@ -262,8 +279,12 @@ namespace NDB
         public string[] RangePresent(int skip, int count, string only_hashes)
         {
 //			try{
-				if(only_hashes.Contains("with_bytelength")){				
+				if(only_hashes.Contains("with_bytelength")){
+					while(_index_locked){System.Threading.Thread.Sleep(10);}
+					_index_locked = true;
 					var indexString = File.ReadAllText(_index);
+					_index_locked = false;
+					
 					var refs = JsonConvert.DeserializeObject<Index> (indexString).indexes;
 					List<string> hashes_bytes = new List<string>();
 				
@@ -313,8 +334,13 @@ namespace NDB
                 {
                     _free.Remove(r.hash);
                     FileUtil.Write(r.file, bytes, r.offset);
-                    FileUtil.Append(DiffFile, JsonConvert.SerializeObject(r) + "\n");
-                    return true;
+                    
+					while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+					DiffFile_locked = true;
+					FileUtil.Append(DiffFile, JsonConvert.SerializeObject(r) + "\n");
+                    DiffFile_locked = false;
+					
+					return true;
                 }
 
             // else try to find best empty area in some file
@@ -348,8 +374,12 @@ namespace NDB
                         FileUtil.Write(best.file, bytes, r.offset);
                         r.file = best.file;
                         best.file = null;
-                        FileUtil.Append(DiffFile, JsonConvert.SerializeObject(best) + "\n");
+
+						while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+						DiffFile_locked = true;
+						FileUtil.Append(DiffFile, JsonConvert.SerializeObject(best) + "\n");
                         FileUtil.Append(DiffFile, JsonConvert.SerializeObject(r) + "\n");
+						DiffFile_locked = false;
                         return true;
                     }
                 }
@@ -358,30 +388,46 @@ namespace NDB
                 r.offset = FileUtil.Append(_data, bytes);
                 r.file = _data;
                 IncreaseCheckDataSize(r.length);
+
+				while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+				DiffFile_locked = true;
                 FileUtil.Append(DiffFile, JsonConvert.SerializeObject(r) + "\n");
+				DiffFile_locked = false;
                 return true;
             }
         }
 
+		public bool PutPostBusy = false;
+		
         public bool PutPost(Post p, bool allowReput = false, bool bypassValidation = false)
         {
-	            if (!PostsValidator.Validate(p, bypassValidation)) 		// do not add posts that fail validation
-                    return false;
+			while(PutPostBusy){System.Threading.Thread.Sleep(10);}
+			
+			PutPostBusy = true;
+		
+	            if (!PostsValidator.Validate(p, bypassValidation)){ 		// do not add posts that fail validation
+                    PutPostBusy = false;
+					return false;
+				}
 
             lock (_lock)
             {
-                if (_refs.ContainsKey(p.hash) && !_deleted.Contains(p.hash)) // do not add existing not deleted posts
+                if (_refs.ContainsKey(p.hash) && !_deleted.Contains(p.hash)){ // do not add existing not deleted posts
+					PutPostBusy = false;
                     return false;
+				}
 
                 // if posts was deleted, add it back if allowed in allowReput param
                 bool wasDeleted = _deleted.Contains(p.hash);
                 if (allowReput && wasDeleted)
                 {
-                    return ReputPost(p);
+                    PutPostBusy = false;
+					return ReputPost(p);
                 }
                 else if (!allowReput && wasDeleted)
                 {
-                    return false;
+                    PutPostBusy = false;
+					return false;
                 }
 
                 // start creating new index entry
@@ -428,9 +474,16 @@ namespace NDB
                         r.file = best.file;
                         best.file = null;
                         AddDbRef(r);
+
+						while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+						DiffFile_locked = true;
                         FileUtil.Append(DiffFile, JsonConvert.SerializeObject(best) + "\n");
                         FileUtil.Append(DiffFile, JsonConvert.SerializeObject(r) + "\n");
-                        return true;
+						DiffFile_locked = false;
+
+						ReadRefs();	//update database from _index and DiffFile
+                        PutPostBusy = false;
+						return true;
                     }
                 }
 
@@ -439,9 +492,14 @@ namespace NDB
                 r.file = _data;
                 IncreaseCheckDataSize(r.length);
                 AddDbRef(r);
-                FileUtil.Append(DiffFile, JsonConvert.SerializeObject(r) + "\n");
-            }
 
+				while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+				DiffFile_locked = true;
+                FileUtil.Append(DiffFile, JsonConvert.SerializeObject(r) + "\n");
+				DiffFile_locked = false;
+            }
+			ReadRefs();
+			PutPostBusy = false;
             return true;
         }
 
@@ -449,10 +507,10 @@ namespace NDB
             Mark post as deleted, erase it's message bytes (write zeros to the file),
             update diff file
         */
-        public bool DeletePost(string hash)
+        public int DeletePost(string hash)
         {
             if ( !_refs.ContainsKey(hash) ){		//if post cann't be deleted
-                return false;						//do not do nothing
+                return 0;						//do not do nothing
 			}
 			else if ( _deleted.Contains(hash) ){	//if post already deleted
 				//Remove this from DB...
@@ -461,20 +519,31 @@ namespace NDB
 				_refs[hash].deleted = true;														//modify values
 				_refs[hash].replyTo = "deleted_forever";
 				FileUtil.Write(_data, new byte[_refs[hash].length], _refs[hash].offset);		//0.db3
+
+				while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+				DiffFile_locked = true;
 				FileUtil.Append(DiffFile, JsonConvert.SerializeObject(_refs[hash]) + "\n");		//diff-3.list
+				DiffFile_locked = false;
+
 				_refs.Remove(hash);
-				return true;
+				_ordered.Remove(hash);
+				return 2;
 			}
 
 			//else set deleted and leave in database.
             _refs[hash].deleted = true;
             FileUtil.Write(_data, new byte[_refs[hash].length], _refs[hash].offset);		//0.db3
+
+			while(DiffFile_locked){System.Threading.Thread.Sleep(10);}
+			DiffFile_locked = true;
             FileUtil.Append(DiffFile, JsonConvert.SerializeObject(_refs[hash]) + "\n");		//diff-3.list
+			DiffFile_locked = false;
+			
             if (_cache.ContainsKey(hash))
                 _cache.Remove(hash);
             _deleted.Add(hash);
             _free.Add(hash);
-            return true;
+            return 1;
         }
 
         /*
@@ -537,15 +606,12 @@ namespace NDB
         public List<Post> GetLastNAnswers(string hash, int n, bool fast = false)
         {
             List<Post> res_ln = new List<Post>();
-			if(_free.Contains(hash)){				//if post deleted forever
+			if(_free.Contains(hash)){				//if post deleted forever or just deleted and contains in _deleted, and not contains in _refs
 				return res_ln;							//return empty list
 			}
-            else if ( !_rrefs.ContainsKey(hash) ){	//if post, thread, cathegory - no have replies
+            if ( !_rrefs.ContainsKey(hash) ){	//if post, thread, cathegory - no have replies
 				return res_ln;							//return empty list
             }
-		//	else if( _deleted.Contains(hash) ){		//if post deleted first time
-		//		return res_ln;							//return empty list
-		//	}
 
             var stack = new Stack<List<DbPostRef>>();
             stack.Push(_rrefs[hash]);
@@ -593,8 +659,20 @@ namespace NDB
 			if (!_rrefs.ContainsKey(hash)){	//if post not have replies
                 return new Post[0];				//return empty post
 			}
-			if(_free.Contains(hash)){		//if post deleted_forever
-				return new Post[0];				//return empty post
+
+			if(_free.Contains(hash)){		//if post deleted
+				if(!_deleted.Contains(hash)){	//and if post deleted_forever and not deleted once
+					return new Post[0];				//return empty post
+				}else{
+					if(_refs.ContainsKey(hash)){
+						if (_refs[hash].replyTo=="deleted_forever"){
+							_refs.Remove(hash);
+							_deleted.Remove(hash);
+							_rrefs.Remove(hash);
+							return new Post[0];
+						}
+					}
+				}
 			}
             var res = new Post[_rrefs[hash].Count];
             var rrefs = _rrefs[hash].ToArray();
@@ -658,16 +736,21 @@ namespace NDB
 				for(var i=0; i<res.Length; i++){
 					DateTime last_date;
 					try{
-						last_date =
-								( GetLastNAnswers(res[i].hash, 1, true).Count > 0 )		//fast
-									? GetLastNAnswers(res[i].hash,1, true).Last().date	//fast
-									: res[i].date
-						;
+						if(res[i] == null) {last_date = DateTime.Parse("01.01.0001 0:00:00");}
+						else{
+							Console.WriteLine("res[i]: "+res[i]+" res[i].date: "+res[i].date);
+
+							last_date =
+									( GetLastNAnswers(res[i].hash, 1, true).Count > 0 )		//fast
+										? GetLastNAnswers(res[i].hash,1, true).Last().date	//fast
+										: res[i].date
+							;
 				
-						last_date = ( ( DateTime.Now - last_date ).Ticks < 0 )	//if unix timestamp lesser than 0
-								?	DateTime.Parse("01.01.0001 0:00:00")				//seems like fake - remove
-								:	last_date											//or leave
-						;
+							last_date = ( ( DateTime.Now - last_date ).Ticks < 0 )	//if unix timestamp lesser than 0
+									?	DateTime.Parse("01.01.0001 0:00:00")				//seems like fake - remove
+									:	last_date											//or leave
+							;
+						}
 					}
 					catch(Exception ex){
 						Console.WriteLine("PostDb.cs, GetReplies, OrderBy: "+ex);
@@ -697,18 +780,40 @@ namespace NDB
             index.indexes = _refs.Values.ToArray();
             var json = JsonConvert.SerializeObject(index, Formatting.None);
 
+/*
+			while(_index_locked){System.Threading.Thread.Sleep(10);}
+			_index_locked = true;
             File.WriteAllText("2"+_index, json);				//write to another file.
+			_index_locked = false;
+            
+			while(_index_locked){System.Threading.Thread.Sleep(10);}
+			_index_locked = true;
 			var indexString = File.ReadAllText("2"+_index);		//read this to compare.
+			_index_locked = false;
+
 			if(json==indexString){								//if equals
+				while(_index_locked){System.Threading.Thread.Sleep(10);}
+				_index_locked = true;
 				File.Delete(_index);								//remove index
+				_index_locked = false;
 
 				FileInfo fi = new FileInfo("2"+_index);				//read fileInfo for 2_index
 				if (fi.Exists)											//if exists
 				{
+					while(_index_locked){System.Threading.Thread.Sleep(10);}
+					_index_locked = true;
 					fi.MoveTo(_index);									//rename to _index.
+					_index_locked = false;
 				}
 			}
+*/
+
 			//File.WriteAllText(_index, json);							//old code - just write, but sometimes NUL bytes there writed.
+			
+			while(_index_locked){System.Threading.Thread.Sleep(10);}
+			_index_locked = true;
+			File.WriteAllText(_index, json);							//old code - just write, but sometimes NUL bytes there writed.
+			_index_locked = false;
         }
 		
 		public static bool IsMD5(string input)	//validate hash string.

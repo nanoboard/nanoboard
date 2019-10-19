@@ -59,7 +59,7 @@
 </style>
 </head>
 <body>
-<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.1</sup></span>
+<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.2</sup></span>
 <div id="head-panel" class="container-fluid">
     <div id="navrow" class="row no-gutter">
         <nav class="navbar navbar-default">
@@ -192,10 +192,12 @@
 		posts from all was been found.
 	</div>
 
-<div id='thread'>
-</div>
 <hr/>
-<div id='statusd'></div>
+<div id='statusd1'></div>
+<hr/>
+<div id='thread'></div>
+<hr/>
+<div id='statusd2'></div>
 <div id='placesd'></div>
 <!-- Modal -->
 <div class="modal fade" id="imgmodal" tabindex="-1" role="dialog" aria-labelledby="Image→Base64">
@@ -208,7 +210,11 @@
       <div class="modal-body">
       
         <form class="input-group" id="img2b64">
-          <input id="inputFileToLoad" type="file" />
+          <input id="inputFileToLoad" type="file" style="display: inline-block;"/>
+		  &nbsp;&nbsp;&nbsp;&nbsp;
+		  or
+		  &nbsp;&nbsp;&nbsp;&nbsp;
+		  <a href="draw_image.html" target="_blank">Draw this Image yourself.</a>
         </form>
         <br/>
         <div class='range1'>
@@ -416,6 +422,13 @@ function get_total_posts(){
 	.done(
 		function(replies){
 			total_posts_available = parseInt(replies);
+			if(postCount<total_posts_available){
+				postCount = total_posts_available;
+				
+				//update_post_count = true;
+				notifyAboutPostCount(true);
+				//update_post_count = false;
+			}
 		}
 	)
 	.fail(
@@ -735,8 +748,12 @@ function update_hashes_of_last_post(last_posts_hashes, queue, value){
 			var current_post_bytelength = parseInt(fullhl_bytes[array[hash]]);
 			bytes_to_pack_now += current_post_bytelength;
 			
-            html +=     	'Post №'+(fullhl.indexOf(array[hash])) +
-			
+			if(((fullhl.indexOf(array[hash])) === -1)){
+				get_total_posts();		//update post count if new posts added
+				generate_hash_list();	//update object with posts byte-length
+			}
+
+            html +=     	'Post #'+fullhl.indexOf(array[hash])+
 							': <a href="javascript:void(0);"'+
 			//				'onclick="_depth=2;loadThread(&quot;'+
             				'onclick="show_post_in_div(&quot;'+
@@ -899,14 +916,18 @@ function generate_hash_list(){
         //    '\n full.l', parthl.length
         //);
         
-        console.log('Loading last posts...', ', total_posts_available: ', total_posts_available);
+        //console.log('Loading last posts...', ', total_posts_available: ', total_posts_available);
 		if(total_posts_available==0){total_posts_available = postCount;}
-        console.log('Loading last posts...', ', total_posts_available: ', total_posts_available);
+        //console.log('Loading last posts...', ', total_posts_available: ', total_posts_available);
 		
 		
         //$.get(        'http://127.0.0.1:7346/api/prange/?fromto='+(total_posts_available-nlp)+'-'+nlp+'&only_hashes=only_hashes') //return hashes only, using GET-query not json posts...
         //$.get(        'http://127.0.0.1:7346/api/prange/?fromto=0-'+total_posts_available+'&only_hashes=only_hashes') //get all list of posts. Return hashes only, using GET-query not json posts...
-        $.get(        'http://127.0.0.1:7346/api/prange/?fromto=0-'+total_posts_available+'&only_hashes=with_bytelength') //get all list of posts. Return hashes only, using GET-query not json posts...
+        $.get(        'http://127.0.0.1:7346/api/prange/?fromto=0-'+
+																	(		total_posts_available
+																		+	500	//try to loading more posts, if new posts was been added.
+																	)
+																	+'&only_hashes=with_bytelength') //get all list of posts. Return hashes only, using GET-query not json posts...
         //http://127.0.0.1:7346/api/prange/0-50/        //here is json posts... Many data...
         .done(function(replies){                        //some test function for response...
 			//console.log('replies, after prange: ', replies);

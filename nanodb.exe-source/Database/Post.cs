@@ -12,12 +12,14 @@ namespace NDB
     */
     public class Post
     {
+#pragma warning disable 0649
         [JsonProperty("hash")]
-        public string hash;
+        public string hash;												//three			//can't
         [JsonProperty("message")]
-        public string message;      // is Base64 string of UTF-8 bytes
+        public string message;      // is Base64 string of UTF-8 bytes	//warnings		//fix
         [JsonProperty("replyTo")]
-        public string replyto;
+        public string replyto;											//here			//this
+#pragma warning restore 0649
 
 		//from client 3.1
         public DateTime date
@@ -31,7 +33,7 @@ namespace NDB
                         Split(new string[] { ", client:" }, StringSplitOptions.None)[0]);
                     
                 }
-                catch(Exception e)
+                catch//(Exception e) //fix compile warning
                 {
                     res = new DateTime();
                 }

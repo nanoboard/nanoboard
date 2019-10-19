@@ -437,6 +437,8 @@ function check_base64(textarea){
 	calculate_length(textarea);
 	var text = textarea.value;
 	
+	var element = $(textarea).parent().find('.preview')[0];
+
 	var bb_codes_with_base64 = ['xmg', 'img', 'file'];												//array with bb-codes, where need to check base64...
 	var result;																						//just define this.
 	for(index_code=0; index_code<bb_codes_with_base64.length; index_code++){						//for each bb-code
@@ -449,16 +451,31 @@ function check_base64(textarea){
 			'\nbetween bb-code [code][/code], and ignore this warning.\n';
 			//textarea.style.border = '1px solid red';															//make red border for textarea.
 			textarea.classList.add('base64_error');																//but add class to activate appended style.
+			if(typeof element !== 'undefined'){
+				element.innerHTML = "<b>Base64_error in some tag</b>";
+			}
 			return false;																						//and return false.
 		}
 	}
 	//else, if false not returned, all base64 is base64-encoded.
-	if(textarea.classList.contains('length_error')){}
+	if(textarea.classList.contains('length_error')){
+		if(typeof element !== 'undefined'){
+			element.innerHTML = "<b>So large post...</b>";
+		}
+		return false;
+	}
 	else{
 		textarea.title = '';																						//remove title
 	}
 //	textarea.style.border = '1px solid lime';																	//change border color to lime
 	textarea.classList.remove('base64_error');																	//remove class, and turn textarea back.
+	
+	if(typeof element !== 'undefined'){
+		element.innerHTML = applyFormatting(escapeTags($(textarea).parent().find('textarea').val()));
+		$(textarea).parent().find('img').click(function(){
+			$(textarea).toggleClass('full');
+		});
+	}
 	return true;																								//return true;
 
 /*
@@ -535,9 +552,9 @@ function get_token(pst){
 	});
 
 function generate_captcha(replyto_hash_and_post) {
-	console.log(
-		'replyto_hash_and_post: '+replyto_hash_and_post
-	);
+
+	//console.log('replyto_hash_and_post: '+replyto_hash_and_post);
+
 	if($("body").find(".pow_modal").length===0){
 		var pst = Base64.encode(replyto_hash_and_post);
 		var captchaModal = $('.captcha_modal');
@@ -582,6 +599,12 @@ function generate_captcha(replyto_hash_and_post) {
 									form.remove();
 									mockSendPostToDb(JSON.parse(postStr));
 									captchaModal.remove();
+									setTimeout(
+										function(){
+											$("body").find(".reply-div").remove();
+										}
+										,1000
+									);
 								})
 								.fail(function(){
 									captchaModal.remove();
@@ -647,6 +670,15 @@ function generate_captcha(replyto_hash_and_post) {
 		});
 }
 
+function focus_in_the_end_of_last_textarea(){	//move cursor to the end of last textarea and focus there.
+	last_textarea = $("body").find('textarea');
+	last_textarea = last_textarea[last_textarea.length-1];
+	if(typeof last_textarea !== "undefined"){
+		last_textarea.focus();
+		last_textarea.setSelectionRange(last_textarea.value.length,last_textarea.value.length);
+	}
+}
+
 function addReplyForm(id) {	// это хэш поста к которому ответ.
   var form = $('<div>')
     .addClass('post').addClass('reply-div')
@@ -659,7 +691,8 @@ function addReplyForm(id) {	// это хэш поста к которому от
         .addClass('reply-button btn btn-danger ')
         .text('Cancel')
         .click(function() {
-          $(this).parent().parent().remove();
+			$(this).parent().parent().remove();
+			focus_in_the_end_of_last_textarea();
         }))
       .append($('<button>')
         .text('Send')
@@ -687,7 +720,7 @@ function addReplyForm(id) {	// это хэш поста к которому от
         .click(function() {
 			$(this).text(($(this).text() === "Show preview") ? "Hide preview" : "Show preview");
 			if(typeof $(this).parent().find('.preview')[0] === 'undefined'){
-				$(this).parent().append($('<div style="border: 1px solid black;">').addClass('preview'));
+				$(this).parent().append($('<div style="border: 1px solid black; padding: 10px;">').addClass('preview'));
 			}else{
 				$(this).parent().find('.preview')[0].remove();
 				$(this).parent().find('.previewbtn').text("Show preview");
@@ -782,6 +815,7 @@ function addReplyForm(id) {	// это хэш поста к которому от
           $(this).parent().find('textarea').selection('replace', {text: '[code]' + sel + '[/code]'});
         })
       )
+      .ready( setTimeout(function(){focus_in_the_end_of_last_textarea();}, 500) )	//when document is ready and all appended, need to wait some time.
     );
     var offset = form.offset();
     offset.top -= 100;

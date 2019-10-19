@@ -1,0 +1,342 @@
+<title>Painting image in canvas.</title>
+<link rel="stylesheet" href="../styles/bootstrap.min.css">
+<body>
+	<div id="sidebar">
+		<div class="colorButtons">
+			<h3>Colour</h3>
+			<input type="color" id="colorpicker" value="#c81464" class="colorpicker" title="Painting color">
+		</div>
+		<div class="colorButtons">
+			<h3>Bg Color</h3>
+			<input type="color" value="#ffffff" id="bgcolorpicker" class="colorpicker" title="Background color">
+		</div>
+
+		<div class="toolsButtons">
+			<h3>Tools</h3>
+			<button id="eraser" class="btn btn-default"><span class="glyphicon glyphicon-erase" aria-hidden="true" title="Erase"></span></button>
+			<button id="clear" class="btn btn-danger"> <span class="glyphicon glyphicon-trash" aria-hidden="true" title="Clear"></span></button>
+		</div>
+
+		<div class="buttonSize">
+			<h3>Size (<span id="showSize">5</span>)</h3>
+			<input type="range" min="1" max="50" value="5" step="1" id="controlSize" title="Size of painting">
+		</div>
+
+		<div class="canvasSize">
+			<h3>Canvas</h3>
+			<div class="input-group">
+				<span class="input-group-addon">X</span>
+				<input type="number" id="sizeX" class="form-control" placeholder="sizeX" value="640" class="size" title="canvas width">
+			</div>
+			<div class="input-group">
+				<span class="input-group-addon">Y</span>
+				<input type="number" id="sizeY" class="form-control" placeholder="sizeY" value="480" class="size" title="canvas height">
+			</div>
+			<input type="button" class="updateSize btn btn-success" value="Resize" id="canvasUpdate" title="Apply resize for canvas">
+		</div>
+		<div class="Storage">
+			<h3>Storage</h3>
+			<input type="button" value="Save" class="btn btn-warning" id="save" title="Save canvas to LocalStorage.">
+			<input type="button" value="Load" class="btn btn-warning" id="load" title="Load canvas from LocalStorage, after clean, for example.">
+			<input type="button" value="Clear" class="btn btn-warning" id="clearCache" title="Clear LocalStorage.">
+		</div>
+		<div class="extra">
+			<h3>Extra</h3>
+			<a id="saveToImage" class="btn btn-warning" title="Save as PNG.">Download</a>
+			<a id="saveToXMGCode" class="btn btn-warning" title="Get xmg-code in pre-tag.">Get xmg-code</a>
+		</div>
+		<div id="resizable" style="border: 2px solid; padding: 5px; resize: both; overflow: auto; left: 150px; top: 45px; position: absolute;"></div>
+		
+		Code to post:<br>
+		<pre id="xmg" style="resize: both; overflow: auto; display: inline-block;" title="Copy and paste this code, inside post, and press the button 'Show Preview'"></pre>
+	</div>
+  </body>
+  
+<style>
+		.colorButtons {
+			display: block;
+			/*margin: 20px 0;*/
+		}
+
+		canvas {
+			cursor: crosshair;
+		}
+
+		div#sidebar {
+			position: absolute;
+			left: 0;
+			width: 150px;
+			padding: 20px 20px;
+			top: 0;
+		}
+
+		.btn {
+			margin-bottom: 10px;
+			width: 100%;
+		}
+		input {
+			width: 100%;
+			margin-bottom: 10px;
+		}
+
+		.input-group {
+			margin-bottom: 10px;
+		}
+
+		.toolsButtons .btn {
+			width: 48%;
+		}
+
+		.sizeButtons .btn {
+			width: 48%;
+		}
+
+		.colorpicker {
+			background: transparent;
+			height: 40px;
+		}
+</style>
+<script>
+
+
+
+		var resizable_div = document.getElementById('resizable');
+		var resizable_div_width = resizable_div.style["width"];
+		var resizable_div_height = resizable_div.style["height"];
+		var canvas_padding = resizable_div.style["padding"];
+		canvas_padding = parseInt(canvas_padding.substring(0, canvas_padding.length-2))+3;
+
+		
+		
+		setInterval(function(){
+			if((resizable_div_width !== resizable_div.style["width"]) || (resizable_div_height !== resizable_div.style["height"])){
+				//div was been resized... Update width and height in inputs...
+				canvas_width = resizable_div.style["width"];
+				canvas_width = canvas_width.substring(0, canvas_width.length-2);
+				
+				canvas_height = resizable_div.style["height"];
+				canvas_height = canvas_height.substring(0, canvas_height.length-2);
+				
+				document.getElementById("sizeX").value = (canvas_width - canvas_padding*2 < 0)?canvas_padding*2:canvas_width - canvas_padding*2;
+				document.getElementById("sizeY").value = (canvas_height - canvas_padding*2 < 0)?canvas_padding*2:canvas_height - canvas_padding*2;
+				resizable_div_width = resizable_div.style["width"];
+				resizable_div_height = resizable_div.style["height"];
+				document.getElementById('canvasUpdate').click();
+			}
+		}, 1000);
+
+		function resize_div(){
+			resizable_div.style["width"] = resizable_div_width = (parseInt(document.getElementById("sizeX").value) + canvas_padding*2)+'px';
+			resizable_div.style["height"] = resizable_div_height = (parseInt(document.getElementById("sizeY").value) + canvas_padding*2)+'px';
+		}
+		resize_div();
+		
+		function return_random_string(len){
+			//generate random string "s" with lenght = len 
+			for(var s = "", rem = 100000000, n = Math.random()*10*rem; s.length < len;){rem=10*rem%n; s+= (rem%10!==0)?rem.toString(36).replace(".", "").substr(0, len-s.length):"";}
+			return s;
+		}
+		
+	// SETTING ALL VARIABLES
+
+		var isMouseDown=false;
+		var canvas = document.createElement('canvas');
+		var body = document.getElementsByTagName("body")[0];
+		var ctx = canvas.getContext('2d');
+		var linesArray = [];
+		currentSize = 5;
+		var currentColor = "rgb(200,20,100)";
+		var currentBg = "white";
+
+		// INITIAL LAUNCH
+
+		createCanvas();
+
+		// BUTTON EVENT HANDLERS
+
+		document.getElementById('canvasUpdate').addEventListener('click', function() {
+			resize_div();
+			createCanvas();
+			redraw();
+		});
+		document.getElementById('colorpicker').addEventListener('change', function() {
+			currentColor = this.value;
+		});
+		document.getElementById('bgcolorpicker').addEventListener('change', function() {
+			ctx.fillStyle = this.value;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			redraw();
+			currentBg = ctx.fillStyle;
+		});
+		document.getElementById('controlSize').addEventListener('change', function() {
+			currentSize = this.value;
+			document.getElementById("showSize").innerHTML = this.value;
+		});
+		document.getElementById('saveToImage').addEventListener('click', function() {
+			downloadCanvas(this, 'canvas', return_random_string(20)+'.png');
+		}, false);
+		document.getElementById('saveToXMGCode').addEventListener('click', function() {
+			console.log("try to save as XMG_code");
+			SaveAsXMGCode(document.getElementById("xmg"), 'canvas', 'masterpiece.png');
+		}, false);
+		
+		
+		document.getElementById('eraser').addEventListener('click', eraser);
+		document.getElementById('clear').addEventListener('click', createCanvas);
+		document.getElementById('save').addEventListener('click', save);
+		document.getElementById('load').addEventListener('click', load);
+		document.getElementById('clearCache').addEventListener('click', function() {
+			localStorage.removeItem("savedCanvas");
+			linesArray = [];
+			console.log("Cache cleared!");
+		});
+
+		// REDRAW 
+
+		function redraw() {
+				for (var i = 1; i < linesArray.length; i++) {
+					ctx.beginPath();
+					ctx.moveTo(linesArray[i-1].x, linesArray[i-1].y);
+					ctx.lineWidth  = linesArray[i].size;
+					ctx.lineCap = "round";
+					ctx.strokeStyle = linesArray[i].color;
+					ctx.lineTo(linesArray[i].x, linesArray[i].y);
+					ctx.stroke();
+				}
+		}
+
+		// DRAWING EVENT HANDLERS
+
+		canvas.addEventListener('mousedown', function() {mousedown(canvas, event);});
+		canvas.addEventListener('mousemove',function() {mousemove(canvas, event);});
+		canvas.addEventListener('mouseup',mouseup);
+
+		// CREATE CANVAS
+
+		function createCanvas() {
+			canvas.id = "canvas";
+			canvas.width = parseInt(document.getElementById("sizeX").value);
+			canvas.height = parseInt(document.getElementById("sizeY").value);
+			canvas.style.zIndex = 8;
+			canvas.style.border = "1px solid";
+			ctx.fillStyle = currentBg;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			document.getElementById("resizable").appendChild(canvas);
+		}
+
+		// DOWNLOAD CANVAS
+
+		function downloadCanvas(link, canvas, filename) {
+			link.href = document.getElementById(canvas).toDataURL();
+			link.download = filename;
+		}
+		
+		function SaveAsXMGCode(xmgPRE, canvas, filename) {
+			//generate random string "s" with len_length;
+			xmgPRE.innerHTML =
+				'[xmg='+
+				document.getElementById(canvas).toDataURL().split("base64,")[1]+
+				']'+
+				'\n'+
+				'['+return_random_string(20)+'.png]'+
+				'\n\n'
+			;
+		}
+
+		// SAVE FUNCTION
+
+		function save() {
+			localStorage.removeItem("savedCanvas");
+			console.log("Try to save", JSON.stringify(linesArray))
+			localStorage.setItem("savedCanvas", JSON.stringify(linesArray));
+			console.log("Saved canvas!");
+		}
+
+		// LOAD FUNCTION
+
+		function load() {
+			if (localStorage.getItem("savedCanvas") != null) {
+				linesArray = JSON.parse(localStorage.savedCanvas);
+				var lines = JSON.parse(localStorage.getItem("savedCanvas"));
+				
+				ctx.fillStyle = 'white';							//clear canvas
+				ctx.fillRect(0, 0, canvas.width, canvas.height);	//do it
+				
+				for (var i = 1; i < lines.length; i++) {
+					ctx.beginPath();
+					ctx.moveTo(linesArray[i-1].x, linesArray[i-1].y);
+					ctx.lineWidth  = linesArray[i].size;
+					ctx.lineCap = "round";
+					ctx.strokeStyle = linesArray[i].color;
+					ctx.lineTo(linesArray[i].x, linesArray[i].y);
+					ctx.stroke();
+				}
+				console.log("Canvas loaded.");
+			}
+			else {
+				console.log("No canvas in memory!");
+			}
+		}
+
+		// ERASER HANDLING
+
+		function eraser() {
+			currentSize = 50;
+			currentColor = ctx.fillStyle
+		}
+
+		// GET MOUSE POSITION
+
+		function getMousePos(canvas, evt) {
+			var rect = canvas.getBoundingClientRect();
+			return {
+				x: evt.clientX - rect.left,
+				y: evt.clientY - rect.top
+			};
+		}
+
+		// ON MOUSE DOWN
+
+		function mousedown(canvas, evt) {
+			var mousePos = getMousePos(canvas, evt);
+			isMouseDown=true
+			var currentPosition = getMousePos(canvas, evt);
+			ctx.moveTo(currentPosition.x, currentPosition.y)
+			ctx.beginPath();
+			ctx.lineWidth  = currentSize;
+			ctx.lineCap = "round";
+			ctx.strokeStyle = currentColor;
+
+		}
+
+		// ON MOUSE MOVE
+
+		function mousemove(canvas, evt) {
+
+			if(isMouseDown){
+				var currentPosition = getMousePos(canvas, evt);
+				ctx.lineTo(currentPosition.x, currentPosition.y)
+				ctx.stroke();
+				store(currentPosition.x, currentPosition.y, currentSize, currentColor);
+			}
+		}
+
+		// STORE DATA
+
+		function store(x, y, s, c) {
+			var line = {
+				"x": x,
+				"y": y,
+				"size": s,
+				"color": c
+			}
+			linesArray.push(line);
+		}
+
+		// ON MOUSE UP
+
+		function mouseup() {
+			isMouseDown=false
+			store()
+		}
+</script>

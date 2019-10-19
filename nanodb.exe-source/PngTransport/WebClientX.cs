@@ -8,7 +8,7 @@ using NServer;
 
 namespace nbpack
 {
-    public class WebClientX
+    public class WebClientX : IDisposable
     {
         private static List<WebClient> _clients = new List<WebClient>();
 
@@ -48,7 +48,9 @@ namespace nbpack
                             NotificationHandler.Instance.Messages.Enqueue("Error! CloudFlare on " + uri.Host);
                             Console.WriteLine("CloudFlare Exception\n" + uri + " is under CloudFlare protection, cannot parse!");
                         }
-                    }} catch {}
+                    }
+						bytes = null;
+					} catch {}
                     if (e.Result == null) {
                         throw new Exception("SendFailure");
                     }
@@ -84,6 +86,11 @@ namespace nbpack
                         }
                     }
                 }
+				_wc.CancelAsync();
+				_wc.Dispose();
+				GC.Collect();
+				GC.WaitForPendingFinalizers();
+				GC.Collect();
             };
             try{_clients.Add(_wc);}catch{}
             //_wc.DownloadDataAsync(new Uri(uri.AbsoluteUri.Replace("https://", "http://")));
@@ -94,12 +101,90 @@ namespace nbpack
         {
             _wc.DownloadFile(new Uri(uri.AbsoluteUri), fileName);
         }
+		
+/*
+        public byte[] DownloadData(string address)	//download large file.
+        {
+            return _wc.DownloadData(address);
+        }
+*/
+
+		public byte[] DownloadData(string address)	//download large file.
+		{
+			Uri uri = new Uri(address);
+			byte [] bytes = null;
+			
+			try{_clients.Add(_wc);}catch{}
+			
+			try{
+				bytes = _wc.DownloadData(address);
+				if (bytes.Length < 8192)
+				{
+					var str = System.Text.Encoding.UTF8.GetString(bytes);
+
+					if (str.Contains("<a href=\"https://www.cloudflare.com/5xx-error-landing"))
+					{
+						NotificationHandler.Instance.Messages.Enqueue("Error! CloudFlare on " + uri.Host);
+						Console.WriteLine("CloudFlare Exception\n" + uri + " is under CloudFlare protection, cannot parse!");
+					}
+				}
+				if (bytes == null) {
+					throw new Exception("SendFailure");
+					}
+			}
+			catch (Exception e1){
+				var exceptionStr = e1.ToString();
+				bool tlsErr = exceptionStr.Contains("SendFailure");
+				if (tlsErr)
+				{
+					Console.WriteLine("Mono TLS Exception\n" + uri + " will use cURL for this URL");
+					try
+					{
+						var eResult = _cwc.DownloadBytes(uri.AbsoluteUri);
+						try
+						{
+							if (eResult.Length < 8192)
+							{
+								var str = System.Text.Encoding.UTF8.GetString(eResult);
+
+								if (str.Contains("<a href=\"https://www.cloudflare.com/5xx-error-landing"))
+								{
+									NotificationHandler.Instance.Messages.Enqueue("Error! CloudFlare on " + uri.Host);
+									Console.WriteLine("CloudFlare Exception\n" + uri + " is under CloudFlare protection, cannot parse!");
+								}
+							}
+						}
+						catch {}
+
+						bytes = eResult;
+					}
+					catch (Exception e3)
+					{
+						Console.WriteLine(e3.ToString());
+					}
+				}			
+			}
+			finally{
+				try{_clients.Remove(_wc);}catch{}
+				//_wc.CancelAsync();
+				//_wc.Dispose();
+				//GC.Collect();
+				//GC.WaitForPendingFinalizers();
+				//GC.Collect();
+			}
+			return bytes;
+		}
 
         public void CancelAsync()	//download large file.
         {
             _wc.CancelAsync();
         }
 
+        public void Dispose()	//download large file.
+        {
+            _wc.Dispose();
+        }
+		
         public WebHeaderCollection Headers
         {
             get

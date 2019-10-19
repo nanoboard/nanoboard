@@ -650,11 +650,23 @@ namespace NServer
 					}
 					
                     //string redirect = "<meta http-equiv='refresh' content='0; url=/pages/index.html' />";
-                    return new HttpResponse(StatusCode.Ok, 	"<a href='/'>[ ../ ]</a>"
-															+"&nbsp;&nbsp;&nbsp;&nbsp;<a href='/download/?all_files'>[ All files ]</a>"
-															+"&nbsp;&nbsp;&nbsp;&nbsp;<a href='/download/'>[ PNG only ]</a>"
-															+"<br><h1>download/:</h1>"
-															+"<br>"+filelist, _mime);
+                    return new HttpResponse(
+											StatusCode.Ok,
+												"<a href='/'>[ ../ ]</a>"
+												+"&nbsp;&nbsp;&nbsp;&nbsp;<a href='/download/?all_files'>[ All files ]</a>"
+												+"&nbsp;&nbsp;&nbsp;&nbsp;<a href='/download/'>[ PNG only ]</a>"
+												+"<br>"
+												+"<h1 title=\"This page can be parsed as thread on the "
+												+"imageboard by URL. "
+												+"From this page there is possible to make collectPNG.\""
+												+">"
+												+"download/:"
+												+"</h1>"
+												+"<br>"
+												+filelist
+											,
+											_mime
+					);
                 }
 
                 var name = request.Address.Split('/').Last();

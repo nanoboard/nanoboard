@@ -102,7 +102,7 @@ nav.navbar {
   margin-left: 10px;
 }
 
-#statusd {
+#statusd1, #statusd2 {
     text-align: left;
     border-top: 1px solid lightgray;
     padding-top: 5px;
@@ -141,6 +141,7 @@ textarea {
   outline: 0;
 }
 
+/*
 .post {
   background: none repeat scroll 0 0 #f0e0d6;
   border: 1px solid #ddccc5;
@@ -149,6 +150,36 @@ textarea {
   margin: .4em 0;
   max-width: 600px;
   margin-right: 20px;
+}
+*/
+.post {
+	background: none repeat scroll 0 0 #f0e0d6;
+	border: 1px solid #ddccc5;
+	padding-top: 3px;
+	border-radius: .4em;
+	margin: .4em 0;
+	width: 600px;
+
+	margin-right: 20px;
+	
+    resize: both;   		/* Options: horizontal, vertical, both */
+    overflow: auto; 		/* fix for Safari */
+	min-width: 600px;
+	max-width: 1200px;
+	/*min-height: 25px;*/
+}
+.post:not(.post_type_hidden){
+	min-height: 85px;
+}
+
+.post_type_hidden {
+	width: 600px;
+	min-width: 600px;
+	max-width: 600px;
+	height: 25px;
+	min-height: 25px;
+	max-height: 25px;
+	resize: none;
 }
 
 .reply-div {
@@ -221,6 +252,7 @@ sp gr, sp b, sp i, sp u, sp s, sp sub, sp sup, sp pre, sp span{
 sp a:hover{
 	background: inherit;
 	color: #dd0000;
+	padding: 2px;
 	
 	-webkit-transition: all 5s ease-in;
 	-moz-transition: all 5s ease-in;
@@ -232,7 +264,7 @@ sp a:hover{
 sp a:not(:hover){
 	background: #f0e0d6;
 	color: #f0e0d6;
-
+	padding: 2px;
 	-webkit-transition: all 0s ease-in;
 	-moz-transition: all 0s ease-in;
 	-o-transition: all 0s ease-in;
@@ -267,6 +299,7 @@ gr pre{
   margin: .5em;
   font-family: serif;
   font-size: 16px;
+  resize: none;
 }
 
 .row {
@@ -324,7 +357,7 @@ div#thread > a:after {
   display: flex;
 }
 
-#statusd a {
+#statusd1 a, #statusd2 a {
   color: #117743;
 }
 

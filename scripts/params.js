@@ -31,7 +31,13 @@ var captcha_url = "https://github.com/Karasiq/nanoboard/releases/download/v1.2.0
 
 var updates_available = false;								//false is version.txt are equals, and no any updates, else - true;
 
+var collect_memory_limit_to_wait = 200;						//Megabytes
 
+var places = '';
+var skin = 'futaba';
+var Download_Timeout_Sec = 30;	//seconds. This is timeout to stop downloading image while collectPNG runned, if tht file of this image is not available.
+
+//try get value of param or set it, if this value is not available.
 function tryGetParam(param, def, cb) {
   $.get('../api/paramget/'+param)
     .done(function(v){cb(v);})
@@ -114,6 +120,7 @@ function reloadParams() {
   tryGetParam('check_updates_every_hours', 		check_updates_every_hours, 					function(v){ check_updates_every_hours = v; });
   tryGetParam('remind_if_updates_exists', 		remind_if_updates_exists, 					function(v){ remind_if_updates_exists = v; });  
   tryGetParam('last_update', 					currentUnixTime, 							function(v){ last_update = v; });
+  tryGetParam('Download_Timeout_Sec', 			Download_Timeout_Sec.toString(), 			function(v){ Download_Timeout_Sec = v; });
   tryGetParam('last_another_repo_version', 		last_another_repo_version,
 	function(v){
 		last_another_repo_version = v;
@@ -122,7 +129,97 @@ function reloadParams() {
 		}
 	}
   );
-  tryGetParam('captcha_pack_file', 				captcha_pack_file, 						function(v){ captcha_pack_file = v; });
-  tryGetParam('original_captcha_sha256', 		original_captcha_sha256, 				function(v){ original_captcha_sha256 = v; });
-  tryGetParam('captcha_url', 					captcha_url, 							function(v){ captcha_url = v; });
+  tryGetParam('captcha_pack_file', 				captcha_pack_file, 							function(v){ captcha_pack_file = v; });
+  tryGetParam('original_captcha_sha256', 		original_captcha_sha256, 					function(v){ original_captcha_sha256 = v; });
+  tryGetParam('captcha_url', 					captcha_url, 								function(v){ captcha_url = v; });
+  tryGetParam(
+	'collect_memory_limit_to_wait',
+	(collect_memory_limit_to_wait * 1024 * 1024).toString(),
+	function(v){ collect_memory_limit_to_wait = v; }
+  );
+
+//Try to set default params, if this is empty, for example, when config.json was been deleted.
+
+//set default places:
+	tryGetParam('places',							places,
+		function(v){
+			if(v == "" || v == "# put urls to threads here, each at new line:\n"){
+				var default_places =
+					"# put URLs here, one per line\n";
+				
+				//array with places:
+				var Defult_places_links_array = [
+					//to download from here, put containers in /download folder or enable save_files in the query of collectPNG to save files there.
+					"http://127.0.0.1:7346/download/",
+					"http://dobrochan.com/mad/res/75979.xhtml",	//each
+					"http://sibirchan.ru/b/res/10656.html",		//item
+					"http://volgach.ru/b/res/5226.html",		//separated 
+					"http://02ch.su/b/res/7379.html",			//with comma
+					"http://chaos.cyberpunk.us/st/50\n"+		//or strings with "\n"
+					"http://endchan.xyz/test/res/971.html\n"+	//many strings
+"http://xynta.ch/b/res/10540.html\n"+							//tabs does not matter here
+"http://www.nowere.net/wa/res/6271.html\n\
+http://alphachan.org/art/res/329789.html\n\
+http://hamstakilla.com/b/22279"
+//or multistring with "\n\ in the end of each line", without tabs or spaces in the beginning of each line.
+				];
+				
+				//generate JSON-string
+				for(i=0; i<Defult_places_links_array.length; i++){
+					default_places += Defult_places_links_array[i]+'\n';
+				}
+
+				$.post('../api/paramset/places', default_places)	//set as default value of the "places" parameter.
+				.done(function(){places = default_places;})			//See config.json, after loading index.html
+				.fail(
+					function(){
+						console.log("params.js: Fail to set default_places in config."); //show error in console.log
+						setTimeout(
+							function(){
+								location.reload();				//and reload the page with futaba-skin.
+							},
+							500									//after 500 milliseconds.
+						);
+					}
+				);
+			}
+			else{
+				places = v;
+			}
+		}
+	);
+  
+//set default skin:
+	tryGetParam('skin',							skin,
+		function(v){
+			if(v == ""){
+				var default_skin = "futaba";
+				$.post('../api/paramset/skin', default_skin)
+				.done(function(){
+					skin = default_skin;
+					setTimeout(
+						function(){
+							location.reload();				//and reload the page with futaba-skin.
+						},
+						500									//after 500 milliseconds.
+					);
+				})
+				.fail(
+					function(){
+						console.log("params.js: Fail to set default_skin in config.");
+						setTimeout(
+							function(){
+								location.reload();				//and reload the page with futaba-skin.
+							},
+							500									//after 500 milliseconds.
+						);
+					}
+				);
+			}
+			else{
+				skin = v;
+			}
+		}
+	);
+  
 }

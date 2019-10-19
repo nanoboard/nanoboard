@@ -707,9 +707,18 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 				//Console.WriteLine("Validate...........");
                 return posts;
             }
-            catch (Exception e)
+            catch// (Exception e) //fix compile warning
             {
-				Console.WriteLine("Unpack catch: "+containerPath);										//here catch for some files.
+				Console.WriteLine("Unpack catch: "+
+					(
+						(		containerPath.IndexOf("data:") != -1
+							&& 	containerPath.IndexOf("base64,")!= -1
+							&&	nbpack.NBPackMain.IsBase64Encoded(containerPath.Split(',')[1])
+						)
+							? containerPath.Substring(0, 40)+"..."
+							: containerPath
+					)
+				);										//here catch for some files.
                 return new NDB.Post[0];
             }
         }
@@ -736,7 +745,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 				//Console.WriteLine("Validate...........");
                 return posts;
             }
-            catch (Exception e)
+            catch// (Exception e) fix compile warning
             {
 				//Console.WriteLine("Unpack catch");									//here can be catch.
                 return new NDB.Post[0];

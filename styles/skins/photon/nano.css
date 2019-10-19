@@ -1,6 +1,8 @@
-* {
-  font-family: 'Tahoma', sans-serif;
-  font-size: 13px;
+html, body {
+  background-color: #EEEEEE;
+  color: #333333;
+  font-family: "Trebuchet MS",Trebuchet,tahoma,serif;
+  font-size: 16px;
 }
 
 .captcha_answer {
@@ -11,6 +13,9 @@
   font-size: 50%;
 }
 
+#categories {
+}
+
 #actions {
   margin-right: 0px;
   margin-top:10px;
@@ -18,10 +23,13 @@
 
 #navs {
   margin-top:16px;
+  width: 300px;
 }
 
 #search {
+  margin-left: 100px;
   margin-top:10px;
+  width: 200px;
 }
 
 #placesd {
@@ -36,10 +44,10 @@
 .board-name {
   font-family: Tahoma;
   font-size: 350%;
-  color: #58a;
+  color: #FF6600;
   padding-left: 10px;
-  text-decoration: none;
   cursor: default;
+  text-decoration: underline;
 }
 
 .noselect {
@@ -70,7 +78,7 @@
   margin-left: 10px;
 }
 
-#statusd1, #statusd2  {
+#statusd1, #statusd2 {
   text-align: center;
 }
 
@@ -90,36 +98,43 @@
 }
 
 gr {
-  color: #4f4;
+  color: #789922;
 }
 
 g {
   color: #888;
-  font-style: italic; 
-  font-size: 75%;
+  font-size: 90%;
+  font-style: italic;
 }
 
 textarea {
-  width: 300px;
-  height: 130px;
+  width: 500px;
+  height: 330px;
   outline: 0;
 }
 
 .post {
-  background-color: #444852;
-  border: 1px solid #111;
-  border-radius: .4em;
+  background-color: #ddd;
+  border: 1px solid #ccc;
+  border-radius: 0;
   margin: .4em 0;
-  max-width: 600px;
+  padding: 2px;
+  min-width: 200px;
+  width: auto;
+  max-width: 95%;
   margin-right: auto;
+  display: table;
+}
+
+.post:first-of-type {
+  background-color: #eee;
+  border: 0;
 }
 
 .reply-div {
   display: inline-block;
 }
-.black-text {
-  color: black;
-}
+
 img {
   border: 1px dotted white;
   max-width: 200px;
@@ -133,34 +148,46 @@ img {
 }
 
 a {
-  text-decoration: none;
-  color: darkorange;
+  color: #FF6600;
+  text-decoration: underline;
 }
 
 a:hover {
-  color: salmon;
+  color: #0066FF;
+}
+
+a:visited {
+  color: #FF6600;
+  text-decoration: underline;
+}
+
+a:active {
+  color: #FF6600;
+  text-decoration: underline;
+}
+
+a:hover {
+  color: #0066FF;
+  text-decoration: underline;
+}
+
+a:focus {
+  color: #0066FF;
+  text-decoration: underline;
 }
 
 .high {
-  background-color: moccasin;
-  border-style: dotted;
+  background-color: #FFCCAA;
 }
 
 sp {
-/*
-  background-color: #000;
-  color: #000;
-*/
-  background-color: #384244;
-  color: #384244;
+  background-color: #ddd;
+  color: #ddd;
 }
 
-sp a, sp gr, sp b, sp i, sp u, sp s, sp sub, sp sup, sp pre, sp span {
-  background-color: inherit;
-  color: inherit;
-}
-
-a sub, a sup {
+/*tags, inside spoiler*/
+sp gr, sp b, sp i, sp u, sp s, sp sub, sp sup, sp pre, sp span{
+	background: inherit;
 	color: inherit;
 }
 
@@ -171,7 +198,7 @@ sp:hover {
 
 sp a:hover{
 	background: inherit;
-	color: salmon;
+	color: #dd0000;
 	padding: 2px;
 	
 	-webkit-transition: all 5s ease-in;
@@ -182,8 +209,8 @@ sp a:hover{
 }
 
 sp a:not(:hover){
-	background: #384244;
-	color: #384244;
+	background: #ddd;
+	color: #ddd;
 	padding: 2px;
 	-webkit-transition: all 0s ease-in;
 	-moz-transition: all 0s ease-in;
@@ -197,9 +224,10 @@ sp pre:hover {
 	color: #000000;
 }
 
-gr:hover{
+/*tags inside quote:*/
+gr:hover {
 	background: inherit;
-	color: #4f4;
+	color: #789922;
 }
 
 gr b, gr i, gr u, gr s, gr sup, gr sub, gr span {
@@ -211,19 +239,7 @@ gr pre{
 	color: #000000;
 }
 
-b:hover, i:hover, u:hover, s:hover, sup:hover, sub:hover {
-/*
-	background: #f0e0d6;
-*/
-
-/*
-	background: inherit;
-*/
-	color: inherit;
-}
-
 .post-inner {
-  font-family: Tahoma;
   word-break: normal;
   overflow: auto;
   max-height: 40em;

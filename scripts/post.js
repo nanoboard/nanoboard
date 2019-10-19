@@ -45,35 +45,41 @@ function escapeTags(text) {
 }
 
 function detectImages(text) {
-  var prefix = 'data:image/jpeg;base64,';
-  //var matches = text.match(/\[(i|x)mg=[A-Za-z0-9+\/=]{4,64512}\]/g);	//images from karasiq nanoboard don't display as images, with limit.
-  var matches = text.match(/\[(i|x)mg=[A-Za-z0-9+\/=]{4,}\]/g);			//Now - OK.
-  if (matches != null) {
-		//console.log(matches);
-    for (var i = 0; i < matches.length; i++) {
-      var value = matches[i].toString();
-      value = value.substring(5);
-      value = value.substring(0, value.length - 1);
+	var prefix = 'data:image/jpeg;base64,';
+	//var matches = text.match(/\[(i|x)mg=[A-Za-z0-9+\/=]{4,64512}\]/g);	//images from karasiq nanoboard don't display as images, with limit.
+  
+	var regex = /\[(i|x)mg=[A-Za-z0-9+\/=]{4,}\]/g	;
+	var result, indexes = [];
+	while ( (result = regex.exec(text)) ) {
+		indexes.push(result.index);
+	}
+	//console.log('matches', matches, ', indexes', indexes);					//array with indexes	
+	var matches = text.match(regex);										//Now - OK.
+	if (matches != null) {
+		for (var i = 0; i < matches.length; i++) {
+			var value = matches[i].toString();
+			value = value.substring(5);
+			value = value.substring(0, value.length - 1);
+		
+			var isfname = text.substring(indexes[i], text.length);		//get second part of message, before next value
+			var isfname = isfname.split("]")[1];							//split by ']\n[filename.ext]' -> ( '' + "]" + '\n[filename.ext' + "]" )
+			var isfname = isfname.substring(2, isfname.length);				//substring '\n[' to get filename.ext
+			var test = /\.([0-9a-z]+)(?:[\?#]|$)/i.test(isfname);		//test is filename.ext there
+			//console.log("detectImages, isfname", isfname, '(isfname==\'\')', (isfname==''), 'test', test);	//show result
 	  
-      var isfname = text.split(value)[1];							//get second part of message, before next value
-	  var isfname = isfname.split("]")[1];							//split by ']\n[filename.ext]' -> ( '' + "]" + '\n[filename.ext' + "]" )
-      var isfname = isfname.substring(2, isfname.length);				//substring '\n[' to get filename.ext
-	  var test = /\.([0-9a-z]+)(?:[\?#]|$)/i.test(isfname);		//test is filename.ext there
-	  //console.log("detectImages, isfname", isfname, '(isfname==\'\')', (isfname==''), 'test', test);	//show result
+			if(isfname!=='' && test==true){		//if not empty string and if [filename.ext] after image
+				var file_name = '['+isfname+']';	//add "[" and "]" to 'filename.ext' 
+				var download_link = '<a href="'+prefix+value+'" download="'+isfname+'">['+isfname+']</a>';
+				text = replaceAll(text, file_name, download_link);	//replace this to link for download the file.
+				//console.log('<a href="'+prefix+value+'" download="'+isfname+'">['+isfname+']</a>'); //show this link
+			}
 	  
-	  if(isfname!=='' && test==true){		//if not empty string and if [filename.ext] after image
-		var file_name = '['+isfname+']';	//add "[" and "]" to 'filename.ext' 
-		var download_link = '<a href="'+prefix+value+'" download="'+isfname+'">['+isfname+']</a>';
-		text = replaceAll(text, file_name, download_link);	//replace this to link for download the file.
-		//console.log('<a href="'+prefix+value+'" download="'+isfname+'">['+isfname+']</a>'); //show this link
-	  }
-	  
-      value = '<img src="' + prefix + value + '" />';
-      text = replaceAll(text, matches[i], value);
-    }
-  }
-  //console.log('post.js: applyformatting, detectImages', '- img replaced to tag img');
-  return text;
+			value = '<img src="' + prefix + value + '" />';
+			text = replaceAll(text, matches[i], value);
+		}
+	}
+	//console.log('post.js: applyformatting, detectImages', '- img replaced to tag img');
+	return text;
 }
 
 function addPlace(place,uuid) {
@@ -333,7 +339,9 @@ function applyFormatting(text) {
       .replace(new RegExp("\\[" + ch + "\\]", 'gim'), '<' + ch + '>')
       .replace(new RegExp("\\[/" + ch + "\\]", 'gim'), '</' + ch + '>');
   }
+  text = detect_files(text);
   text = detectImages(text);
+  text = replaceAll(text, 'data:image/jpeg;base64,iVBORw0K', 'data:image/png;base64,iVBORw0K');	//replace to jpeg to PNG if PNG signature found in base64
   text = detectThreadLinks(text);
   text = replaceAll(text, '\n', '<br/>');
   text = replaceAll(text, '  ', '&nbsp; ');

@@ -865,7 +865,7 @@ nanodb.exe-source\start_compile.bat
 \nanodb.exe				- changed, after recompilation.
 \Changes.txt			- Add this changes.
 _____________________________________________________________________
-(19.10.2019) Changed 23 files 1 file added - in 11 folders:
+(19.10.2019) Changed 24 files, added 1 file - in 11 folders:
 
 Changes and additions:
 	Source code:
@@ -918,7 +918,18 @@ Changes and additions:
 				WebClients are pending in the memory, connections is opened.
 				This will be closed for each WebClient, after DOWNLOAD_TIMEOUT_SEC
 			Comment notifs about opened connections. Was been added - just for test.
-	
+			Fix proxy usage. Now PNGCollect working through HTTP and HTTPS proxy.
+				Switch to WebClient to HTTPWebClient.
+				Add modify Ping function, now this TryPingProxy, and this try to ping proxy using itself.
+				Add TryConnectProxy method. This get External IP and compare this IP with IP of used proxy.
+			Modify the cycle to search working proxy.
+				Now proxy can be specified without http:// and https://, just IP:PORT in proxy.txt
+				In this case http:// and https:// proxy will added to the list and can be checked.
+			Add randomize of proxy list.
+			
+		\proxy.txt
+			update proxy list, change format for the items in strings, and add some sources to find HTTP and HTTPS proxies.
+
 	HTML, CSS, JS:
 		\pages\index.html
 			Change version to 3.2

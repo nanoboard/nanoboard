@@ -309,23 +309,73 @@ namespace nboard
         }//+ PNGTransport/WebClientX.cs: "private WebClient _wc;" -> "public WebClient _wc;"
 */
 		
-		private static bool Ping(string url)
+		private static bool TryConnectProxy(string url) //get external IP and compare this with proxyIP
+		{
+			try{
+				Uri uri = new Uri(url);
+				string proxyIP = uri.Host;
+				int proxyPort = uri.Port;
+
+				var req = (HttpWebRequest)HttpWebRequest.Create("http://ip-api.com/json");
+				req.Timeout = 5000;
+				req.Proxy = new WebProxy(proxyIP, proxyPort);
+				string myip = null;
+				try{
+					using(var resp =   req.GetResponse()){
+						var json = new StreamReader(resp.GetResponseStream()).ReadToEnd();
+						myip = (string)Newtonsoft.Json.Linq.JObject.Parse(json)["query"];
+					}
+				}
+				catch//(Exception ex)
+				{
+					//Console.WriteLine("Catch1: "+ex);
+					//Console.WriteLine("Catch1");
+					return false;
+				}
+
+				if (myip == proxyIP)
+				{
+					Console.WriteLine("CONNECT - OK!");
+					return true;
+				}
+				else{
+					return false;
+				}
+			}
+			catch//(Exception ex)
+			{
+				//Console.WriteLine("Catch2: "+ex);
+				return false;
+			}
+		}
+
+		private static bool TryPingProxy(string url)
 		{
 			try
 			{
-				//HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);
-				WebRequest request = WebRequest.Create(url);	//"http:", "https:", "ftp:", and "file:"
-				request.Timeout = 3000;
-				//request.AllowAutoRedirect = false; // find out if this site is up and don't follow a redirector	//for HttpWebRequest
-				request.Method = "HEAD";
+				Uri uri = new Uri(url);
+				
+				string proxyIP = uri.Host;
+				int proxyPort = uri.Port;
 
-				using (var response = request.GetResponse())
+				
+				//HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create("http://www.google.com/404");
+				//Try to open short 404 response. As variant, this can also be a small and popular - google.ico
+				//but...
+				HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);	//try to open this same proxy using itself.
+				request.Timeout = 3000;													//with timeout
+				request.Proxy = new WebProxy(url, true);								//append proxy
+				request.AllowAutoRedirect = false;				// find out if this site is up and don't follow a redirector	//for HttpWebRequest
+				request.Method = "HEAD";												//just head
+				using (var response = request.GetResponse())	//dispose after
 				{
-					return true;
+					Console.WriteLine("PING - OK!");
+					return TryConnectProxy(url);
 				}
 			}
-			catch
+			catch//(Exception ex)
 			{
+				//Console.WriteLine("catch: "+ex);
 				return false;
 			}
 		}
@@ -339,26 +389,45 @@ namespace nboard
 				string proxyUrl = "";
 				string proxy_file = File.Exists("proxy.txt")?File.ReadAllText("proxy.txt"):"";
 				proxies = proxy_file.Split('\n').Where( p => (  !p.StartsWith("#") && p!=""  ) ).ToList();
-				foreach (var proxy_URL in proxies) {
-					Console.WriteLine("Try ping proxy: "+proxy_URL);
-					if(Ping(proxy_URL)==true){
-						proxyUrl = proxy_URL;
-						
-						Console.WriteLine("Using proxy: "+proxy_URL);
-						//Console.WriteLine("PROXY USAGE IS DISABLED IN THIS VERSION (UNABLE TO SUPPORT PROXY FOR EVERY OCCASION)");
-						//var proxyUrl = File.ReadAllText("proxy.txt");
-						proxy.Address = new Uri(proxyUrl);
-						//proxy.Credentials = new NetworkCredential("usernameHere", "pa****rdHere");  //These can be replaced by user input
-						//proxy.UseDefaultCredentials = false;										//this false, in this case...
-						//proxy.BypassProxyOnLocal = true;
-						proxy.BypassProxyOnLocal = false;  					//still use the proxy for local addresses
-						//client._wc.Proxy = proxy;							//WebClient, not WebclientX, working when _wc is public in WebClientX.cs
-						//client = WebClientX(proxy);						//update client, using extended method
-						return proxy;
-						
-					}else{
+				proxies = proxies.OrderBy(a => Guid.NewGuid()).ToList();									//RANDOMIZE PROXY-LIST
+				
+				int proxy_index = 0;
+				string proxy_URL = "";
+				
+				while(true) {
+					if(proxy_index>proxies.Count){
 						proxyUrl = "";
+						break;
 					}
+					proxy_URL = proxies[proxy_index];
+					
+					if(!proxy_URL.Contains("http://") && !proxy_URL.Contains("https://")){
+						proxies.Add("http://"+proxy_URL);	//add http
+						proxies.Add("https://"+proxy_URL);	//and https
+					}else{
+						Console.WriteLine("Try ping proxy: "+proxy_URL);
+						if(TryPingProxy(proxy_URL)==true){	//ping and connect to proxy
+						
+							proxyUrl = proxy_URL;
+						
+							Console.WriteLine("Selected Proxy: "+proxyUrl);
+							AggregatorMain.maximum_timeout += 30000;			//just +30 sec to maximum timeout, if proxy used.
+							//Console.WriteLine("PROXY USAGE IS DISABLED IN THIS VERSION (UNABLE TO SUPPORT PROXY FOR EVERY OCCASION)");
+							proxy.Address = new Uri(proxyUrl);
+							//proxy.Credentials = new NetworkCredential("usernameHere", "pa****rdHere");  //These can be replaced by user input
+							//proxy.UseDefaultCredentials = false;										//this false, in this case...
+							//proxy.BypassProxyOnLocal = true;
+							proxy.BypassProxyOnLocal = false;  					//still use the proxy for local addresses
+							//client._wc.Proxy = proxy;							//WebClient, not WebclientX, working when _wc is public in WebClientX.cs
+							//client = WebClientX(proxy);						//update client, using extended method
+						
+							return proxy;
+						
+						}else{
+							proxyUrl = "";
+						}
+					}
+					proxy_index++;
 				}
 				if(proxyUrl == ""){Console.WriteLine("No responce from any proxy.");}
             }

@@ -132,6 +132,7 @@ namespace NServer
 			}else{						//else, if contens was been send, using POST-query
 				parameters = Uri.UnescapeDataString(POST);			//get queue_and_image from second parameter
 			}
+			Console.WriteLine("\nPngCollect was been runned, wait the end of collect images...");
 			Console.WriteLine("parameters: " + parameters);
 			string [] _params_ = (parameters!="") ? parameters.Split('|') : new string[0];
 			

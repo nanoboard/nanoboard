@@ -999,6 +999,99 @@ Changes and additions:
 		
 	That's all.
 _____________________________________________________________________
+(24.10.2019) Changed 9 files, added 2 files - in 5 folders:
+Short changes:
+	Add many IP_services, and now this is not hardcoded, and can be customized like places, using txt-file, or "Settings", or in params.js.
+	Add proxy in "Settings". Now this can be customized there, or in params.js, or in txt-file.
+	Try to connect each proxy for many IP-Services.
+	Change proxy for each collect, without restart the program, and select only successfully connected to IP_services proxy.
+	Add ability to change proxy, without restart the server program.
+		Now, if Bad Requests received, will be enough to just press the button "Collect PNG" again.
+	Add default values for places, proxy, and IP_services, in \scripts\params.js. Now, this can be customized there, and this is not hardcoded.
+	Small fixes, warnings, etc...
+
+Full changes
+Source code:
+	\nanodb.exe-source\Server\DbApiHandler.cs
+		Just add one string to show notify about starting PNG collect.
+
+	\nanodb.exe-source\PngTransport\Aggregator.cs
+		Add two bool variables - is_already_increased_if_proxy, and is_downloading_error.
+			Now timeout will not be increasing again and again, if first variable will be true.
+			If one item will error of downloading will be showed the notify in the end of collect.
+		Add proxy.txt and externalIPservices.txt, now this like places.txt
+		Add methods to check update values of this from "Settings" or direcly in "config.json"
+		Modify method Aggregate() by adding proxy-list and IP_services, there.
+			Now proxy will be changed after each run the collectPNG.
+		Modify the method TryConnectProxy()
+			Now this try to connect to many IP_Services from list, not one.
+			List can be specified in config.json, params.js, or externalIPservices.txt
+			if first start (wihtout config.json, or with empty values of corresponding parameters there).
+		Modify TryPingProxy() method.
+			Timeout of PingProxy was been increased up to 10 seconds. Maybe this need to be increased up to Maximum TTL.
+		Modify AddProxy() method
+			Check update proxy in the settings on try to add it.
+			Do not read list of proxy from proxy.txt, and read this from internal variable.
+			Return empty proxy if this was been empty string.
+			Add +30 seconds for download timeout if proxy was been used.
+			Show the link of proxy in Console, in the end of method.
+		Change value of variable proxy to empty proxy, to don't set this global once.
+			This value will be setted after starting collect,
+			in the method Aggregate in catch, if this proxy will be null or empty.
+			Else, this will be just changed there.
+		Modify ParseText()
+			Add description about bad connection, if null bytes received.
+			Show notify, when Bad Request responce was been reveived,
+			after try to loading thread using proxy, + notify about error in the end.
+				Because this sucessfully finished.
+			Show notify about error, if one from the item for dowloading was been not downloaded by Time OUT.
+
+	\nanodb.exe-source\Program.cs
+		Add check on the start of program, the update a following parameters:
+		places, proxy, and external_IP_services
+		if this was been updated from the "Settings", or just by editting config.json.
+		Add commented console.log to test from which file was been this calls.
+
+	\scripts\params.js
+		Add two params IP_services and List_of_Proxy
+		Add default links on IP_services and proxies, there.
+		If this was been undefined, and if this parameters will be empty,
+		then this script will set this values in config.json on loading index.html.
+		Else, values will be loaded from here.
+
+	\pages\params.html
+		Resize textareas with proxy, and IP_services, and add title tooltips there.
+		Resize textarea with skins.
+
+	\proxy.txt
+		Update the proxy list - just add examples of records.
+		Add the links to find actual proxy.
+
+	\Changes.txt - add this info, here.
+
+	\nanodb.exe
+		Regenerated after recompilation.
+	\pages\version.txt
+		Regenerated after recompilation.
+
+Add two files:
+	\externalIPservices.txt
+		Add the links of IP-services which return the text with IP after connect there.
+		This need to check proxy connection, if proxy used.
+		Proxy will connect to this services, check external IP of this proxy, and return.
+		Then program will compare IP, and if this is the same IP, then proxy is working, and will be used to download PNG.
+		Else, try to connect to another proxy.
+		Connect to this services using only using proxy, as you can see in the source code.
+		If proxy working, this will be success, else fail.
+		And no any leaks of REAL IP, in this case.
+
+	\places.txt
+		Add default places in this file, just as historical data.
+		Actually, this can be customized in the settings, and /scripts/params.js
+		but on fists loading, when config.json is not found or contains empty values, this data will be loaded from this files.
+
+That's all.
+_____________________________________________________________________
 
 Code commented. See source code.
 

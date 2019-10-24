@@ -1,0 +1,25 @@
+# List of the services, which returns external IP (need to check proxy connection).
+# This services may return text, string, JSON, or HTML, contains external IP-address (IPv4).
+http://ip-api.com/json
+http://bot.whatismyipaddress.com
+http://checkip.dyndns.org
+http://ipinfo.io/ip
+http://ifconfig.me/ip
+http://www.trackip.net/ip
+http://www.whoisthisip.com/
+http://ipapi.co/ip
+http://api.ipify.org/?format=json
+http://api.myip.com
+http://ip.seeip.org/jsonip
+http://myexternalip.com/raw
+http://icanhazip.com
+http://ident.me/.json
+https://www.trackip.net/ip
+https://www.whoisthisip.com/
+https://ipapi.co/ip
+https://api.ipify.org/?format=json
+https://api.myip.com
+https://ip.seeip.org/jsonip
+https://myexternalip.com/raw
+https://icanhazip.com
+https://ident.me/.json

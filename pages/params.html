@@ -240,13 +240,36 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 							title = "# put URLs here, one per line. Use \'#\' to comment the line.\n"+
 									'http(s)://imageboard.com:443/thread/number.php?ports=50&sort=date\n'+
 									"http://my_server.local/pngLinks.html\n"+
-									"#etc...";
+									"#etc..."
+							;
 							height = 250;	//px
+							width = 500;
+							break;
+						case 'Proxy_List':
+							title = "# put HTTP or HTTPS proxy-list here\n"+
+									'# Each proxy per line:\n'+
+									"http://123.45.67.89:8080/\n"+
+									"https://123.45.67.89:443/\n"+
+									"123.45.67.89:8080\n"+
+									"123.45.67.89:443\n"+
+									"#etc..."
+							;
+							height = 250;	//px
+							width = 500;
+							break;
+						case 'Services_Returns_External_IP':
+							title = "# Put IP-services there which can return external IP of proxy as text, contains this IP\n"+
+									"# each IP-service, per line\n"+
+									"http://ip-api.com/json\n"
+									"#etc..."
+							;
+							height = 100;	//px
 							width = 500;
 							break;
 						case 'skins':
 							title = 'Available skins...\n["dark","futaba","photon"]';
 							val = val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]');
+							height = 75;	//px
 							break;
 						case 'skin': title = 'Current skin...'; break;
 						case 'post_delete_timeout': title = 'Timeout to delete post...'; break;
@@ -293,7 +316,6 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 							break;
 						case 'captcha_url': readonly = true; width = 550; break;
 						case 'original_captcha_sha256': readonly = true; break;
-						
 
 						default: title = ''; break;
 					}

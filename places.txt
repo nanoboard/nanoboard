@@ -1,0 +1,12 @@
+# Put URLs to threads here, one per line:
+http://127.0.0.1:7346/download/
+http://dobrochan.com/mad/res/75979.xhtml
+http://sibirchan.ru/b/res/10656.html
+http://volgach.ru/b/res/5226.html
+http://02ch.su/b/res/7379.html
+http://chaos.cyberpunk.us/st/50
+http://endchan.xyz/test/res/971.html
+http://xynta.ch/b/res/10540.html
+http://www.nowere.net/wa/res/6271.html
+http://alphachan.org/art/res/329789.html
+http://hamstakilla.com/b/22279

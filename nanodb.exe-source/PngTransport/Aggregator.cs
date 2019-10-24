@@ -74,6 +74,8 @@ namespace nboard
 		}
 
 	  public static int maximum_timeout = (int)DOWNLOAD_TIMEOUT_SEC * 1000;		//milliseconds
+	  public static bool is_already_increased_if_proxy = false;					//true, if increased.
+	  public static bool is_downloading_error = false;							//true, if increased.
       public static long maximum_collect_memory_limit_to_wait = (long)collect_memory_limit_to_wait;	//bytes
       public static bool Running { get; private set; }
       public static void Run(string [] p = null)
@@ -104,8 +106,17 @@ namespace nboard
 //            agg.InProgress = 0;
 //          }
         }
+		//while(AggregatorMain.is_downloading_error){
+		if(AggregatorMain.is_downloading_error){
+			Console.WriteLine("WARNING: One or more items has the downloading error. Try to collect again...");
+			//Running = true;
+			//running = true;
+			//agg.Aggregate();
+		}
+
         Running = false;
 		WebClientX.Interrupt();	//Interrupt here
+
 		Console.WriteLine("Finished.");
 		return;
       }
@@ -115,7 +126,9 @@ namespace nboard
     {
         private const string UserAgentConfig = "useragent.config";
         private const string Downloaded = "downloaded.txt";
-        private const string Config = "places.txt";
+        private const string Places_txt = "places.txt";
+        private const string Proxy_txt = "proxy.txt";
+        private const string IP_Services_txt = "externalIPservices.txt";
         private const string ImgPattern = "href=\"[:A-z0-9/\\-\\.]*\\.png\"";
 
 		public static bool 	only_RAM 							= 	true;
@@ -142,21 +155,64 @@ namespace nboard
 
         public event Action ProgressChanged = delegate {};
 
-        private static List<string> _places;
+        private static List<string> _places = new List<string>();		//empty list.
+		private const string default_places = "# Put URLs to threads here, one per line:\n";
 
-        private static List<string> proxies;
+        private static List<string> proxies = new List<string>();		//empty list, because if this variable is unsigned, proxies.Count not working.
+		private const string default_proxies =
+			"# Syntax: each proxy per line [(http(s)://)+IP:PORT], where () is optional parameter.\n"+
+			"# List of HTTP or HTTPS proxies:\n"						//see "/scripts/params.js"
+		;
+
+        private static List<string> IP_services = new List<string>();	//empty array
+		private const string IP_services_default =
+			"# List of the services, which returns external IP (need to check proxy connection).\n"+
+			"# This services may return text, string, JSON, or HTML, contains external IP-address (IPv4).\n"
+		;
 
         private readonly HashSet<string> _downloaded;
 
         private readonly WebHeaderCollection _headers;
 
-        public static void CheckUpdatePlacesConfig()
+	// Next three methods are calls from Program.cs too...
+	//Begin checking and update params
+		//Try read value from config, or set this from file, or from default value.
+        public static void CheckUpdateProxyList()			//Update proxy-list, if this was been changed and specified in proxy.txt
         {
-            var places = Configurator.Instance.GetValue("places", File.Exists(Config)?File.ReadAllText(Config):"# put urls to threads here, each at new line:\n");
-            File.Delete(Config);
-            _places = places.Split('\n').Where(p => !p.StartsWith("#")).ToList();
+		//	Console.WriteLine("CheckUpdateProxyList");
+			var proxies_list = Configurator.Instance.GetValue("Proxy_List", File.Exists(Proxy_txt)?File.ReadAllText(Proxy_txt):default_proxies);
+			proxies = proxies_list.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
+			if(File.Exists(Proxy_txt)){	//rename file if exists
+				File.Move(Proxy_txt, "renamed_"+Proxy_txt);
+			}
+		//	Console.WriteLine("CheckUpdateProxyList return; proxies.Count: "+proxies.Count.ToString());
 			return;
         }
+
+        public static void CheckUpdateIPServicesConfig()	//Update IP_services, if this was been changed and specified in externalIPservices.txt
+        {
+		//	Console.WriteLine("CheckUpdateIPServicesConfig");
+			var IP_services_config = Configurator.Instance.GetValue("Services_Returns_External_IP", File.Exists(IP_Services_txt)?File.ReadAllText(IP_Services_txt):IP_services_default);
+			IP_services = IP_services_config.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
+			if(File.Exists(IP_Services_txt)){	//rename file if exists
+				File.Move(IP_Services_txt, "renamed_"+IP_Services_txt);
+			}
+		//	Console.WriteLine("CheckUpdateIPServicesConfig return; IP_services.Count: "+IP_services.Count.ToString());
+			return;
+        }
+
+        public static void CheckUpdatePlacesConfig()		//Update threads, if this was been changed and specified in places.txt
+        {
+		//	Console.WriteLine("CheckUpdatePlacesConfig");
+			var places = Configurator.Instance.GetValue("places", File.Exists(Places_txt)?File.ReadAllText(Places_txt):default_places);
+			if(File.Exists(Places_txt)){	//rename file if exists
+				File.Move(Places_txt, "renamed_"+Places_txt);
+            }
+			_places = places.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
+		//	Console.WriteLine("CheckUpdatePlacesConfig return; _places.Count: "+_places.Count.ToString());
+			return;
+        }
+	//End of checking and update params
 
         public Aggregator(string [] _params_ = null)
         {
@@ -235,7 +291,12 @@ namespace nboard
                     _downloaded = new HashSet<string>();
                 }
 
+			//	Console.WriteLine("Aggregator: CheckUpdatePlacesConfig()");
                 CheckUpdatePlacesConfig();
+			//	Console.WriteLine("Aggregator: CheckUpdateProxyList()");
+				CheckUpdateProxyList();
+			//	Console.WriteLine("Aggregator: CheckUpdateIPServicesConfig()");
+				CheckUpdateIPServicesConfig();
             }
             catch (Exception e)
             {
@@ -261,8 +322,40 @@ namespace nboard
         {
             try
             {
-                CheckUpdatePlacesConfig();
+			//	Console.WriteLine("Aggregate: CheckUpdatePlacesConfig();");
+				CheckUpdatePlacesConfig();
+			//	Console.WriteLine("Aggregate: CheckUpdateProxyList();");
+				CheckUpdateProxyList();
+			//	Console.WriteLine("Aggregate: CheckUpdateIPServicesConfig();");
+				CheckUpdateIPServicesConfig();
                 bool empty = true;
+
+				try{
+					if (!String.IsNullOrEmpty(proxy.Address.AbsoluteUri)) //check previous proxy
+					{
+						Console.WriteLine("Proxy URL: " + proxy.Address.AbsoluteUri+" was been used...");
+						Console.WriteLine("Try to switch proxy...");
+						proxy = AddProxy(new WebProxy());
+					}
+				}
+				catch// (Exception ex)
+				{
+					//Console.WriteLine("Exception: "+ex);
+					Console.WriteLine("Proxy not been used...");
+					proxy = AddProxy(new WebProxy());
+				}
+
+				try{
+					if (!String.IsNullOrEmpty(proxy.Address.AbsoluteUri))
+					{
+						Console.WriteLine("New proxy URL: " + proxy.Address.AbsoluteUri+" will be used...");
+					}
+				}
+				catch// (Exception ex)
+				{
+					//Console.WriteLine("Exception: "+ex);
+					Console.WriteLine("Proxy not used...");
+				}
 
                 foreach (string place in _places)
                 {
@@ -279,7 +372,7 @@ namespace nboard
 
                 if (empty)
                 {
-                    InProgress = 0;
+					InProgress = 0;
                 }
             }
 
@@ -293,10 +386,10 @@ namespace nboard
 /*
         private static void AddProxy(WebClientX client)
         {
-            if (File.Exists("proxy.txt"))
+            if (File.Exists(Proxy_txt))
             {
                 //Console.WriteLine("PROXY USAGE IS DISABLED IN THIS VERSION (UNABLE TO SUPPORT PROXY FOR EVERY OCCASION)");
-				var proxyUrl = File.ReadAllText("proxy.txt");
+				var proxyUrl = File.ReadAllText(Proxy_txt);
                 WebProxy proxy = new WebProxy();
                 proxy.Address = new Uri(proxyUrl);
 				//proxy.Credentials = new NetworkCredential("usernameHere", "pa****rdHere");  //These can be replaced by user input
@@ -311,42 +404,48 @@ namespace nboard
 		
 		private static bool TryConnectProxy(string url) //get external IP and compare this with proxyIP
 		{
-			try{
-				Uri uri = new Uri(url);
-				string proxyIP = uri.Host;
-				int proxyPort = uri.Port;
+			Uri uri = new Uri(url);
+			string proxyIP = uri.Host;
+			int proxyPort = uri.Port;
 
-				var req = (HttpWebRequest)HttpWebRequest.Create("http://ip-api.com/json");
-				req.Timeout = 5000;
-				req.Proxy = new WebProxy(proxyIP, proxyPort);
-				string myip = null;
+			foreach(string IPservice in IP_services){
+				Console.WriteLine("Try to connect: "+IPservice);
 				try{
-					using(var resp =   req.GetResponse()){
-						var json = new StreamReader(resp.GetResponseStream()).ReadToEnd();
-						myip = (string)Newtonsoft.Json.Linq.JObject.Parse(json)["query"];
-					}
-				}
-				catch//(Exception ex)
-				{
-					//Console.WriteLine("Catch1: "+ex);
-					//Console.WriteLine("Catch1");
-					return false;
-				}
+					var req = (HttpWebRequest)HttpWebRequest.Create(IPservice);
+					req.Timeout = 5000;
+					req.Proxy = new WebProxy(proxyIP, proxyPort);
+					string myip = null;
+			
+					// String where IP exists
+					//String input = "var product_pic_fn=;var firmware_ver='20.02.024';var wan_ip='1992.75.120.206';if (parent.location.href != window.location.href)";
+					// Regexp to extract IPv4 address
+					Regex ip = new Regex(@"(?<First>2[0-4]\d|25[0-5]|[01]?\d\d?)\.(?<Second>2[0-4]\d|25[0-5]|[01]?\d\d?)\.(?<Third>2[0-4]\d|25[0-5]|[01]?\d\d?)\.(?<Fourth>2[0-4]\d|25[0-5]|[01]?\d\d?)");
+					//MatchCollection result = ip.Matches(input);
+					//Console.WriteLine((result[0]).ToString());	//show extracted IP-address (IPv4)
 
-				if (myip == proxyIP)
-				{
-					Console.WriteLine("CONNECT - OK!");
-					return true;
-				}
-				else{
-					return false;
+					using(var resp =   req.GetResponse()){
+						string response = new StreamReader(resp.GetResponseStream()).ReadToEnd();	//json or text/string or html
+						//Console.WriteLine("response"+response);
+						MatchCollection result = ip.Matches(response);								//extract IP-address (IPv4)
+						myip = (result[0]).ToString();												//result to string
+						if (myip == proxyIP)	//if IP is the proxy IP
+						{
+							Console.WriteLine("CONNECT to "+IPservice+" - OK! IP: "+myip);
+							//continue;
+							return true;
+						}else{
+							Console.WriteLine("CONNECT to "+IPservice+" - OK,\nbut IP is not IP of the PROXY! IP: "+myip);
+							continue;
+						}
+					}
+				}catch{
+					Console.WriteLine("CONNECT to "+IPservice+" - Fail!");
+					continue;					
 				}
 			}
-			catch//(Exception ex)
-			{
-				//Console.WriteLine("Catch2: "+ex);
-				return false;
-			}
+
+			Console.WriteLine("CONNECT to all IP services - Fail...\n\n");
+			return false; //cann't get external IP for this proxy - connection to all IP-services was been failed.
 		}
 
 		private static bool TryPingProxy(string url)
@@ -363,7 +462,7 @@ namespace nboard
 				//Try to open short 404 response. As variant, this can also be a small and popular - google.ico
 				//but...
 				HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);	//try to open this same proxy using itself.
-				request.Timeout = 3000;													//with timeout
+				request.Timeout = 10000;												//with timeout
 				request.Proxy = new WebProxy(url, true);								//append proxy
 				request.AllowAutoRedirect = false;				// find out if this site is up and don't follow a redirector	//for HttpWebRequest
 				request.Method = "HEAD";												//just head
@@ -380,22 +479,22 @@ namespace nboard
 			}
 		}
 
-        private static WebProxy AddProxy(WebProxy proxy)
+        private static WebProxy AddProxy(WebProxy proxy_server)
         {
-            proxy = new WebProxy();
-			
-            if (File.Exists("proxy.txt"))
+			CheckUpdateProxyList();
+            proxy_server = new WebProxy();
+            if (proxies.Count!=0)
             {
+                CheckUpdateIPServicesConfig();	//get list of IP_services to get external IP of the proxies, or set this list as default
+				
 				string proxyUrl = "";
-				string proxy_file = File.Exists("proxy.txt")?File.ReadAllText("proxy.txt"):"";
-				proxies = proxy_file.Split('\n').Where( p => (  !p.StartsWith("#") && p!=""  ) ).ToList();
 				proxies = proxies.OrderBy(a => Guid.NewGuid()).ToList();									//RANDOMIZE PROXY-LIST
 				
 				int proxy_index = 0;
 				string proxy_URL = "";
 				
 				while(true) {
-					if(proxy_index>proxies.Count){
+					if(proxy_index>proxies.Count || proxies[proxy_index]==""){
 						proxyUrl = "";
 						break;
 					}
@@ -411,17 +510,15 @@ namespace nboard
 							proxyUrl = proxy_URL;
 						
 							Console.WriteLine("Selected Proxy: "+proxyUrl);
-							AggregatorMain.maximum_timeout += 30000;			//just +30 sec to maximum timeout, if proxy used.
-							//Console.WriteLine("PROXY USAGE IS DISABLED IN THIS VERSION (UNABLE TO SUPPORT PROXY FOR EVERY OCCASION)");
-							proxy.Address = new Uri(proxyUrl);
-							//proxy.Credentials = new NetworkCredential("usernameHere", "pa****rdHere");  //These can be replaced by user input
-							//proxy.UseDefaultCredentials = false;										//this false, in this case...
-							//proxy.BypassProxyOnLocal = true;
-							proxy.BypassProxyOnLocal = false;  					//still use the proxy for local addresses
-							//client._wc.Proxy = proxy;							//WebClient, not WebclientX, working when _wc is public in WebClientX.cs
-							//client = WebClientX(proxy);						//update client, using extended method
+							proxy_server.Address = new Uri(proxyUrl);
+							//proxy_server.Credentials = new NetworkCredential("usernameHere", "pa****rdHere");  //These can be replaced by user input
+							//proxy_server.UseDefaultCredentials = false;										//this false, in this case...
+							//proxy_server.BypassProxyOnLocal = true;
+							proxy_server.BypassProxyOnLocal = false;  					//still use the proxy for local addresses
+							//client._wc.Proxy = proxy_server;							//WebClient, not WebclientX, working when _wc is public in WebClientX.cs
+							//client = WebClientX(proxy_server);						//update client, using extended method
 						
-							return proxy;
+							break;
 						
 						}else{
 							proxyUrl = "";
@@ -431,12 +528,29 @@ namespace nboard
 				}
 				if(proxyUrl == ""){Console.WriteLine("No responce from any proxy.");}
             }
-			Console.WriteLine("Do not using proxy...");
-			return proxy;
+			
+			try{
+				if (!String.IsNullOrEmpty(proxy_server.Address.AbsoluteUri))
+				{
+					Console.WriteLine("Proxy URL: " + proxy_server.Address.AbsoluteUri + " was selected as current proxy.");
+					if(!AggregatorMain.is_already_increased_if_proxy){
+						AggregatorMain.maximum_timeout += 30000;			//just +30 sec to maximum timeout, if proxy used.
+						AggregatorMain.is_already_increased_if_proxy = true;
+					}
+				}
+			}
+			catch// (Exception ex)
+			{
+				//Console.WriteLine("Exception: "+ex);
+				Console.WriteLine("Do not using proxy...");
+			}
+			
+			return proxy_server;
         }//+ PNGTransport/WebClientX.cs: "private WebClient _wc;" -> "public WebClient _wc;"
 
-		WebProxy proxy = AddProxy(new WebProxy());
+		private static WebProxy proxy = new WebProxy();
 		//and change everywhere in this file:
+
 		//var client = new WebClientX();
 		//to var client = new WebClientX(proxy);
 
@@ -492,7 +606,7 @@ namespace nboard
             client.DownloadDataCompleted += bytes => 
             {
                 if (bytes == null) {
-                    Console.WriteLine("Null bytes received from " + address);
+                    Console.WriteLine("Null bytes received from " + address + ". Maybe connection is bad.");
                     return;
                 }else{
 					downloaded_thread = true;
@@ -505,6 +619,11 @@ namespace nboard
                 try
                 {
                     string text = Encoding.UTF8.GetString(bytes);
+					//Console.WriteLine("Downloaded data (partial): "+text.Substring(0, (text.Length>40)?40:text.Length)); //It was been received HTML or some another bullshit?
+					if(text.Contains("Bad Request")){
+						Console.WriteLine("Error - \"Bad request\" response for: "+address);
+						AggregatorMain.is_downloading_error = true;
+					}
                     //string host = Regex.Match(address, "https?://[A-z\\.0-9-]*").Value;	//original code, commented.
 					//return protocol://(IP/domain) only, without PORT, folder, and slash.
 
@@ -645,6 +764,8 @@ namespace nboard
 
 					client.CancelAsync();	//cancel downloading
 					InProgress -= 1;		//and delete from progress.
+					AggregatorMain.is_downloading_error = true;
+					return;
 				}
 			};
 			runonce.AutoReset=false;
@@ -795,6 +916,7 @@ namespace nboard
 
 						client.CancelAsync();			//cancel download
 						InProgress -= 1;				//and delete from progress.
+						AggregatorMain.is_downloading_error = true;
 						return;
 					}
 				};
@@ -804,7 +926,7 @@ namespace nboard
 				byte[] bytes = client.DownloadData(address);
 
 				if (bytes == null) {
-                    Console.WriteLine("Ignoring null bytes");
+                    Console.WriteLine("Ignoring null bytes. Maybe connection is bad.");
                     return;
                 }else{
 					image_downloaded = true;
@@ -1099,6 +1221,8 @@ namespace nboard
 
 					client.CancelAsync();			//cancel download
 					InProgress -= 1;				//and delete from progress.
+					AggregatorMain.is_downloading_error = true;
+					return;
 				}
 			};
 			runonce.AutoReset=false;

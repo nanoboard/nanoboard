@@ -34,6 +34,9 @@ var updates_available = false;								//false is version.txt are equals, and no 
 var collect_memory_limit_to_wait = 200;						//Megabytes
 
 var places = '';
+var IP_Services = '';
+var List_of_proxy = '';
+
 var skin = 'futaba';
 var Download_Timeout_Sec = 30;	//seconds. This is timeout to stop downloading image while collectPNG runned, if tht file of this image is not available.
 
@@ -143,9 +146,8 @@ function reloadParams() {
 //set default places:
 	tryGetParam('places',							places,
 		function(v){
-			if(v == "" || v == "# put urls to threads here, each at new line:\n"){
-				var default_places =
-					"# put URLs here, one per line\n";
+			var default_places = "# Put URLs to threads here, one per line:\n";
+			if(v == "" || v == default_places){
 				
 				//array with places:
 				var Defult_places_links_array = [
@@ -174,12 +176,6 @@ http://hamstakilla.com/b/22279"
 				.fail(
 					function(){
 						console.log("params.js: Fail to set default_places in config."); //show error in console.log
-						setTimeout(
-							function(){
-								location.reload();				//and reload the page with futaba-skin.
-							},
-							500									//after 500 milliseconds.
-						);
 					}
 				);
 			}
@@ -189,11 +185,134 @@ http://hamstakilla.com/b/22279"
 		}
 	);
   
+//set default IP_Services:
+	tryGetParam('Services_Returns_External_IP',		IP_Services,
+		function(v){
+			var default_IP_Services = "# List of the services, which returns external IP (need to check proxy connection).\n# This services may return text, string, JSON, or HTML, contains external IP-address (IPv4).\n";
+			if(v == "" || v == default_IP_Services){
+				
+//				var Defult_IP_Services_links_array = [];
+
+				//array with IP_Services to get External IP of used proxy, and compare this, then:
+				var Defult_IP_Services_links_array = [
+					"http://ip-api.com/json",					//each
+					"http://bot.whatismyipaddress.com",			//item
+					"http://checkip.dyndns.org",				//separated
+					"http://ipinfo.io/ip",						//with comma
+					"http://ifconfig.me/ip",
+
+					"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",		//test for replace
+					
+					//http + https:
+					//http:
+					"http://www.trackip.net/ip\n"+				//or strings with "\n" in the end, concatenated with "+"
+					"http://www.whoisthisip.com/\n"+
+					"http://ipapi.co/ip\n"+
+					"http://api.ipify.org/?format=json\n"+
+					"http://api.myip.com\n"+
+					"http://ip.seeip.org/jsonip\n"+
+					"http://myexternalip.com/raw\n"+
+					"http://icanhazip.com\n"+
+					"http://ident.me/.json\n",
+					
+					"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",		//test for replace
+
+					//https:
+					"https://www.trackip.net/ip\n\
+https://www.whoisthisip.com/\n\
+https://ipapi.co/ip\n\
+https://api.ipify.org/?format=json\n\
+https://api.myip.com\n\
+https://ip.seeip.org/jsonip\n\
+https://myexternalip.com/raw\n\
+https://icanhazip.com\n\
+https://ident.me/.json\n"
+//or multistring with "\n\ in the end of each line", without tabs or spaces in the beginning of each line.
+				];
+
+				//generate JSON-string
+				for(i=0; i<Defult_IP_Services_links_array.length; i++){
+					default_IP_Services += Defult_IP_Services_links_array[i]+'\n';
+				}
+				//console.log('default_IP_Services', default_IP_Services);
+				
+				while(default_IP_Services.indexOf("\n\n")!==-1){
+					default_IP_Services = default_IP_Services.split('\n\n').join('\n');		//replace many '\n'
+				}
+				
+				//console.log('default_IP_Services', default_IP_Services);
+
+				$.post('../api/paramset/Services_Returns_External_IP', default_IP_Services)	//set as default value of the "places" parameter.
+				.done(function(){IP_Services = default_IP_Services;})			//See config.json, after loading index.html
+				.fail(
+					function(){
+						console.log("params.js: Fail to set default_IP_Services in config."); //show error in console.log
+					}
+				);
+			}
+			else{
+				IP_Services = v;
+			}
+		}
+	);
+
+//set default Proxy List:
+	tryGetParam('Proxy_List',		IP_Services,
+		function(v){
+			var default_proxies = "# Syntax: each proxy per line [(http(s)://)+IP:PORT], where () is optional parameter.\n# List of HTTP or HTTPS proxies:\n"; //See Aggregator.cs
+			if(v == "" || v == default_proxies){
+				
+				default_proxies = 
+"#########################################################################\n\
+#                                                                       #\n\
+#       MORE PROXIES HERE:                                              #\n\
+#       https://free-proxy-list.net/                                    #\n\
+#       http://free-proxy.cz/ru/proxylist/country/all/http/ping/all     #\n\
+#       http://free-proxy.cz/ru/proxylist/country/all/https/ping/all    #\n\
+#       https://www.proxy-list.download/HTTP                            #\n\
+#       https://www.proxy-list.download/HTTPS                           #\n\
+#       https://proxy-daily.com/                                        #\n\
+# (!!!) https://hidemy.name/en/proxy-checker/                           #\n\
+#                                                                       #\n\
+#########################################################################"
++default_proxies
+				;
+
+				//array with proxies to CollectPNG using this proxies:
+				var Defult_Proxy_list = [];
+
+				//generate JSON-string
+				for(i=0; i<Defult_Proxy_list.length; i++){
+					default_proxies += Defult_Proxy_list[i]+'\n';
+				}
+				//console.log('default_proxies', default_proxies);
+				
+				while(default_proxies.indexOf("\n\n")!==-1){
+					default_proxies = default_proxies.split('\n\n').join('\n');		//replace many '\n'
+				}
+				
+				//console.log('default_proxies', default_proxies);
+
+				$.post('../api/paramset/Proxy_List', default_proxies)	//set as default value of the "places" parameter.
+				.done(function(){List_of_proxy = default_proxies;})			//See config.json, after loading index.html
+				.fail(
+					function(){
+						console.log("params.js: Fail to set default_proxies in config."); //show error in console.log
+					}
+				);
+			}
+			else{
+				List_of_proxy = v;
+			}
+		}
+	);
+  
+
 //set default skin:
 	tryGetParam('skin',							skin,
 		function(v){
+			var default_skin = "futaba";
 			if(v == ""){
-				var default_skin = "futaba";
 				$.post('../api/paramset/skin', default_skin)
 				.done(function(){
 					skin = default_skin;
@@ -201,7 +320,7 @@ http://hamstakilla.com/b/22279"
 						function(){
 							location.reload();				//and reload the page with futaba-skin.
 						},
-						500									//after 500 milliseconds.
+						5000								//after 10000 milliseconds.
 					);
 				})
 				.fail(
@@ -211,7 +330,7 @@ http://hamstakilla.com/b/22279"
 							function(){
 								location.reload();				//and reload the page with futaba-skin.
 							},
-							500									//after 500 milliseconds.
+							5000								//after 10000 milliseconds.
 						);
 					}
 				);

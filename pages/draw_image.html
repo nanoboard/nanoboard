@@ -207,8 +207,8 @@
 
 		// DRAWING EVENT HANDLERS
 
-		canvas.addEventListener('mousedown', function() {mousedown(canvas, event);});
-		canvas.addEventListener('mousemove',function() {mousemove(canvas, event);});
+		canvas.addEventListener('mousedown', function(event) {mousedown(canvas, event);});
+		canvas.addEventListener('mousemove',function(event) {mousemove(canvas, event);});
 		canvas.addEventListener('mouseup',mouseup);
 
 		// CREATE CANVAS

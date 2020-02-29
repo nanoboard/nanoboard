@@ -26,11 +26,21 @@ namespace captcha
 
         public static byte[] Bytify(this string @string)
         {
-            var bytes = new byte[@string.Length / 2];
+			//when database is corrupted and damaged,
+			//or when some text contains in the end of the post, after [sign=blahblah]some_text
+			string sign_value = @string.Split(']')[0];				//just cut signature [sign=blahblah], and working with signature only.
+            var bytes = new byte[sign_value.Length / 2];
 
-            for (int i = 0; i < @string.Length / 2; i++)
+            for (int i = 0; i < sign_value.Length / 2; i++)
             {
-                bytes[i] = byte.Parse(@string[i * 2] + "" + @string[i * 2 + 1], System.Globalization.NumberStyles.HexNumber);
+				try{						//try 
+					bytes[i] = byte.Parse(sign_value[i * 2] + "" + sign_value[i * 2 + 1], System.Globalization.NumberStyles.HexNumber);
+					//Sometimes System.Byte.Parse return incorrect value, when @string contains some text, after signature.
+				}
+				catch (Exception ex){		//or return some shit, as bytes.
+					Console.WriteLine(ex);
+					bytes[i] = 0;			//add null byte, just to skip this step.
+				}
             }
 
             return bytes;

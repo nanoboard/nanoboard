@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Nanoboard</title>
+<link rel="shortcut icon" href="/images/favicon.ico" />
+<meta charset="UTF-8"> 
+<script src='../scripts/jquery.min.js'> </script>
+<script src='../scripts/base64.js'> </script>
+<script src='../scripts/notif.js'> </script>
+<script src='../scripts/bootstrap.min.js'></script>
+<script src='../scripts/params.js'> </script>
+<script src='../scripts/checkver.js'></script>
+<script src='../scripts/api.js'></script>
+<link rel='stylesheet' type='text/css' href='../styles/bootstrap.min.css'>
+<link rel='stylesheet' type='text/css' href='../styles/nano.css'>
+<link rel='stylesheet' type='text/css' href='../styles/notif.css'>
+<style>
+h1 {
+  font-size: 200%;
+  margin-left: 50px;
+}
+p {
+  margin-left: 50px;
+}
+.checkbox {
+/*
+  margin-left: 50px;
+*/
+  width: 20px;
+  height: 20px;
+  outline: 0;
+/*
+  margin: 5px;
+  position: absolute;
+  left: 300px;
+  padding-left: 4px;
+  display:inline;
+*/
+  left: 10px;
+}
+textarea {
+  font-style: normal;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 12px;
+  margin-left: 50px;
+  width: 500px;
+  height:30px;
+  margin-left: 5px;
+  outline: 0;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+}
+body {
+  margin-bottom: 100px;
+}
+.parname {
+  margin-left: 50px;
+  font-size: 120%;
+  font-style: italic;
+  line-height: 180%;
+}
+
+
+table {
+	margin-left: 50px;
+    border-collapse: collapse;
+	
+/*
+	background-color: #ffffee;
+*/
+	background-color: important;
+    
+	border: 2px solid #a55;
+}
+tr {
+	border: 2px solid #a55;
+}
+td {
+    position: relative;
+    min-width: 100px;
+    min-height: 5px;
+	border: 1px dotted #a55;
+	
+/*
+	color: #FFFFFF;
+*/
+
+}
+
+textarea {
+    display: block;
+    border: 1px solid #aaa;
+/*
+
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+*/
+    height: 100%;
+/*
+	resize: vertical;
+*/
+
+    min-width: 100px;
+/*
+    min-height: 50px;
+*/
+
+}
+
+</style>
+<script>
+var spam_filter_help_text = '#  Keywords for spam-filter\n// Each word per line:\n';
+var append_sfht = true;
+
+function closure(func) {
+  var x = function(args1) {
+    func(args1);
+  }
+  x(args.slice(1,args.length-1));
+}
+
+function toCamelCase(str) {
+  if (str.length <= 3) return str.toUpperCase();
+  return str
+      .replace(/\s(.)/g, function($1) { return $1.toUpperCase(); })
+      //.replace(/\s/g, '')
+      .replace(/^(.)/, function($1) { return $1.toUpperCase(); });
+}
+
+function beautifyParamName(txt) {
+  return toCamelCase(txt.split('_').join(' '));
+}
+
+function convert_unix_timestamp(unixtimestamp){		//Unixtimestamp
+	var months_arr =							// Months array
+	['Jan','Feb','Mar','Apr',
+	'May','Jun','Jul','Aug',
+	'Sep','Oct','Nov','Dec'];
+	
+	var date = new Date(unixtimestamp*1000);	// Convert timestamp to milliseconds
+	var year = date.getFullYear();				// Year
+	var month = months_arr[date.getMonth()];	// Month
+	var day = date.getDate();					// Day
+	var hours = date.getHours();				// Hours
+	var minutes = "0" + date.getMinutes();		// Minutes
+	var seconds = "0" + date.getSeconds();		// Seconds
+	// Display date time in MM-dd-yyyy h:m:s format
+	var convdataTime = month+'-'+day+'-'+year+' '+
+	hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+	
+	return convdataTime;
+}
+$(function(){
+/*
+  $.get('../api/paramget/skins')
+    .done(function(skins){
+      skins = JSON.parse(skins);
+      for (var i = 0; i < skins.length; i++) {
+        $('#skin-sel').append('<option>' + skins[i] + '</option>');
+      }
+      $.get('../api/paramget/skin')
+        .done(function(skin){
+          if (skin == '') skin = 'None';
+          $('#skin-sel').val(skin).change();
+          $('#skin-sel').change(function(){
+			var newSkin = $(this).val();
+            if (newSkin == 'None') newSkin = '';
+            $.post('../api/paramset/skin', newSkin);
+            setTimeout(
+				function(){
+					location.reload();
+				},
+				500
+			);
+          });
+        });
+     });
+*/
+var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^-\d\.]/g, ''), 10);	//font size in textareas, need to regulate height of this, onload.
+
+  function showParams() {
+/*
+    $.get('../api/params')
+      .done(function(arr){
+		
+		//var table = $('<table>');
+        //table.appendTo($('body'));
+		var table = $('#params');
+		
+        arr = JSON.parse(arr);
+//		console.log("arr", arr);
+        for (var i = 0; i < arr.length; i++) {
+          var param = arr[i];
+//		  console.log("param", param);
+			if(param !== 'places') continue;
+			
+          if (param == '') continue;
+          var parcont = $('<tr>');
+//          var parcont = $('<div>').addClass('parname');
+          parcont.appendTo(table);
+//          parcont.appendTo($('body'));
+          var x = function(cont,par) {
+            $.get('../api/paramget/' + par)
+              .done(function(val) {
+                cont.html(
+					'<td class="parname" align="right" valign="center">&nbsp;'+beautifyParamName(par) + ((par=='remind_if_updates_exists') ? ' (minutes)' : '') + ':'
+					+ '&nbsp;</td>'
+				);
+				if (val == 'true' || val == 'false') {
+					var td = $('<td>');
+					td.appendTo(cont);
+                  $('<input>')
+                    .addClass('checkbox')
+                    .attr('type', 'checkbox')
+                    .attr('checked', val == 'true')
+//                    .appendTo(cont)
+                    .appendTo(td)
+                    .change(function(){
+                      var elem = $(this);
+                      var new_val = elem.is(":checked").toString();
+                      $.post('../api/paramset/'+par, new_val)
+                        .done(function(){
+                          elem.attr('checked', new_val == 'true');
+                          pushNotification('Autosaved.');
+                        });
+                    });
+                } else {
+
+					var td = $('<td>');
+					td.appendTo(cont);
+
+					var title = '';	//define variable for title tooltip
+					var readonly = false;
+					var height = 0;
+					var width = 0;
+					switch(par) {	//set title tooltips for different textareas
+						case 'ip': title = 'IP address to bind...'; break;
+						case 'password': title = 'Your password...'; break;
+						case 'port': title = 'PORT to listen...'; break;
+						case 'places':
+							title = "# put URLs here, one per line. Use \'#\' to comment the line.\n"+
+									'http(s)://imageboard.com:443/thread/number.php?ports=50&sort=date\n'+
+									"http://my_server.local/pngLinks.html\n"+
+									"#etc..."
+							;
+							height = 250;	//px
+							width = 500;
+							readonly = true;
+							break;
+						case 'Proxy_List':
+							title = "# put HTTP or HTTPS proxy-list here\n"+
+									'# Each proxy per line:\n'+
+									"http://123.45.67.89:8080/\n"+
+									"https://123.45.67.89:443/\n"+
+									"123.45.67.89:8080\n"+
+									"123.45.67.89:443\n"+
+									"#etc..."
+							;
+							height = 250;	//px
+							width = 500;
+							break;
+						case 'Services_Returns_External_IP':
+							title = "# Put IP-services there which can return external IP of proxy as text, contains this IP\n"+
+									"# each IP-service, per line\n"+
+									"http://ip-api.com/json\n"
+									"#etc..."
+							;
+							height = 100;	//px
+							width = 500;
+							break;
+						case 'skins':
+							title = 'Available skins...\n["dark","futaba","photon"]';
+							val = val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]');
+							height = 75;	//px
+							break;
+						case 'skin': title = 'Current skin...'; break;
+						case 'post_delete_timeout': title = 'Timeout to delete post...'; break;
+						case 'post_count_notification_time':
+							title = 'Hide notification, after [x] milliseconds...\n'+
+									'Also, try to change the parameter "var _post_count_notification_time" in scripts/params.js';
+							break;
+						case 'post_offset_in_tree_px': title = 'Offset for post in the tree...'; break;
+						case 'spam_filter':
+							title = 'Keywords of spam-list... Format:\nWORD1\nword2\\n\n//Word3\\n//(disabled)\n//disabled_wORd\n\\n\\n\nWoRd5...\n(delimiter is \'\\n\')';
+							//console.log("spam_filter - show. val = ", val,	"val=='[\"\"]'", (val=='[""]'));
+							//console.log('val', val, 'help_text: '+val.substring(0, spam_filter_help_text.length));
+							val = (val=='' || val=='[""]') ? '' : JSON.parse(val.replace(/\\/g, '\\\\')).join('\n');	//if serialized JSON in config-3.json, not serialized string.
+							height = ( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
+							//console.log( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
+							//console.log('after replace, val: '+val);
+							break;
+						case 'captcha_pack_file':
+							title = 	'captcha file: captcha.nbc\n\n'
+									+	'Multihasher hashes:\n'
+									+	'CRC32: E5408891\n'
+									+	'MD5: 7E93FE7DB9BC3D70A84F34B4E4FA6257\n'
+									+	'RIPEMD-160: 2A6E1B283B48D9B05649346E1B72ACDA52E874E8\n'
+									+	'SHA-1: 3B81C46C03157FE55BD8F430FEEC9A8BF010C816\n'
+									+	'SHA-256: 0732888283037E2B17FFF361EAB73BEC26F7D2505CDB98C83C80EC14B9680413\n'
+									+	'SHA-384: B23C27C96C1D57DF8168C1E0406DB61B1A79F006997F164D33D2D70F6E4CAE674056885BB980F6E5804AAE03DAD76037\n'
+									+	'SHA-512: FCDF1161543174E4713D791C1FD18F6A64972EC91E9B331833DD4F941D3F88E1A717758B7851F5187EFA76202652AFD174CF8C4D6F8A03B0386284B4032D37F1\n'
+							;
+							break;
+						case 'download_timeout_sec': title = 'Timeout to download containers...'; break;
+						case 'check_updates_every_hours': title = 'Interval to check updates... Hours.'; break;
+						case 'last_update':
+							title = 'Time of last update. Unix timestamp (MM-DD-YYYY hh:mm:ss).';
+							readonly = true;
+							val = val+" ("+convert_unix_timestamp(val)+")";
+							break;
+						case 'last_another_repo_version':
+							title = 'Latest downloaded version (saved in config-3.json)';
+							readonly = true;
+							val = decodeURIComponent(val);
+							break;
+						case 'remind_if_updates_exists':
+							title = 'Interval for check if updates available (minutes).';
+							break;
+						case 'captcha_url': readonly = true; width = 550; break;
+						case 'original_captcha_sha256': readonly = true; break;
+
+						default: title = ''; break;
+					}
+						height = ( (height != 0) ? height : ( ( val.split('\n').length + 1 ) * fontSize_in_textareas ) );	//textarea height
+
+					$('<textarea>')
+						.attr('title', title)		//add title tooltip to the textarea.
+						.attr('id', par)
+						.attr('readonly', readonly)
+						.val(((par=='spam_filter') ? ( (append_sfht==true) ? spam_filter_help_text : '' ) : '' ) + val)
+						.css('height', height + 'px')
+						.css('width', ((width != 0) ? width + 'px' : ''))
+//              		.appendTo(cont)
+						.appendTo(td)
+						.change(function(){
+							var elem = $(this);
+							var new_val = elem.val();
+							if(par=='spam_filter'){
+								//console.log('spam_filter - before: '+new_val);
+								new_val =
+										JSON.stringify(				//save serialized JSON in config-3.json
+											new_val
+											.substring(
+												((append_sfht==true) ? spam_filter_help_text.length : 0)
+												, new_val.length
+											)
+											.split('\n')
+										).replace(/\\\\/g, '\\')
+								;
+
+								//console.log('spam_filter - after: '+new_val);
+							}else if (par=='skins'){
+								//console.log('new_val', new_val);
+								new_val = new_val.replace(/\n/g, '');
+								//console.log('new_val', new_val);
+							}
+							$.post('../api/paramset/'+par, new_val)
+							.done(function(){
+								elem.val(
+									(par=='spam_filter')
+										? (
+											(append_sfht==true)
+												? spam_filter_help_text
+												: ''
+										)
+										+JSON.parse(new_val.replace(/\\/g, '\\\\')).join('\n')				//save serialized JSON in config-3.json
+//										? new_val															//if no need serialized JSON, just serialized string
+										: (par=='skins')
+											? new_val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]')
+											: new_val
+								);
+							
+								pushNotification('Autosaved.');
+							});
+						});
+
+					//console.log('last_update, par = ', par);
+					
+					//console.log('cont.html: ', cont.html());
+					if(par=="last_update"){
+						var newTD = $('<td align="right" valign="center">').appendTo(cont);
+						$('<div style="align:center; display:inline-block;">')
+							.html('&nbsp;<a href="javascript:void(0)" onclick="checkVersion(true);">Check updates online, now!</a>&nbsp;')
+							.appendTo(newTD)
+						;
+					}else if(par=='captcha_url'){
+						var newTD = $('<td align="right">').appendTo(cont);
+						$('<div style="display:inline-block;" valign="center">')
+							.html('&nbsp;<a href="'+val+'">Download captcha, now!</a>&nbsp;')
+							.appendTo(newTD)
+						;
+					}else if(par=='places'){
+						var newTD = $('<td align="right" valign="center">').appendTo(cont);
+						$('<div style="display:inline-block;">')
+							.html('&nbsp;<a href="./generate_HTTP(S)_links.html" target="_blank">Generate HTTP and HTTPS links for places...</a>&nbsp;')
+							.appendTo(newTD)
+						;
+						
+					}
+					//cont.append('<br/>');
+						
+				}
+              });
+          };
+          x(parcont,param);
+        };
+      });
+*/	  
+		//show deleted posts in LocalStorage, and allow to modify this data.
+		var table = $('#params');
+		var parcont = $('<tr>');
+			parcont.appendTo(table);
+			parcont.html(
+					'<td class="parname" align="right" valign="center">&nbsp;'+beautifyParamName("deleted_posts")+':'+ '&nbsp;</td>'
+				);
+			
+			var value_of_deleted_posts =	(JSON.stringify(deleted_posts))
+												.replace(/{/g, '{\n\t')
+												.replace(/],"/g, ']\t,\n\t"')
+												.replace(/"]}/g, '"]\n}\n')
+			;
+			var height = ( ( value_of_deleted_posts.split('\n').length + 1 ) * fontSize_in_textareas );	//textarea height
+			var td = $('<td>');
+				td.appendTo(parcont);
+					$('<textarea>')
+						.attr(
+							'title',	//add title tooltip to the textarea.
+								'Object with deleted_posts, saved client-side, in LocalStorage.\n'+
+								'You can edit this as you want, but be careful with format of this.\n'+
+								'Format:\n'+
+'{\n\
+	 "hash1" : [ "report_reason1" , "status1" ] ,\n\
+	 "hash2" : [ "report_reason2" , "status2" ] ,\n\
+	etc...\n\
+}\n'								
+						)
+						.attr('id', "deleted_posts")
+						.css('height', height + 'px')
+						.css('width', '700px')
+						.val(value_of_deleted_posts)
+						.appendTo(td)
+						.change(function(){
+							var elem = $(this);
+							deleted_posts = JSON.parse(elem.val());
+							save_The_Hashes_Of_Deleted_Posts_Locally();
+							Read_The_Hashes_Of_Deleted_Posts();
+						});
+						
+			var newTD = $('<td align="right" valign="center">').appendTo(parcont);
+						$('<div style="align:center; display:inline-block;">')
+							.html(
+								'&nbsp;'+
+								'<a href="javascript:void(0)"'+
+									'onclick="var show_all_posts = confirm(\'Do you really want to delete all records from LocalStorage?\');'+
+									'if(show_all_posts == true) {'+
+										'deleted_posts = {};'+
+										'save_The_Hashes_Of_Deleted_Posts_Locally();'+
+									'}"'+
+									'title="clear LocalStorage from deleted_posts!">'+
+										'Show all posts!'+
+								'</a>&nbsp;'
+							)
+							.appendTo(newTD)
+						;						
+		//end deleted_posts in LocalStorage.
+	  
+  }
+
+  showParams();
+/*
+  $('#restartb').click(function(){
+	var ip = $('#ip').val();
+	var port = $('#port').val();
+	var after = 1000;	//milliseconds
+	console.log('Restart, and redirect to '+('http://' + ip + ':' + port)+' after '+after+' milliseconds');
+    $('textarea').blur();
+    $('body').empty();
+    $.get('../restart');
+    setTimeout(function(){
+      location.href = 'http://' + ip + ':' + port;
+    }, after);
+  });
+*/
+});
+</script>
+</head>
+
+<body>
+<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.3</sup></span>
+<div id="head-panel" class="container-fluid">
+    <div id="navrow" class="row no-gutter">
+        <nav class="navbar navbar-default">
+                <div class="col-md-3 col-sm-3 col-xs-5">
+                    <ul id="navs"class="nav nav-pills">
+                      <div class="row">
+                      <li role="presentation" id="mainli" class="active col-xs-4"><a id='maina' href='/pages/index.html'><span class='glyphicon glyphicon-home'></span><span class="hidden-xs">&thinsp;Main</span></a></li>
+                      <li role="presentation" id="lastli" class="dropdown col-xs-4">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                          <span class='glyphicon glyphicon-bell'></span><span class="hidden-xs">&thinsp;Last</span><span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                          <li role="presentation"><a id='last10a' href='/pages/index.html#last10'>10</a></li>
+                          <li role="presentation"><a id='last50a' href='/pages/index.html#last50'>50</a></li>
+                          <li role="presentation"><a id='last100a' href='/pages/index.html#last100'>100</a></li>
+                          <li role="presentation"><a id='last200a' href='/pages/index.html#last200'>200</a></li>
+                          <li role="presentation"><a id='last500a' href='/pages/index.html#last500'>500</a></li>
+                        </ul>
+                      </li>
+                      <li role="presentation" class="col-xs-4" id="paramsli"><a href='params.html'><span class='glyphicon glyphicon-cog'></span><span class="hidden-xs">&thinsp;Settings</span></a></li>
+                      </div>
+                    </ul>
+                </div>
+                <form id="search" class="col-md-7 col-sm-7 col-xs-5 pull-left" role="search">
+                    <div class="form-group" >
+                      <div class="input-group">
+                        <span class="input-group-btn">
+                            <button type="submit" id="searchbtn" class="btn btn-default hidden-xs"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+                        </span>
+                        <input type="text" class="form-control searchfield" placeholder="Search">
+                      </div>
+                    </div>
+                </form>
+<!--
+                <form id="actions" class="col-md-2 col-sm-2 col-xs-2 pull-right" >
+                    <div class="row">
+                    <a type="button" href="/shutdown" id="shutdownbtn" class="col-xs-12 btn btn-danger"><span class="glyphicon glyphicon-off" aria-hidden="true"></span><span class='btn-title hidden-xs hidden-sm'>&nbsp;Shutdown</span></a>
+                    </div>
+                </form>
+-->
+        </nav>
+    </div>
+</div>
+<hr>
+<h1>Settings</h1>
+<!--
+<p>Some parameters may require thread page refresh, some (like IP/port) – server <button id='restartb' class="btn btn-warning">restart</button>.</p>
+<p>If you did something wrong with port/ip and server is not accessible, change port/ip in config.json manually.</p>
+<p>Default values for IP/port are 127.0.0.1 and 7346</p>
+-->
+
+<table id="params">
+<!--
+	<tr>
+		<td align="right" valign="center">
+			<div class="parname">
+				Skin:&nbsp;
+			</div>
+		</td>
+		<td align="left" valign="center">
+			<select class="black-text" id="skin-sel" style="margin-left: 5px;" title="Select style from 'styles'-folder..." disabled>
+			<option>None</option>
+			</select>
+		</td>
+		<td>
+		</td>
+	</tr>
+-->
+</table>
+	
+</body>
+</html>

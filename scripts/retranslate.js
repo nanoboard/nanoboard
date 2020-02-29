@@ -19,3 +19,20 @@ function retranslate() {
 				});
 		});
 }
+
+function test_retranslate(){
+	var temp_instantRetranslation = _instantRetranslation;
+	var temp_transportUri = transportUri;
+	
+	_instantRetranslation = 'true';
+	transportUri = window.location.origin+'/api/upload-post';
+	
+	retranslate();
+	setTimeout(
+		function(){
+			_instantRetranslation = temp_instantRetranslation;
+			transportUri = temp_transportUri;
+		}
+		,5000
+	);
+}

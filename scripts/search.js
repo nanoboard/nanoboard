@@ -115,7 +115,8 @@ $(function() {
 											},
 											false
 										);
-										if (arr[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+//										if (arr[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+										if ((arr[i].message).substring(0, 16) === 'post_was_deleted'){
 											p.css({ opacity: _deletedOpacity});
 										}
 										if (
@@ -170,8 +171,8 @@ $(function() {
 					var search = Base64.encode($('.searchfield').val());
 				
 
-					//$.get('../api/search/'+search)
-					$.post('../api/search', search+'|'+post_count_limit_for_searching)
+					$.get('../api/search/'+encodeURIComponent(search+'|'+post_count_limit_for_searching))
+//					$.post('../api/search', search+'|'+post_count_limit_for_searching)
 						.done(
 							function(arr){
 								$('#searchresult').empty();

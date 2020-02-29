@@ -441,10 +441,16 @@ function show_hide_post_code(hash){
 							//"Show code";
 }
 
+function replace_deleted_once(post_message){
+	return post_message.replace('post_was_deleted', '');//.replace('post_is_reported', '');
+	//(((post_message).substring(0, 16) === 'post_was_deleted')? (post_message).substring(16, post_message.length) : post_message);
+}
 function addPost(post, appendFunc, hasShowButton, short) {
 
 	//console.log('post',post);
 
+	if(post == null){return false;}
+	
   if (_use_spam_filter=='true' && post.hash != _categories){
     for (i in _spam_filter){
         if (_spam_filter[i].test(escapeTags(Base64.decode(post.message)))) return false;
@@ -506,6 +512,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
       .click(function() {
         addReplyForm(post.hash);
         d.next().find('textarea').focus();
+		d.next().find('.previewbtn').click();
       }));
   if (hasShowButton) {
     d.append('&nbsp;');
@@ -539,12 +546,14 @@ function addPost(post, appendFunc, hasShowButton, short) {
           return;
         }
         var undo = false;
+		$('#undelete_'+post.hash).hide();	//remove "undelete"-button
         d.append(
-          $('<button id="undo'+post.hash+'">')
+          $('<button id="undo_'+post.hash+'">')
             .text('Undo')
             .click(function(){
-              undo = true;
-              $(this).remove();
+				undo = true;
+				$(this).remove();
+				$('#undelete_'+post.hash).show();	//remove "undelete"-button
             })
             .append($('<span>').html('&nbsp;')
               .css({ background: 'red', height: '5px', marginLeft: '5px'})
@@ -552,27 +561,93 @@ function addPost(post, appendFunc, hasShowButton, short) {
               .animate({width: '0px'},Math.random()*200+_post_delete_timeout)));
         setTimeout(function(){
           if (undo) return;
+		  $('#undelete_'+post.hash).remove();
           deletePostFromDb(post.hash);
-		  console.log(post, '\n', "(post.message === 'cG9zdCB3YXMgZGVsZXRlZA==')", (post.message === 'cG9zdCB3YXMgZGVsZXRlZA=='));
-			if((post.message === 'cG9zdCB3YXMgZGVsZXRlZA==')){
+//		  console.log(post, '\n', "(post.message === 'cG9zdCB3YXMgZGVsZXRlZA==')", (post.message === 'cG9zdCB3YXMgZGVsZXRlZA=='));
+//		  console.log(post, '\n', "((post.message).substring(0, 16) === 'post_was_deleted')", ((post.message).substring(0, 16) === 'post_was_deleted'));
+//			if((post.message === 'cG9zdCB3YXMgZGVsZXRlZA==')){
+			if(((post.message).substring(0, 16) === 'post_was_deleted')){
 //				console.log('try to remove d');
 				d.remove();
 			}else{
-				post.message = 'cG9zdCB3YXMgZGVsZXRlZA==';
+//				post.message = 'cG9zdCB3YXMgZGVsZXRlZA==';
+				post.message = 'post_was_deleted'+post.message;
 //				console.log('try to add deleted post with opacity');
 //				console.log('d', d);
-				d.find('#post_'+post.hash).html(Base64.decode('cG9zdCB3YXMgZGVsZXRlZA=='));
+//				d.find('#post_'+post.hash).html(Base64.decode('cG9zdCB3YXMgZGVsZXRlZA=='));
+				d.find('#post_'+post.hash).html("post_was_deleted");
 				d.css({ opacity: _deletedOpacity});
-				d.find('#undo'+post.hash).hide();
+				d.find('#undo_'+post.hash).hide();
+
+					//append "Undelete"-button for the post, which was been "deleted_once", to recovery this post.
+					d.append(
+						$('<button id="undelete_'+post.hash+'">')
+							.text('Undelete')
+							.attr('title', 'See the source code of deleted post, before undelete this.')
+							.click(
+								function(){
+									console.log('undelete line 500');
+									var really_undelete = confirm(
+										'Do you really want to restore the post\n'+
+										'(hash = '+post.hash+')?\n'
+									);
+									if(really_undelete){
+										/*
+										delete deleted_posts[post.hash];
+										save_The_Hashes_Of_Deleted_Posts_Locally();
+										*/
+										$.get('../api/undelete_post/' + post.hash)
+										.done(
+											function(reply){
+												console.log("1 Try to undelete post on full-server...");
+												post.message = Base64.encode('Post was been undeleted.');
+												d.css({ opacity: ''});
+												//show_hide_post_code(post.hash, true);
+												post.message = $('#pre_'+post.hash).html().split('_________')[1];
+												$('#post_'+post.hash).html(applyFormatting(replace_local_quotes(post.message)).substring(5)); //show post without <br/>
+												$('#undelete_'+post.hash).remove();
+												$('#undo_'+post.hash).remove();
+												pushNotification(reply);
+											}
+										)
+									}
+								}
+							)
+					);
+					//end append "Undelete"-button.
 			}
-          pushNotification('A post was deleted forever.');
+          //pushNotification('A post_was_deleted forever.');
         }, _post_delete_timeout);
       }));
   appendFunc(d);
+
   
+/*
   //This code need function isBase64(str), and this function in beginning of this script
-  var post_content = escapeTags(Base64.decode(post.message));
-  //console.log('At beginning, post_content was been: \n', post_content);				//Value of post_content at beginning, with description
+//  var post_content = escapeTags(Base64.decode(replace_deleted_once(post.message)));
+  var post_content =
+	escapeTags(
+		Base64.decode(
+			((post.message).substring(0, 16) === 'post_was_deleted')
+				?	"cG9zdCB3YXMgZGVsZXRlZA=="
+				:	post.message
+		)
+	);
+*/
+  //This code need function isBase64(str), and this function in beginning of this script
+	var post_content =	escapeTags
+		(
+			Base64.decode(
+						((post.message).substring(0, 16) === 'post_was_deleted')
+							?	"cG9zdCB3YXMgZGVsZXRlZA=="
+							:	post.message		//((post.message).substring(0, 16) === 'post_is_reported')
+								//?	(post.message).substring(16)
+								//:	post.message
+			)
+		)
+	;
+
+//  console.log('At beginning, post_content was been: \n', post_content);				//Value of post_content at beginning, with description
 
 	if(_detectURLs === 'true'){
 		post_content = replace_local_quotes(post_content);	//replace posts to local links.
@@ -597,7 +672,7 @@ function addPost(post, appendFunc, hasShowButton, short) {
 			+	'ReplyTo: '			+			post.replyTo + '\n'
 			+	'Date: '			+			post.date + '(added in version 3.1 to sort posts) \n'
 			+	'Message: '			+ '\n_________\n'	+
-				Base64.decode(post.message)
+				Base64.decode(replace_deleted_once(post.message))
 				.replace(	//replace HTML code to entities, to do not replase links, after.
 					/[\u00A0-\u9999<>\&]/gim,
 					function(i) {
@@ -737,9 +812,59 @@ function addPost(post, appendFunc, hasShowButton, short) {
 		d.find('br').first().remove();
     d.find('g').css('display','none');
   }
-	if (post.message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+//	if (post.message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+	if ((post.message).substring(0, 16) === 'post_was_deleted'){
 		d.css({ opacity: _deletedOpacity});
+					//append "Undelete"-button for the post, which was been "deleted_once", to recovery this post.
+					d.append(
+						$('<button id="undelete_'+post.hash+'">')
+							.text('Undelete')
+							.attr('title', 'See the source code of deleted post, before undelete this.')
+							.click(
+								function(){
+									console.log("undelete line 800")
+									var really_undelete = confirm(
+										'Do you really want to restore the post\n'+
+										'(hash = '+post.hash+')?\n'
+									);
+									if(really_undelete){
+										/*
+										delete deleted_posts[post.hash];
+										save_The_Hashes_Of_Deleted_Posts_Locally();
+										*/
+										
+										$.get('../api/undelete_post/' + post.hash)
+										.done(
+											function(reply){
+												console.log("2 Try to undelete post on full-server...");
+												post.message = Base64.encode('Post was been undeleted.');
+												d.css({ opacity: ''});
+												//show_hide_post_code(post.hash, true);
+												post.message = $('#pre_'+post.hash).html().split('_________')[1];
+												$('#post_'+post.hash).html(applyFormatting(replace_local_quotes(post.message)).substring(5)); //show post without <br/>
+												$('#undelete_'+post.hash).remove();
+												$('#undo_'+post.hash).remove();
+												pushNotification(reply);
+											}
+										)
+									}
+								}
+							)
+					);
+					//end append "Undelete"-button.
 	}
+//	else if ((post.message).substring(0, 16) === 'post_is_reported'){
+	if (array_with_hashes_of_reported_ports.indexOf(post.hash)!=-1){
+		d.css({ background: "lightcoral"});
+					//append "Show Reports"-button for the "post_is_reported", to show reports for this post.
+					d.append(
+						$('<a href="../reports/'+post.hash+'.txt" target="_blank">')
+							.text('Show reports')
+							.attr('title', 'Show reports for post with hash: '+post.hash)
+					);
+					//end append "Undelete"-button.
+	}
+
   return d;
 }
 
@@ -819,8 +944,9 @@ function append_thread_and_post_links(p, post, is_found_thread_string){
 	);
 }
 
-function loadReplies(hash, offset, highlight) {
-  $.get('../api/replies/' + hash)
+function loadReplies(hash, offset, highlight) {		//load replies in the thread with hash
+  $.get('../api/replies/' + hash +'-'+ 'true')	//last parameter appendText = true, to append text info to post.message, if post was been deleted or reported.
+//  $.get('../api/replies/' + hash +'-'+ 'false')	//last parameter appendText = true, to append text info to post.message, if post was been deleted or reported.
     .done(function(arr){
       arr = JSON.parse(arr);
       if (arr.length == 0) return;
@@ -849,15 +975,21 @@ function loadReplies(hash, offset, highlight) {
 //3.1
 function AddBriefView(hash, deleted, highlight)
 {
-	//console.log('AddBriefView - hash:', hash);
-	$.post('../api/getlastn/' + hash, '3').done(function(brief)
+	console.log('AddBriefView - hash:', hash);
+//	$.post('../api/getlastn/' + hash, '3')
+//	$.get('../api/getlastn/' + hash + '-' + '3' + '-' + 'true')
+	$.post('../api/getlastn/', hash + '-' + '3' + '-' + 'true' + '-' + 'false')	//last parameter appendText = true, to append text info to post.message, if post was been deleted or reported.
+//	$.post('../api/getlastn/', hash + '-' + '3' + '-' + 'false' + '-' + 'false')	//last parameter appendText = true, to append text info to post.message, if post was been deleted or reported.
+	
+	.done(function(brief)		//get last "3" posts for thread with "hash" and show it.
 	{						
 		brief = JSON.parse(brief);
-		brief.reverse();	//maybe no need reverse...
+//		brief.reverse();	//maybe no need reverse...		Yeap, without reverse, last post available as the last answer.
 		if(brief.length==0) return;
 		for(var i=0;i<brief.length;i++)
 		{
-			if (brief[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){//for deleted posts
+//			if (brief[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){//for deleted posts
+			if ((brief[i].message).substring(0, 16) === 'post_was_deleted'){//for deleted posts
 				deleted = true;										//show deleted post with opacity
 				//continue;											//skip deleted posts
 			}
@@ -866,7 +998,7 @@ function AddBriefView(hash, deleted, highlight)
 			if(p1)
 			{
 				p1.css('margin-left', 2 * _treeOffsetPx + 'px');
-				if (deleted) p1.css({ opacity: _deletedOpacity });								
+//				if (deleted) p1.css({ opacity: _deletedOpacity });	//make all posts deleted, if category deleted. But if post in category deleted, all posts with opacity... disable it...
 				if (highlight == brief[i].hash) {
 				  p1.addTemporaryClass('high', 8000);
 				}
@@ -878,7 +1010,8 @@ function AddBriefView(hash, deleted, highlight)
 
 function loadThread(hash, highlight) {
   thisPosts = [];
-  $.get('../api/replies/' + hash)
+  $.get('../api/replies/' + hash +'-'+	'true')	//last parameter appendText = true, to append text info to post.message, if post was been deleted or reported.
+//  $.get('../api/replies/' + hash +'-'+	'false')	//last parameter appendText = true, to append text info to post.message, if post was been deleted or reported.
     .done(function(arr){
       arr = JSON.parse(arr);
 	  //console.log('loadThred, arr: ', arr);
@@ -890,7 +1023,8 @@ function loadThread(hash, highlight) {
         //return; 					//don't return and show post
 		$('#thread').empty();		//don't repeat posts
       }
-      $.get('../api/get/' + hash)
+      $.get('../api/get/' + hash +'-'+ 'true')	//last parameter appendText = true, to append text info to post.message, if post was been deleted or reported.
+//      $.get('../api/get/' + hash +'-'+ 'false')	//last parameter appendText = true, to append text info to post.message, if post was been deleted or reported.
         .done(function(post){
           post = JSON.parse(post);
           if (_depth > 0) {

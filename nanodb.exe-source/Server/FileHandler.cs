@@ -588,7 +588,8 @@ namespace NServer
 			{".xwd", "image/x-xwindowdump"},
 			{".z", "application/x-compress"},
 			{".zip", "application/x-zip-compressed"},
-			{"", "application/octet-stream"}
+			{"", "application/octet-stream"},
+			{".nbc", "application/octet-stream"}	//add captcha.nbc extension
 			#endregion
         };
 
@@ -626,7 +627,7 @@ namespace NServer
         {
             try
             {
-                if (request.Address == "" || request.Address == "/") 
+                if ((request.Address == "" || request.Address == "/") && !request.Address.Contains("captcha.nbc")) 
                 {
                     string redirect = "<meta http-equiv='refresh' content='0; url=/pages/index.html' />";
                     return new HttpResponse(StatusCode.Ok, redirect + "<a href='/pages/index.html'>[Enter]</a>", _mime);
@@ -643,18 +644,19 @@ namespace NServer
 					string filelist = "";
 					string link = "";
 					for(int i=0; i<files.Length; i++){
-						if(files[i].EndsWith(".png", StringComparison.OrdinalIgnoreCase) || request.Address=="/download/?all_files"){
-							link =	"http://" + host + ":" + port + '/' + files[i].Replace('\\', '/');
-							filelist += "<a href=\""+link+"\">"+files[i].Replace("download\\", "")+"</a><br>";
+						if( ( files[i].EndsWith(".png", StringComparison.OrdinalIgnoreCase) && (!files[i].StartsWith("download\\created")) && (!files[i].StartsWith("download\\generated")) ) || request.Address=="/download/?all_files" ){
+							link =	((request.Address=="/download")?"download/":"")+files[i].Replace("download\\", "").Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+							filelist += "<a href=\""+link+"\" target=\"_blank\">"+link+"</a><br>";
 						}
 					}
 					
                     //string redirect = "<meta http-equiv='refresh' content='0; url=/pages/index.html' />";
                     return new HttpResponse(
 											StatusCode.Ok,
-												"<a href='/'>[ ../ ]</a>"
-												+"&nbsp;&nbsp;&nbsp;&nbsp;<a href='/download/?all_files'>[ All files ]</a>"
-												+"&nbsp;&nbsp;&nbsp;&nbsp;<a href='/download/'>[ PNG only ]</a>"
+												"<a href=\"/\" title=\"Back to server's root-directory.\">[ ../ ]</a>"
+												+"&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"/download/?all_files\" title=\"Show all files in 'download'-folder, independent of their types, and extensions.\">[ Show all files ]</a>"
+												+"&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"/download/\" title=\"Show PNG-files only, to 'Collect PNG' (default mode, for 'download'-folder).\">[ PNG only ]</a>"
+												+"&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"/captcha.nbc\" title=\"Download 'captcha.nbc' - captcha-pack file.\">[ Download captcha.nbc ]</a>"
 												+"<br>"
 												+"<h1 title=\"This page can be parsed as thread on the "
 												+"imageboard by URL. "
@@ -667,14 +669,23 @@ namespace NServer
 											,
 											_mime
 					);
-                }
+                }else if(request.Address.Contains("captcha.nbc")){
+				
+					if (!File.Exists("captcha.nbc"))
+					{
+						return new ErrorHandler(StatusCode.NotFound, "not found: \"captcha.nbc\"").Handle(request);
+					}
+					else{
+						return new HttpResponse(StatusCode.Ok, File.ReadAllBytes("captcha.nbc"), GetMimeType(".nbc"));
+					}
+				}
 
                 var name = request.Address.Split('/').Last();
                 var path = _folder + Path.DirectorySeparatorChar + name;
 
                 if (!File.Exists(path))
                 {
-                    return new ErrorHandler(StatusCode.NotFound, "").Handle(request);
+                    return new ErrorHandler(StatusCode.NotFound, "Not Found file in path: \""+path+"\"").Handle(request);
                 }
 
                 if (_binary)

@@ -1,7 +1,7 @@
 var _categories = 'bdd4b5fc1b3a933367bc6830fef72a35';
 var _mainpost = 'f682830a470200d738d32c69e6c2b8a4';
 var _rootpost = '00000000000000000000000000000000';
-var _postWasDeletedMarker = 'post was deleted';
+var _postWasDeletedMarker = 'post_was_deleted';
 var _depth = 0;
 
 var _showDeleted = 'true';
@@ -15,7 +15,10 @@ var _post_count_notification_time = 2400;				//was been 600 but 2400 for me
 //var _post_count_notification_time = 16000;
 //var _post_count_notification_time = 24000;
 var _deletedOpacity = 0.33;
-var _spam_filter = [];
+
+//var _spam_filter = [];											//old code
+var _spam_filter = ["spam_keyword1", "spam_keyword2", "spam_keyword3"];		//match anything by default.
+
 var _use_spam_filter= 'true';
 
 var currentUnixTime = Math.floor(new Date().getTime()/1000).toString(); //current_unix timestamp
@@ -42,21 +45,15 @@ var Download_Timeout_Sec = 30;	//seconds. This is timeout to stop downloading im
 
 //try get value of param or set it, if this value is not available.
 function tryGetParam(param, def, cb) {
-  $.get('../api/paramget/'+param)
-    .done(function(v){cb(v);})
-    .fail(function(){
-      $.post('../api/paramset/'+param, def)
-        .done(function(){cb(def);})
-		.fail(
-			function(){
-				setTimeout(
-					function(){
-						tryGetParam(param, def, cb);
-					},
-					100
-				);
-			}
-		);
+//	console.log("def", def, "encodeURIComponent(def)", encodeURIComponent(def));
+//  $.get('../api/paramget/'+param, encodeURIComponent(def))		//try get param value or set default param (GET + encodeURIComponent)
+  $.post('../api/paramget/'+param, encodeURIComponent(def))			//try get param value or set default param (POST)
+    .done(function(v){	//if param value received
+			cb(v);		//return this
+	})
+    .fail(function(){	//else
+		console.log("param.js. tryGetParam("+param+", "+def+", cb). fail... Try again...");
+		tryGetParam(param, def, cb);	//try again.
     });
 }
 
@@ -118,7 +115,7 @@ function reloadParams() {
   tryGetParam('post_offset_in_tree_px', 		_treeOffsetPx.toString(), 					function(v){ _treeOffsetPx = parseInt(v); });
   tryGetParam('post_delete_timeout', 			_post_delete_timeout.toString(), 			function(v){ _post_delete_timeout = parseInt(v); });
   tryGetParam('post_count_notification_time', 	_post_count_notification_time.toString(), 	function(v){ _post_count_notification_time = parseInt(v); });
-  tryGetParam('spam_filter', 					_spam_filter.join('\n'), 					function(v){ _spam_filter = parseRegExps(v); });
+  tryGetParam('spam_filter', 					JSON.stringify(_spam_filter), 				function(v){ _spam_filter = parseRegExps(decodeURIComponent(v)); });
   tryGetParam('use_spam_filter', 				_use_spam_filter, 							function(v){ _use_spam_filter = v; });
   tryGetParam('check_updates_every_hours', 		check_updates_every_hours, 					function(v){ check_updates_every_hours = v; });
   tryGetParam('remind_if_updates_exists', 		remind_if_updates_exists, 					function(v){ remind_if_updates_exists = v; });  
@@ -171,6 +168,7 @@ http://hamstakilla.com/b/22279"
 					default_places += Defult_places_links_array[i]+'\n';
 				}
 
+//				$.get('../api/paramset/places', encodeURIComponent(default_places))	//set as default value of the "places" parameter.
 				$.post('../api/paramset/places', default_places)	//set as default value of the "places" parameter.
 				.done(function(){places = default_places;})			//See config.json, after loading index.html
 				.fail(
@@ -242,6 +240,7 @@ https://ident.me/.json\n"
 				
 				//console.log('default_IP_Services', default_IP_Services);
 
+//				$.get('../api/paramset/Services_Returns_External_IP', encodeURIComponent(default_IP_Services))	//set as default value of the "places" parameter.
 				$.post('../api/paramset/Services_Returns_External_IP', default_IP_Services)	//set as default value of the "places" parameter.
 				.done(function(){IP_Services = default_IP_Services;})			//See config.json, after loading index.html
 				.fail(
@@ -293,6 +292,7 @@ https://ident.me/.json\n"
 				
 				//console.log('default_proxies', default_proxies);
 
+//				$.get('../api/paramset/Proxy_List', encodeURIComponent(default_proxies))	//set as default value of the "places" parameter.
 				$.post('../api/paramset/Proxy_List', default_proxies)	//set as default value of the "places" parameter.
 				.done(function(){List_of_proxy = default_proxies;})			//See config.json, after loading index.html
 				.fail(
@@ -313,11 +313,18 @@ https://ident.me/.json\n"
 		function(v){
 			var default_skin = "futaba";
 			if(v == ""){
+//				console.log("default_skin: ", default_skin);
+
+//				$.get('../api/paramset/skin', encodeURIComponent(default_skin))
 				$.post('../api/paramset/skin', default_skin)
-				.done(function(){
+				.done(function(reply){
+					console.log("reply", reply);
 					skin = default_skin;
+					console.log("params.js, skin, done. location reload...");
+							
 					setTimeout(
 						function(){
+							console.log("params.js, skin, done. location reload...");
 							location.reload();				//and reload the page with futaba-skin.
 						},
 						5000								//after 10000 milliseconds.
@@ -328,6 +335,7 @@ https://ident.me/.json\n"
 						console.log("params.js: Fail to set default_skin in config.");
 						setTimeout(
 							function(){
+								console.log("params.js, skin, fail. location reload...");
 								location.reload();				//and reload the page with futaba-skin.
 							},
 							5000								//after 10000 milliseconds.

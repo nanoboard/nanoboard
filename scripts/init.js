@@ -20,7 +20,8 @@ function updateCategoriesBar() {
 	  replies = JSON.parse(replies);
 	  for (var i = 0; i < replies.length; i++){
 	    var reply = replies[i];
-	    if (reply.message != 'cG9zdCB3YXMgZGVsZXRlZA==' && stripTags(applyFormatting(Base64.decode(reply.message)))!==''){ // if category post was deleted or empty - skip
+//	    if (reply.message != 'cG9zdCB3YXMgZGVsZXRlZA==' && stripTags(applyFormatting(Base64.decode(reply.message)))!==''){ // if category 'post_was_deleted' or empty - skip
+	    if ((reply.message).substring(0, 16) != 'post_was_deleted' && stripTags(applyFormatting(Base64.decode(reply.message)))!==''){ // if category post_was_deleted or empty - skip
 	       $('#categories').append('<a href="#category'+reply.hash+'">['+stripTags(applyFormatting(Base64.decode(reply.message)))+']</a> ');	//else - show category
 		   list_of_categories_hashes.push(reply.hash);	//and save the hash of category post.
 		}
@@ -39,7 +40,8 @@ function getPosts(string_with_hashes_comma) {						//string, with hashes, joined
 	  replies = JSON.parse(replies);
 	  for (var i = 0; i < replies.length; i++){
 	    var reply = replies[i];
-	    if (reply.message != 'cG9zdCB3YXMgZGVsZXRlZA==') // if category post was deleted - skip, else
+//	    if (reply.message != 'cG9zdCB3YXMgZGVsZXRlZA==') // if category post_was_deleted - skip, else
+	    if ((reply.message).substring(0, 16) != 'post_was_deleted') // if category "post_was_deleted" - skip, else
 	       //$('#categories').append('<a href="#category'+reply.hash+'">['+stripTags(applyFormatting(Base64.decode(reply.message)))+']</a> ');
 		   console.log(reply);
 	  }
@@ -50,29 +52,36 @@ function getPosts(string_with_hashes_comma) {						//string, with hashes, joined
 }
 //getPosts('f682830a470200d738d32c69e6c2b8a4,cd94a3d60f2f521806abebcd3dc3f549,bdd4b5fc1b3a933367bc6830fef72a35'); //test.
 
-var places = '';
+var places_on_server = '';
 var update_places = false;				//false - if no need to regular update, true - if need regular update (2 tabs opened, places changed in second tab, then update links on first tab).
 
 function updatePlacesBar_once(){
+//	console.log('updatePlacesBar_once();');
 	var to_false = !update_places;
 	update_places = true;
-	if(to_false==true){updatePlacesBar();}
+	if(to_false==true){
+//		console.log("run updatePlacesBar();")
+		updatePlacesBar();
+	}
 	update_places = !to_false;
 }
 
 function updatePlacesBar() {
+//	console.log("updatePlacesBar();");
 	if(update_places==false) {
-		//console.log("No need to update places...");
-		return;
+//		console.log("No need to update places again... return...")
+		return;		//when function updatePlacesBar, is starting by timeout, but no need to update places, just return, and do not do nothing,
+					//and do not repeat updating this places automatically, only by click on the link.
+					//in this case, list of places not transferring every time by timeout, and places not reading from config every time.
 	}
 	$.get('../api/paramget/places')
 	.done(
 		function(v){
-			if(places!==v){
-				places = v;
+			if(places_on_server!==v){
+				places_on_server = v;
 				v = v.split('\n');
 				$('#placesd').empty();
-				$('#placesd').append('<b><a href="javascript:void(0)" onclick="updatePlacesBar_once();" title="Click here to update places links from settings, if this was been changed...">Places</a> (to post PNG containers to):</b><br/>')
+				$('#placesd').append('<b><a href="javascript:void(0)" onclick="updatePlacesBar_once();" title="Click here to update places_on_server links, after changing this in settings, if this was been changed...">Places</a> (to post PNG containers to):</b><br/>')
 				for (var i = 0; i < v.length; i++) {
 					if (v[i].length > 0 && v[i][0]=='#') continue;
 					$('#placesd').append('• <a target=_blank href="'+v[i]+'">'+v[i]+'</a><br/>')
@@ -89,7 +98,7 @@ setTimeout(
 	function(){
 		updatePlacesBar_once();
 	},
-	2000
+	5000
 );
 
 var postCount = 0;
@@ -137,8 +146,8 @@ $.ajax({
 		}else{
 			setTimeout(function(){notifyAboutPostCount();}, _post_count_notification_time);
 		}
-		$('#statusd1').html('<a href="javascript:void(0);" onclick="notifyAboutPostCount(true);">Posts (including deleted once): '+postCount+'</a>');
-		$('#statusd2').html('<a href="javascript:void(0);" onclick="notifyAboutPostCount(true);">Posts (including deleted once): '+postCount+'</a>');
+		$('#statusd1').html('<a href="javascript:void(0);" onclick="notifyAboutPostCount(true);" title="Click to update this value.">Posts (including deleted once): '+postCount+'</a>');
+		$('#statusd2').html('<a href="javascript:void(0);" onclick="notifyAboutPostCount(true);" title="Click to update this value.">Posts (including deleted once): '+postCount+'</a>');
     })
     .fail(function(){
       pushNotification('Connection to server lost.', 900);
@@ -169,11 +178,13 @@ $(function() {
 	//$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|delete_files|"+max_connections))		//test save, from RAM, max_connections = 10
 	
 	//This need to try run collect from "download" folder: http://127.0.0.1:7346/download/
-	$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|do_not_save_and_do_not_delete|"+max_connections))	//test save, from RAM, without deleting and adding posts. max_connections = 10.
+//	$.get('../api/png-collect', encodeURIComponent("collect_using_RAM|do_not_save_and_do_not_delete|"+max_connections))	//test save, from RAM, without deleting and adding posts. max_connections = 10.
+	//This need to try run collect from "download" folder: http://127.0.0.1:7346/download/
+	$.post('../api/png-collect', "collect_using_RAM|do_not_save_and_do_not_delete|"+max_connections)	//test save, from RAM, without deleting and adding posts. max_connections = 10.
 	//Success!
 	
 	//collect to download folder:
-//	$.post('../api/png-collect', encodeURIComponent("collect_using_RAM|save_files|"+max_connections))	//test save, from RAM, without deleting and adding posts. max_connections = 10.
+//	$.post('../api/png-collect', ("collect_using_RAM|save_files|"+max_connections))	//test save, from RAM, without deleting and adding posts. max_connections = 10.
 	//Success!
 
 	.done(
@@ -257,6 +268,105 @@ $(function() {
 			)
       .done(function(response){
 		console.log("done png-create post-query..."+response);
+		var notifications = response.split('|||');
+		console.log("notifications", notifications);
+		var milliseconds = 2000;
+		for(notification = 0; notification < notifications.length; notification++){
+//			console.log('notifications[notification]: '+notifications[notification]);
+			data = notifications[notification];
+			if(notifications[notification] == "" || notifications[notification] == "\n" || (typeof notifications[notification] == 'undefined')){continue;}
+			else if(data.substring(0,21)=='Saved PNG to /upload/'){
+				data += '<br><a href="../upload/'+data.split("/upload/")[1]+'" target="_blank">Open image in new tab</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="../upload/'+data.split("/upload/")[1]+'" target="_blank" download="'+data.split("/upload/")[1]+'">Download image, as file</a>';
+				generated_container_name = data.substring(21);
+				if(add_saved==true){									//if need add
+					if(Create_PNG_result.innerHTML.indexOf(generated_container_name)!==-1){
+						Create_PNG_result.innerHTML += data;				//just add
+					}else{
+						already_saved_to = data;
+					}
+					add_saved = false;									//and false
+				}
+				else{													//else
+					if(Create_PNG_result.innerHTML.indexOf(generated_container_name)!==-1){
+						Create_PNG_result.innerHTML = data;					//insert in html and clear previous results.
+					}else{
+						already_saved_to = data;
+					}
+				}
+				//current_queue = [];												//remove all packed hashes from current_queue
+			}else if(data.substring(0,29)=="Hashes of posts, packed into "){
+				//Create_PNG_result.innerHTML += 		'<br>'+	data.split('["')[0]
+				Create_PNG_result.innerHTML = 		'<br>'+	data.split('["')[0]
+												+	'<br><div id="packed_hashes"></div>';
+				//var packed_hashes_list_element = document.getElementById('packed_hashes');
+				
+				var packed_hashes_array = [];
+				packed_hashes_array = (data.indexOf('["')!==-1) ? JSON.parse('["' + data.split('["')[1]) : [];
+				//var JSON_packed_hashes = JSON.parse('["' + data.split('["')[1]);
+				//packed_hashes_list_element;
+				console.log("packed_hashes_array", packed_hashes_array);
+				update_hashes_of_last_post(packed_hashes_array, 'packed_hashes', packed_hashes_array.length);
+				if(already_saved_to===""){
+					add_saved = true;
+				}else{
+					Create_PNG_result.innerHTML += already_saved_to;
+					already_saved_to = "";
+				}
+
+				console.log(
+							'packed hashes displayed!',
+							'\n',	'queue = ', queue,
+							'\n',	'current_queue = ', current_queue
+				);
+
+					//dequeue all packed hashes from current queue.
+				for(i=0; i<=packed_hashes_array.length; i++){
+					queue_remove(current_queue, packed_hashes_array[i]);
+					//queue_remove(queue, packed_hashes_array[i]);
+				}
+
+				console.log(
+							'after remove packed hashes: ',
+							'\n',	'queue = ', queue,
+							'\n',	'current_queue = ', current_queue
+				);
+				
+					//update values, after massive dequeue
+				piq.innerHTML = packed_hashes_array.length;
+			
+				if(fq.value>packed_hashes_array.length){
+					fq.value = packed_hashes_array.length;
+					pfq.innerHTML = packed_hashes_array.length;
+				}
+				
+
+				update_hashes_of_last_post(current_queue, 'queue', current_queue.length); //generate list with hashes of packed posts
+				//update_hashes_of_last_post(queue, 'queue', queue.length); //generate list with hashes of packed posts
+				
+				if(fq.value>queue.length){
+					fq.value = queue.length;
+					pfq.innerHTML = queue.length;
+				}
+				
+				console.log('current_queue.length', current_queue.length);
+				console.log('queue.length', queue.length, 'fq.value', fq.value, 'pfq.innerHTML', pfq.innerHTML);
+				
+
+				change_values();	//after update queue
+
+				//current_queue = [];
+				
+//				Create_PNG_result.innerHTML += '<br>'+data;
+				dont_show_notif = true;
+			}else if(data == "Your containers dir is empty! Add container(s)"){
+				Create_PNG_result.innerHTML = 'Your containers dir is empty! Add container(s). You can generate container <a href="http://127.0.0.1:7346/pages/convert-to-PNG.html" target="_blank">here</a>.';
+			}
+			var notification_data = ((notifications[notification].substring(0, 3) == '[g]') ? applyFormatting(notifications[notification]) : notifications[notification]);
+
+//			var notification_data = notifications[notification];
+			pushNotification(notification_data, milliseconds);
+			milliseconds += 2000;
+		}
 //		Create_PNG_result.innerHTML = response;									//add response to div on PNG creation tab
 //		current_queue = [];			//remove all packed hashes from current_queue
 

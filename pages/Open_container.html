@@ -96,7 +96,7 @@ function parse_PNG_by_dataURL(dataURL, filename=false, download=false){
 			
                 //console.log("reply received");		//show this.
 
-				var posts = JSON.parse(replies);		//parse posts
+				var posts = JSON.parse(replies);		//console.log('dataURL', dataURL); //parse posts
 				result.innerHTML += '<center><h3>'
 									+ posts.length
 									+' posts was been found in this container'
@@ -106,15 +106,23 @@ function parse_PNG_by_dataURL(dataURL, filename=false, download=false){
 											//downloading is available in browser from download folder, after downloading.
 											//But this can be deleted.
 											//So just click to link to download.
-												? '<a href="'+dataURL+'" download="'+filename+'"'
-													+'title="This file in \'download\/\' folder and it can be deleted! Click to download file in browser.">download/'+filename
-													+(
-														(dataURL.indexOf("../download/")!=-1 && is_enabled_preview)	//if file in download-folder, and if checkbox checked
-															? 	' <img src="'+dataURL+'" style="border: 2px solid gray; width: 64px; height: 64px;"'
-																+	'title="Small preview."> '	//show preview
+												?	'<a href="'+dataURL+'" download="'+filename+'"'+
+														'title="This file in \'download\/\' folder and it can be deleted! Click to download file in browser."'+
+													'>'+
+															'download/'+filename+
+													'</a>'+
+													(
+														(dataURL.indexOf("../containers")!=-1 && is_enabled_preview)	//if file in download-folder, and if checkbox checked
+															? 	(
+																	'<a href="'+dataURL.replace('\\', '/')+'"'+
+																		'title="This file in \'download\/\' folder and it can be deleted! Click to download file in browser."'+
+																	' target="_blank">'+
+																			' <img src="'+dataURL.replace('\\', '/')+'" style="border: 2px solid gray; width: 64px; height: 64px;"'+
+																				'title="Small preview. Click to show full-size image."> '+	//show preview
+																	'</a>'
+																)
 															:	''								//else, just link
 													)
-													+'</a>'
 												: 'download/'+filename	//else, just text
 										)
 									+') '

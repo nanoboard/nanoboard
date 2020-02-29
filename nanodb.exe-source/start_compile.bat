@@ -10,4 +10,4 @@
 ::4. start_compile.bat
 ::5. Another window opened, compilation successfully, press any key, and window is closing.
 
-start compile.bat
+start compile.bat %1

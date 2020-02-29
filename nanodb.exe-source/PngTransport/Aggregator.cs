@@ -117,7 +117,7 @@ namespace nboard
         Running = false;
 		WebClientX.Interrupt();	//Interrupt here
 
-		Console.WriteLine("Finished.");
+		Console.WriteLine("Finished."); nbpack.NBPackMain.PostDatabase.ReadRefs_private(); //read refs and Flush() data, in the end.
 		return;
       }
     }
@@ -133,7 +133,7 @@ namespace nboard
 
 		public static bool 	only_RAM 							= 	true;
 		public static bool 	save_files 							= 	false;
-		public static bool 	do_not_save_and_do_not_delete 		= 	false;
+		public static bool 	do_not_save_and_do_not_delete 		= 	true;			//by default, do not delete anything, from "/download"-folder.
 		public static int 	max_connections 					= 	6;
 		
 	  
@@ -179,37 +179,52 @@ namespace nboard
 		//Try read value from config, or set this from file, or from default value.
         public static void CheckUpdateProxyList()			//Update proxy-list, if this was been changed and specified in proxy.txt
         {
-		//	Console.WriteLine("CheckUpdateProxyList");
-			var proxies_list = Configurator.Instance.GetValue("Proxy_List", File.Exists(Proxy_txt)?File.ReadAllText(Proxy_txt):default_proxies);
-			proxies = proxies_list.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
-			if(File.Exists(Proxy_txt)){	//rename file if exists
-				File.Move(Proxy_txt, "renamed_"+Proxy_txt);
-			}
-		//	Console.WriteLine("CheckUpdateProxyList return; proxies.Count: "+proxies.Count.ToString());
+			//	Console.WriteLine("CheckUpdateProxyList");
+			try{
+				var proxies_list = Configurator.Instance.GetValue("Proxy_List", File.Exists(Proxy_txt)?File.ReadAllText(Proxy_txt):default_proxies);
+				proxies = proxies_list.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
+				if(File.Exists(Proxy_txt)){	//rename file if exists
+					File.Move(Proxy_txt, "renamed_"+Proxy_txt);
+				}
+			}	
+			catch (Exception ex){
+				Console.WriteLine(ex);
+			}	
+			//	Console.WriteLine("CheckUpdateProxyList return; proxies.Count: "+proxies.Count.ToString());
 			return;
         }
 
         public static void CheckUpdateIPServicesConfig()	//Update IP_services, if this was been changed and specified in externalIPservices.txt
         {
-		//	Console.WriteLine("CheckUpdateIPServicesConfig");
-			var IP_services_config = Configurator.Instance.GetValue("Services_Returns_External_IP", File.Exists(IP_Services_txt)?File.ReadAllText(IP_Services_txt):IP_services_default);
-			IP_services = IP_services_config.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
-			if(File.Exists(IP_Services_txt)){	//rename file if exists
-				File.Move(IP_Services_txt, "renamed_"+IP_Services_txt);
-			}
-		//	Console.WriteLine("CheckUpdateIPServicesConfig return; IP_services.Count: "+IP_services.Count.ToString());
+			//	Console.WriteLine("CheckUpdateIPServicesConfig");
+			try{
+				var IP_services_config = Configurator.Instance.GetValue("Services_Returns_External_IP", File.Exists(IP_Services_txt)?File.ReadAllText(IP_Services_txt):IP_services_default);
+				IP_services = IP_services_config.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
+				if(File.Exists(IP_Services_txt)){	//rename file if exists
+					File.Move(IP_Services_txt, "renamed_"+IP_Services_txt);
+				}
+			}	
+			catch (Exception ex){
+				Console.WriteLine(ex);
+			}	
+			//	Console.WriteLine("CheckUpdateIPServicesConfig return; IP_services.Count: "+IP_services.Count.ToString());
 			return;
         }
 
         public static void CheckUpdatePlacesConfig()		//Update threads, if this was been changed and specified in places.txt
         {
-		//	Console.WriteLine("CheckUpdatePlacesConfig");
-			var places = Configurator.Instance.GetValue("places", File.Exists(Places_txt)?File.ReadAllText(Places_txt):default_places);
-			if(File.Exists(Places_txt)){	//rename file if exists
-				File.Move(Places_txt, "renamed_"+Places_txt);
-            }
-			_places = places.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
-		//	Console.WriteLine("CheckUpdatePlacesConfig return; _places.Count: "+_places.Count.ToString());
+			//	Console.WriteLine("CheckUpdatePlacesConfig");
+			try{
+				var places = Configurator.Instance.GetValue("places", File.Exists(Places_txt)?File.ReadAllText(Places_txt):default_places);
+				if(File.Exists(Places_txt)){	//rename file if exists
+					File.Move(Places_txt, "renamed_"+Places_txt);
+				}
+				_places = places.Split('\n').Where(p => (!p.StartsWith("#") && p!="")).ToList();
+			}	
+			catch (Exception ex){
+				Console.WriteLine(ex);
+			}	
+			//	Console.WriteLine("CheckUpdatePlacesConfig return; _places.Count: "+_places.Count.ToString());
 			return;
         }
 	//End of checking and update params
@@ -236,11 +251,12 @@ namespace nboard
 						}
 						else if(_params_[item] == "delete_files"){
 							Console.WriteLine("ParseImage: delete_files, save_files = false now");
+							do_not_save_and_do_not_delete = false;
 							save_files = false;
 						}else if(_params_[item] == "collect_using_RAM"){
 							Console.WriteLine("ParseImage: collect_using_RAM, only_RAM = true now");
 							only_RAM = true;
-						}
+						}else if(_params_[item] == "allowReput"){Console.WriteLine("Aggregator.cs: allowReput = true now"); nbpack.NBPackMain.allowReput = true;}else if(_params_[item] == "bypassValidation"){Console.WriteLine("Aggregator.cs: bypassValidation = true now"); nbpack.NBPackMain.bypassValidation = true;}
 						else if(_params_[item].Contains("DownloadPNG: ")){
 							Console.WriteLine("DownloadPNG: ");
 							//return;
@@ -260,14 +276,16 @@ namespace nboard
 					}
 					Console.WriteLine("Delete files in \"download/\" folder...");
 					System.IO.DirectoryInfo di = new DirectoryInfo("download"+Path.DirectorySeparatorChar);
-					foreach (FileInfo file in di.GetFiles()){file.Delete();}
+					foreach (FileInfo file in di.GetFiles()){file.Delete();}									//this strings will clear all files and all folders in "/download"-folder !
 					foreach (DirectoryInfo dir in di.GetDirectories()){dir.Delete(true);}
-					// Create a file to write to.
+
+					// Create a file to write to "/download"-folder.
 					using (StreamWriter sw = File.CreateText("download"+Path.DirectorySeparatorChar+"Files_will_deleted.txt")) 
 					{
 						sw.WriteLine("Files in this folder will be deleted, if option for saving this not specified in GET-query.");
 						sw.WriteLine("Don't store any files here or enable \"save_files\". See the parameters of the query, in /scripts/init.js");
-					}	
+					}
+
 				}
 
                 if (!File.Exists(UserAgentConfig))
@@ -494,7 +512,7 @@ namespace nboard
 				string proxy_URL = "";
 				
 				while(true) {
-					if(proxy_index>proxies.Count || proxies[proxy_index]==""){
+					if(proxy_index>=proxies.Count || proxies[proxy_index]==""){
 						proxyUrl = "";
 						break;
 					}
@@ -686,7 +704,7 @@ namespace nboard
 							)
 							{
 								Console.WriteLine(	"Image download starting: {0}\n"+	//show imageURL
-													"Logging attempt prevented.",
+													"IP-Logging attempt prevented: {0}",
 													imageAddress
 								);
 								//and do nothing...
@@ -773,7 +791,7 @@ namespace nboard
 			
         }
 		
-        public string DownloadPNG(string[] params_)
+        public string DownloadPNG(string[] params_, bool is_lite = false)
 		{
 			string URL = "";
 			int i = 0, interval = 500, max_interval = 5000;	//milliseconds
@@ -797,11 +815,11 @@ namespace nboard
             client.Headers = _headers;
 			
 			string downloaded_from_URL = "false";
-
+			string download_to_folder = ((is_lite == true) ? "download"+Path.DirectorySeparatorChar+"created" : "containers");
 			if (!Directory.Exists("temp")) Directory.CreateDirectory("temp");
 			if (!Directory.Exists("download")) Directory.CreateDirectory("download");
-		
-			if(downloadFile==true)
+			if (!Directory.Exists(download_to_folder)) Directory.CreateDirectory(download_to_folder);
+			if( downloadFile == true )
 			{
 /*
 				string remoteUri = URL;
@@ -811,7 +829,7 @@ namespace nboard
 				// Concatenate the domain with the Web resource filename.
 */
 				string [] splitURL = URL.Split('/');
-				string fileName = "download" + Path.DirectorySeparatorChar + splitURL[splitURL.Length-1], myStringWebResource = null;
+				string fileName = download_to_folder + Path.DirectorySeparatorChar + splitURL[splitURL.Length-1], myStringWebResource = null;
 				myStringWebResource = URL;
 				Console.WriteLine("Downloading File \"{0}\" from \"{1}\" .......\n\n", fileName, myStringWebResource);
 				// Download the Web resource and save it into the current filesystem folder.
@@ -832,16 +850,16 @@ namespace nboard
 						string name = temp[temp.Length-1];
 						if(only_RAM==false){
 							File.WriteAllBytes("temp" + Path.DirectorySeparatorChar + name, bytes);
-							File.Move("temp" + Path.DirectorySeparatorChar + name, "download" + Path.DirectorySeparatorChar + name);
+							File.Move("temp" + Path.DirectorySeparatorChar + name, download_to_folder + Path.DirectorySeparatorChar + name);
 							if(save_files==true){
-								Console.WriteLine("\n"+URL+"\nsaved as "+"download" + Path.DirectorySeparatorChar + name+"\n");
+								Console.WriteLine("\n"+URL+"\nsaved as "+download_to_folder + Path.DirectorySeparatorChar + name+"\n");
 							}
 						}
 						else{
 							ms = new MemoryStream(bytes);
 							RAM_container = Image.FromStream(ms);														//image in RAM
 							if(save_files==true){
-								File.WriteAllBytes("download"+ Path.DirectorySeparatorChar + name, ms.ToArray());
+								File.WriteAllBytes( download_to_folder + Path.DirectorySeparatorChar + name, ms.ToArray());
 								Console.WriteLine("\n"+URL+"\nsaved as "+name+"\n");
 							}
 						}
@@ -849,16 +867,16 @@ namespace nboard
 						Console.WriteLine("Image  download (FINISH): " + URL);
 					
 						string filepath = 
-								name.Replace(Path.DirectorySeparatorChar, '/')								//file pathway
+								name.Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)								//file pathway
 						;
 						downloaded_from_URL = 
 								"Image Downloaded from " + URL
 							+	"<br>"
 							+	"<a href=\""
-							//+	"../"
-							+	"../download/"
-							+	filepath+"\" download=\""+name.Replace("download\\", "")+"\">"
-							+		"<img src=\"../"+filepath+"\"/>"
+							+	"../"
+							+	(download_to_folder + Path.DirectorySeparatorChar + filepath)
+							+"\" download=\""+name.Replace("download\\", "")+"\">"
+							+		"<img src=\"../"+(download_to_folder + Path.DirectorySeparatorChar + filepath)+"\"/>"
 							+		"<br>"+name.Replace("download\\", "")
 							+	"</a>"
 						;
@@ -1101,8 +1119,15 @@ namespace nboard
 						}
                     }
 					else{
-						ms = new MemoryStream(bytes);
-						RAM_container = Image.FromStream(ms);														//image in RAM
+						try{
+							ms = new MemoryStream(bytes);
+							RAM_container = Image.FromStream(ms);														//image in RAM
+						}
+						catch{
+						//	(Exception ex){	//exception, when not image bytes received from address.
+						//		Console.WriteLine("Invalid image bytes received from address: "+address+"\nException: "+ex);	//don't show this
+								return;	//and just return.
+						}
 						if(save_files==true){
 							var name_ms = "download" + Path.DirectorySeparatorChar + Guid.NewGuid().ToString().Trim('{', '}')+".png";
 							File.WriteAllBytes(name_ms, ms.ToArray());

@@ -167,14 +167,15 @@ $(function(){
           if (skin == '') skin = 'None';
           $('#skin-sel').val(skin).change();
           $('#skin-sel').change(function(){
-			var newSkin = $(this).val();
-            if (newSkin == 'None') newSkin = '';
+			var newSkin = $(this).val(); //console.log("newSkin", newSkin);
+//            if (newSkin == 'None') newSkin = '';	//just test auto-change skin to futaba, when config-3.json have value of sking = ''
+//            $.get('../api/paramset/skin', encodeURIComponent(newSkin));
             $.post('../api/paramset/skin', newSkin);
             setTimeout(
 				function(){
 					location.reload();
 				},
-				500
+				500,	//5000 (longer timeout to reload the page, to see console.log messages)
 			);
           });
         });
@@ -217,6 +218,7 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
                     .change(function(){
                       var elem = $(this);
                       var new_val = elem.is(":checked").toString();
+//                      $.get('../api/paramset/'+par, encodeURIComponent(new_val))
                       $.post('../api/paramset/'+par, new_val)
                         .done(function(){
                           elem.attr('checked', new_val == 'true');
@@ -234,7 +236,7 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 					var width = 0;
 					switch(par) {	//set title tooltips for different textareas
 						case 'ip': title = 'IP address to bind...'; break;
-						case 'password': title = 'Your password...'; break;
+						case 'password': title = 'Your password...\n\nWarning! Also "nano" password was used for some containers.\nThere is contains the packed posts without pow and sign, and this posts can be added with "bypassValidation"=true'; break;
 						case 'port': title = 'PORT to listen...'; break;
 						case 'places':
 							title = "# put URLs here, one per line. Use \'#\' to comment the line.\n"+
@@ -287,7 +289,7 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 							//console.log( ( val.split('\n').length + ( ( append_sfht == true ) ? spam_filter_help_text.split('\n').length : 0 ) + 1) * fontSize_in_textareas );
 							//console.log('after replace, val: '+val);
 							break;
-						case 'captcha_pack_file':
+						case 'captcha_pack_file': case 'original_captcha_sha256': case 'captcha_url':
 							title = 	'captcha file: captcha.nbc\n\n'
 									+	'Multihasher hashes:\n'
 									+	'CRC32: E5408891\n'
@@ -297,7 +299,7 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 									+	'SHA-256: 0732888283037E2B17FFF361EAB73BEC26F7D2505CDB98C83C80EC14B9680413\n'
 									+	'SHA-384: B23C27C96C1D57DF8168C1E0406DB61B1A79F006997F164D33D2D70F6E4CAE674056885BB980F6E5804AAE03DAD76037\n'
 									+	'SHA-512: FCDF1161543174E4713D791C1FD18F6A64972EC91E9B331833DD4F941D3F88E1A717758B7851F5187EFA76202652AFD174CF8C4D6F8A03B0386284B4032D37F1\n'
-							;
+							;val = decodeURIComponent(val);
 							break;
 						case 'download_timeout_sec': title = 'Timeout to download containers...'; break;
 						case 'check_updates_every_hours': title = 'Interval to check updates... Hours.'; break;
@@ -351,22 +353,23 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 								//console.log('new_val', new_val);
 								new_val = new_val.replace(/\n/g, '');
 								//console.log('new_val', new_val);
-							}
+							}else if(par == 'captcha_url'){new_val = encodeURIComponent(new_val);}
+//							$.get('../api/paramset/'+par, encodeURIComponent(new_val))
 							$.post('../api/paramset/'+par, new_val)
 							.done(function(){
-								elem.val(
-									(par=='spam_filter')
-										? (
-											(append_sfht==true)
-												? spam_filter_help_text
-												: ''
-										)
-										+JSON.parse(new_val.replace(/\\/g, '\\\\')).join('\n')				//save serialized JSON in config-3.json
-//										? new_val															//if no need serialized JSON, just serialized string
-										: (par=='skins')
-											? new_val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]')
-											: new_val
-								);
+								if(par=='spam_filter'){
+									if(append_sfht==true){													//if need append spam_filter_help_text
+										new_val = spam_filter_help_text;										//append it
+									}else{																	//else
+										new_val = '';															//do not append
+									}
+									new_val += JSON.parse(new_val.replace(/\\/g, '\\\\')).join('\n'); 		//and save the serialized JSON in config-3.json
+								}else if(par=='skins'){
+									new_val = new_val.replace('["', '[\n"').replace(/,/g, ',\n').replace('"]', '"\n]');
+								}else if(par == 'captcha_url'){
+									new_val = decodeURIComponent(new_val);
+								}
+								elem.val(new_val);
 							
 								pushNotification('Autosaved.');
 							});
@@ -424,7 +427,7 @@ var fontSize_in_textareas = parseInt($('<textarea>').css('fontSize').replace(/[^
 </head>
 
 <body>
-<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.2</sup></span>
+<span class='board-name noselect' href='javascript:void(0)'>Nanoboard<sup class='version'>3.3</sup></span>
 <div id="head-panel" class="container-fluid">
     <div id="navrow" class="row no-gutter">
         <nav class="navbar navbar-default">

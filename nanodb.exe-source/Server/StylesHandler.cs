@@ -21,7 +21,7 @@ namespace NServer
     class StylesHandler : IRequestHandler
     {
         private readonly FileHandler _filehandler;
-
+		public static string currentSkin = "";
         public StylesHandler()
         {
             _filehandler = new FileHandler("styles", MimeType.Css, false);
@@ -33,17 +33,23 @@ namespace NServer
                 skins = skins.Select(s => s.Split('\\', '/').Last()).ToArray();
                 Configurator.Instance.SetValue("skins", JsonConvert.SerializeObject(skins));
             }
+			Update_currentSkin();
         }
 
+		public static void Update_currentSkin(){
+            currentSkin = Configurator.Instance.GetValue("skin", "");//Console.WriteLine("currentSkin: "+currentSkin);
+			string styles_folder = ( ( currentSkin == "" || currentSkin == "None") ? "styles/" : ( ( "styles/skins/" + currentSkin + "/" ) ) ).Replace('/', Path.DirectorySeparatorChar);
+			if(!File.Exists(styles_folder+"notif.css") || !File.Exists(styles_folder+"bootstrap.min.css") || !File.Exists(styles_folder+"nano.css")){
+				Console.WriteLine("StylesHandler.cs. Some files does not exists in "+styles_folder+"! Using the default style...");
+				Configurator.Instance.SetValue("skin", "");
+				currentSkin = "";
+			}
+		}
         public HttpResponse Handle(HttpRequest request)
         {
-            var currentSkin = Configurator.Instance.GetValue("skin", "");
-
-            if (currentSkin == "")
-            {
-                return _filehandler.Handle(request);
-            }
-
+            if (currentSkin == "" || currentSkin == "None"){
+				return _filehandler.Handle(request);
+			}
             var file = request.Address.Replace("styles/", "styles/skins/" + currentSkin + "/").TrimStart('/');
             return new HttpResponse(StatusCode.Ok, File.ReadAllText(file.Replace('/', Path.DirectorySeparatorChar)), MimeType.Css);
         }

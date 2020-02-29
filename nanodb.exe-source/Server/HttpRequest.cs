@@ -17,6 +17,7 @@ namespace NServer
     {
         public readonly string Method;
         public readonly string Address;
+        public readonly string Host;
         public readonly Dictionary<string, string> Headers = new Dictionary<string, string>();
         public readonly string Content;
         public readonly HttpConnection Connection;
@@ -31,20 +32,21 @@ namespace NServer
                 return;
             }
 
-            var fls = request.Split(new char[]{ ' ' }, 3);
+            var fls = request.Split(new char[]{ ' ' }, 4);
 
-            if (fls.Length < 2)
+            if (fls.Length < 3)
             {
                 Invalid = true;
                 return;
             }
 
-            Method = fls[0];
-            Address = fls[1];
+            Method 		= 	fls[0];
+            Address 	= 	fls[1];
+            Host 		= 	((fls[3]).Split(new string[]{ "\r\n" }, 2, StringSplitOptions.None))[0];
 
             var heco = request.Split(new string[]{ "\r\n\r\n" }, 2, StringSplitOptions.None);
 
-            if (heco.Length < 2)
+            if (heco.Length < 2)	//DON'T CHANGE THIS VALUE, because params in requests will not be transferred correctly.
             {
                 Invalid = true;
                 return;
@@ -61,6 +63,7 @@ namespace NServer
                 if (hl.Length < 2) continue;
                 Headers[hl[0]] = hl[1];
             }
+//			Console.WriteLine("Method: "+Method+", Address: "+Address+", Host: "+Host+", Content: "+Content+", Invalid: "+Invalid );
         }
     }
 }

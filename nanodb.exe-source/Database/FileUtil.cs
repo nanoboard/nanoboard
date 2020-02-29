@@ -10,7 +10,10 @@ namespace NDB
         /* Appends bytes to the end of file */
         public static int Append(string path, string @string)
         {
-            return Append(path, System.Text.Encoding.UTF8.GetBytes(@string));
+            lock (_lock) //sometimes .db3 file busy by another process, when program try to append string there. lock it.
+            {
+				return Append(path, System.Text.Encoding.UTF8.GetBytes(@string));
+			}
         }
 
         /* Appends bytes to the end of file */

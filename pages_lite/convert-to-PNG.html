@@ -1,0 +1,164 @@
+<meta charset="utf-8">
+	Select custom picture (jpeg, jpg, gif, bmp, png): 
+	<input id="select_image" type="file" accept="image/jpeg,image/jpg,image/gif,image/bmp,image/png">
+	<br>
+	dataURL: <div id="dataURL" style="display: block;"></div>
+	<br>
+	<br>
+	dataURL-string:<br>
+	<textarea id="dataURL_string" cols="50" rows="5"></textarea>
+	
+	<!-- GET-query -->
+	<br><br>SEND, using GET-query (lagging for big pictures):<br>
+	<a id="send_encodeURIComponent_dataURL" href="" onclick="" target="_blank">Make PNG from this picture.</a>
+	<!-- for big files, GET-query with dataURL is lagging, because URL have bytelength limit.-->
+	
+	<!-- USING POST QUERY -->
+	<br><br>Send, using POST-query (not lagging, and big pictures supported):<br>
+	<a id="send_encodeURIComponent_dataURL" href="javascript:void(0)" onclick="send();">Make PNG from this picture.</a>
+	<hr>
+	Or generate PNG:<br>
+	Folder: <input id="folder" type="text" value="download/" readonly="readonly" title="For lite server, all generated images will be saved in 'download'-folder, to let anonymous download it">
+	Width: <input id="width" type="number" value="1920">
+	Height: <input id="height" type="number" value="1080">
+	<input type="button" value="submit" onclick="generate_PNG();">
+	<label id="franctalgen_label" title="Fractalgen disabled. Using random bitmap.">
+		<div id="is_enabled_fractalgen" style="display: inline-block">Random bitmap</div>
+		<input id="franctalgen"type="checkbox" onclick="change_fractalgen()">
+	</label>
+	<hr>
+	Response: <div id="result"></div>
+	
+</form>
+<script>
+var file = document.getElementById('select_image');
+var link = document.getElementById('dataURL');
+var textarea = document.getElementById('dataURL_string');
+var convert_link = document.getElementById('send_encodeURIComponent_dataURL');
+var result_div = document.getElementById('result');
+var folder_input = document.getElementById('folder');
+var width_input = document.getElementById('width');
+var height_input = document.getElementById('height');
+var is_enabled_fractalgen = document.getElementById('is_enabled_fractalgen');
+var franctalgen_label = document.getElementById('franctalgen_label');
+var franctalgen = document.getElementById('franctalgen');
+var d = '|';	//delimiter for params
+
+file.addEventListener('change', function(evt){
+	var f = evt.target.files[0]; 
+	if (f){
+		var r = new FileReader();
+		r.onload = function(e){
+			var dataURL = "";
+
+			dataURL = e.target.result;
+			link.innerHTML = '- (this link is draggable in new tab) <a id="image_as_dataURL" href="'+dataURL+'" target="_blank">'+dataURL.substring(0, 40)+'...'+dataURL.substring(dataURL.length-40, dataURL.length)+'</a>'+
+							//sometimes, dataURL not opening in Google Chrome, so need to open new window, and add dataURL in <img> or <iframe>
+							'<br>- or open it - <a id="dataURL_in_new_window"'+
+								//'href="'+dataURL+'"'+															//this link still draggable in new tab, and dataURL contains in href.
+								'href="javascript:void(0);"'+													//or this dataURL can be not contains in href.
+								'onclick="open_dataURL_in_new_window(\''+dataURL+'\');">'+		//open image in new tab of the browser.
+									'in new window.'+
+							'</a>'
+			;
+			
+			//console.log('image size = '+e.loaded+'bytes');
+			//URL have byte-length limit.	For Google Chrome this is 2MB maximum.
+			if(e.loaded <= 640*1024){	//set this limit as 640KBytes
+				//GET-query
+				convert_link.href = '/api/convert-to-PNG/'+encodeURIComponent(dataURL);		//use encodeURIComponent for to tell dataURL in GET-request
+				convert_link.removeAttribute('onclick');
+				textarea.value = dataURL;
+				textarea.title = "";				
+			}else{
+				convert_link.href = 'javascript:void(0)';
+				convert_link.setAttribute('onclick',"alert('So long value... Use POST-query.');");
+				textarea.value = encodeURIComponent(dataURL);
+				textarea.title = "So long value to display as text...";
+			}
+		};
+		r.readAsDataURL(f);				//read as dataURL...
+	}else 
+	{
+		console.log("failed");
+	}
+});
+
+//XHR POST query
+function send(){
+	var dataURL_string = textarea.value;
+	var folder = folder_input.value;
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", '/api/convert-to-PNG/', true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+	xhr.onreadystatechange = function() {//call function onchange
+		if(xhr.readyState == XMLHttpRequest.DONE && xhr.status == 200) {
+			result_div.innerHTML = xhr.response;	//append responce to result_div.
+		}
+	}
+//	xhr.send(dataURL_string+'|'+folder);	//no have any sense now, for lite-server
+	xhr.send(dataURL_string);	//save to "download"-folder, as predefined default folder, and return the link.
+}
+
+function change_fractalgen(){
+	if(franctalgen.checked){
+		franctalgen_label.title = "Fractalgen - enabled. Fractal will be generated.";
+		is_enabled_fractalgen.innerHTML = "Using fractalgen";
+	}else{
+		franctalgen_label.title = "Fractalgen - disabled. Using random bitmap.";
+		is_enabled_fractalgen.innerHTML = "Random bitmap";
+	}
+}
+change_fractalgen();
+
+function generate_PNG(){
+	var folder = folder_input.value;
+	var width = width_input.value;
+	var height = height_input.value;
+	
+	var xhr = new XMLHttpRequest();
+	xhr.open("POST", '/api/convert-to-PNG/', true);
+	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+	xhr.onreadystatechange = function() {//call function onchange
+		if(xhr.readyState == XMLHttpRequest.DONE && xhr.status == 200) {
+			result_div.innerHTML = xhr.response;	//append responce to result_div.
+		}
+	}
+	if(franctalgen.checked){																					//generate PNG, using fractalgen
+		//var generate_PNG_params = 'generate_PNG'	+d	+'fractalgen'	+d	+width	+d	+height;				//without folder, near program. 
+		//var generate_PNG_params = 'generate_PNG'	+d	+'fractalgen'	+d	+folder +d	+width	+d	+height;	//Now, have no any sense for lite-server.
+		var generate_PNG_params = 'generate_PNG'	+d	+'fractalgen' +d	+width	+d	+height;	//in the folder
+	}
+	else{																										//just generate random bitmap
+		//var generate_PNG_params = 'generate_PNG'	+d	+width	+d	+height;									//without folder, near program.
+//		var generate_PNG_params = 'generate_PNG'	+d	+folder	+d	+width	+d	+height;						//now, this have no any sense for lite-server.
+		var generate_PNG_params = 'generate_PNG'	+d	+folder	+d	+width	+d	+height;						//in the folder
+	}
+	xhr.send(generate_PNG_params);																				//without encoding
+	//xhr.send(encodeURIComponent(generate_PNG_params));														//encodeURIComponent for parameters
+}
+
+/**
+ * Display a base64 URL inside an iframe in another window.
+ */
+function open_dataURL_in_new_window(base64URL){
+	
+//	var string = doc.output('datauristring');
+//	var iframe = 	"<iframe width='100%' height='100%' src='" + string + "'></iframe>"
+
+//	var iframe = 	'<iframe src="' + base64URL  + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>';
+
+	var iframe = 	//'<br><br>dataURL as text:<br><textarea style="width: 100%" rows="3">'+base64URL+'</textarea>'+
+					'<br><br>Image is draggable in new tab:<br><img src="'+base64URL+'" />'
+	;
+
+	var win = window.open();
+	win.document.open();
+	win.document.write(iframe);
+	win.document.close();	
+}
+
+
+</script>

@@ -15,6 +15,9 @@ namespace NDB
         */
         public static string FromB64(this string s)
         {
+			if(s == "" || s == null){
+				return "PostValidator.cs. FromB64. Source string is empty or null.";
+			}
             return Encoding.UTF8.GetString(Convert.FromBase64String(s));
         }
 

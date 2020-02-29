@@ -44,17 +44,28 @@ namespace NServer
 
         public string GetValue(string key, string defaultValue)
         {
-            if (_keyValues.ContainsKey(key)) 
-                return _keyValues[key];
+//			Console.WriteLine("Configurator.cs. GetValue.");
+            if (_keyValues.ContainsKey(key)){
+//				Console.WriteLine("GetValue: key = "+key+", defaultValue = "+defaultValue+", value = "+_keyValues[key]);
+                return _keyValues[key];	
+			}
+//            Console.WriteLine("Configurator.cs. GetValue run SetValue...");
             SetValue(key, defaultValue);
             return defaultValue;
         }
 
         public void SetValue(string key, string value)
         {
+			if(value == null){
+				Console.WriteLine("Configurator.cs. SetValue. key = "+key+", value = "+value+". Value must not be NULL. return.");
+				return;
+			}
+//			Console.WriteLine("SetValue: key = "+key+", value = "+value);
+//			Console.WriteLine("JsonConvert.SerializeObject(_keyValues, Formatting.Indented) = "+JsonConvert.SerializeObject(_keyValues, Formatting.Indented));
             _keyValues[key] = value;
             var config = JsonConvert.SerializeObject(_keyValues, Formatting.Indented);
             File.WriteAllText(ConfigFileName, config);
+			if(key == "skin"){NServer.StylesHandler.Update_currentSkin();}
         }
     }
 }

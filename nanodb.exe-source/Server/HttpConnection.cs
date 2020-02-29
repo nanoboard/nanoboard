@@ -33,11 +33,16 @@ namespace NServer
         }
 
         public void Response(HttpResponse response)
-        {
-            if (response.IsBinary)
-                _binaryCallback(response.GetResponse(), response.GetBinaryContent());
-            else
-                _callback(response.GetResponse(), response.GetContent());
-        }
+		{
+			if(response == null){
+				Console.WriteLine("HttpConnection.cs. response is null, return...");
+				return;
+			}
+			if (response.IsBinary){
+				_binaryCallback(response.GetResponse(), response.GetBinaryContent());
+			}else{
+				_callback(response.GetResponse(), response.GetContent());
+			}
+		}
     }
 }

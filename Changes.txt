@@ -1092,6 +1092,932 @@ Add two files:
 
 That's all.
 _____________________________________________________________________
+(29.02.2019)  82 files is different. Changed 45 files, added 37 files, 3 files was been deleted - in 14 folders.
+Short changes:
+1. Add lite-server to sharing and hosting the nanoboard. Now this listening on port 7347 (by defalt).
+	-	To disable this - run "nanodb.exe old". See Program.cs source code.
+	-	Both servers (full-server and lite-server) can working parallel, and accepting the different clients - independent.
+	-	Now, is possible to host nanoboard to make able this online for another anonymous users.
+	-	Hosting can be in TOR, on onion-domain, without any abuses.
+		How to host nanoboard in TOR?
+			1. 	Generate onion keypair,
+					or find the best RSA privkey for nice onion-domains,
+					by using Garlic https://github.com/Artifact0/Garlic
+			2.	Download TorBrowser.
+			3.	Add two strings in "torrc":
+					HiddenServiceDir "HiddenServiceDir "C:\\folder_to_onion_domain_and_key\\nboardn46ay6ycdi.onion"	#folder with two files: "hostname" and "private_key" (RSA private key), generaged by garlic: https://garlic7ravilyupx.onion.ly
+					HiddenServicePort 80 127.0.0.1:7347
+			4. 	Restart TorBrowser.
+			5.	Start nanodb.exe.
+			6. Go to your onion-site.
+	-	Posting - is allowed on lite-server. Captcha is working.
+	-	Deletion of posts - is allowed locally (deleted_once and deleted_forever posts hashes saved in LocalStorage).
+	-	Added report reason, after first delete on lite-server (max length = 64 symbols, and this is hardcoded, to make substring).
+	-	lite-server cann't change parameters on server.
+			Some API calls was been disabled. Only places is available and localstorage arrays. Some functions was been commented.
+	-	different API for this server - was been added.
+
+2.	Full-server changes:
+		- Add file to see reports on full-server /pages/show_reports.html.
+			There is possible to see all posts with reports (sorted by number of reports),
+			make post "delete_once", make post "delete_forever", delete all reports, or and undelete post, which was been "deleted_once".
+		- Now the link of reports is available, when reports exists in the folder "/reports/post_hash.txt",
+			because when "post_is_reported" hash of this post contains in array, returned at beginning of loading index.html on full-server,
+			So, mark repoted posts and when "post_was_deleted".
+		- Add ability to undelete all posts, which was been "deleted_once".
+			Now this not filled by nulls in database, and can be recovered by click the button "Undelete".
+		- Posts which was been "deleted_once", are available only on full-server. Searching is available. Replies is available too.
+		- Posts which was been "deleted_once", are not available on lite-server.
+		- Fix deletion of the posts, and loading deleted posts.
+		- Fix large response from the server, by writting bytearray in TCP-NetworkStream block-by-block. See changes in TcpClient.cs.
+		- Fix uploading posts from JSON of large POST-requests on "/api/upload-posts/". Add two modes to uploading posts from parsed JSON:
+			1. 	Old mode0: 		"nanodb.exe large_POST_mode0" 	- previous mode, uploading JSON, after reading TCP-stream. This return OutOfMemoryException for large JSON.
+			2. 	Default mode1:	"nanodb large_POST_mode1" 		- uploading posts post-by-post, from readData-string,
+																	by parse JSON from the block of this string,
+																	and call UploadPost for each post, which was been foud in this string,
+																	while TCP-NetworkStream is reading from client.
+			3.	Caching mode2:	"nanodb lite large_POST_mode2"	- cache large data of POST-request, and UploadPost post-by-post, from this cache-file, after save this,
+																	because client can be disconnected at any time, without get response.
+			Warning!
+				Now, ALL posts can be downloaded and uploaded, using requests to lite-server, and databases can be synchronized by this way.
+				Now nanoboard can be p2p board, if DHT and peer-exchange, can be injected.
+				See http://127.0.0.1:7346/pages/TEST_download-upload-posts.html and the source code of \pages\TEST_download-upload-posts.html
+
+		- Rewrite DbApiHandler.cs to get parameters on API by GET and POST-requests. If large parameters transferred in GET-query, encodeURIComponent used for this params.
+		- NotificationHandler.cs - add three modes for notifs,
+			"notif_mode0" - old mode (empty response for each request, or notif)
+			"notif_mode1" - new mode wait notif and return this from recursive function, which is suspend thread, to resume this by timer.
+			"notif_mode2" - new mode wait async function which is delegate return value from recursive function in another thread. This seems, like working faster.
+			This modes can be specified, as parameter to run nanodb.exe
+		- 	Add caching the results of GetReplies, in PostDb.cs, to reduce data comparison operations. Add lock in GetReplies, and in Post.cs - date. Rewrite this method, add comments.
+		-	The folder "/download" can be available on lite-server. Pathways for files - was been fixed.
+			For example (TorBrowser): http://nboardn46ay6ycdi.onion/download/
+			From web: http://nboardn46ay6ycdi.onion.ly/download/
+			There can be possible to make "collect PNG", with saving the images, and share this then. Also, there is available captcha.nbc to downloading.
+		-	DbApiHandler.cs. Now generate PNG is available on lite-server. See /pages/convert-to-PNG.html.
+			Files can be saved in "/download"-folder, and will be available to download it.
+			In future, need to realize temporary storage of this file, to prevent DDoS-attack, and some StackOverFlowExceptions/OutOfMemoryExceptions, etc...
+		-	DbApiHandler.cs, NbPack.cs, HttpServerBuilder.cs, HttpServer.cs - save files by requests on lite-server in "download/created", "download/generated" - folder,
+			to be able to download this on lite-server.
+			Delete this file after timeout, which can be changed by running nanodb with parameter lite_images_timeout1800000, where 1800000 - milliseconds to save temporary files, and delete this, then.
+		-	Enable "Create PNG"-button, on lite-server. Now notifs about packed posts not added to the queue, and return as HttpResponse for HttpRequest on "../api/png-create".
+		-	Now, is possible to disable all notifications for lite-server to prevent DDoS-attack the lite-server, by sending many requests on '/notif'.
+		-	Add bypassValidation and allowReput, as parameters to run nanodb. See compile.bat source code.
+			Now is possible to make posting without captcha, when bypassValidation = true, upload posts and add many posts.
+			Disable error about invalid captcha, when bypassValidation == true, and allow add post without captchs.
+			Posts will be added without pow and sign tags, in this case. See changes in reply.js and DbApiHandler.cs
+			Warning! In this case is growing the risk of spam and wipes! Deleted posts (including spam/wipe posts, can be re-added, if allowReput = true)!
+		-	Change version from 3.2 to 3.3.
+		-	Add files /pages/Upload_posts_from_JSON_file.html and /pages_lite/Upload_posts_from_JSON_file.html to upload posts on the remote-server from JSON-file.
+		-	Add new method ReadRefs_private(). Read references if this was been changed, and Flush() database every time, after collectPNG, after uploading posts, after downloading posts.
+		-	Run nanodb after compilation by default, or disable this, or just run with parameters. See changed in compile.bat.
+		-	Run PutPost with parameters allowReput and bypassValidatin, predefined/changed globally.
+		-	Add lock in some places.
+		-	Add separate dictionary "hash" -> DateTime in PostDb.cs, to sort indexes, and Last Posts by DateTime.
+			Save this dictionary to file datetime_by_hash.json, if this was been changed. Do this every time, when Flush() or ReadRefs() runned.
+
+3. Test version of lite-server you can find here: http://nboardn46ay6ycdi.onion/
+	Posting is available, by using TorBrowser. Server is unstable, and can go shut-down at any time, but as concept - this is working!
+_____________________________________________________________________
+
+Full changes and additions.
+	Removed files:
+	
+	Total:												(+37 files added, 45 files changed = 82 files in difference, in 14 folders, 3 files was been deleted.)
+
+	\													(2 files changed)
+		\nanodb.exe					- regenerated, after recompilation.
+		\Changes.txt				- Lines 1095 - 2020 - add this text with changes, in this file.
+
+	\download\created\											(+1 files added, temp_file_to_create_directory.txt)
+	\download\generated\										(+1 files added, temp_file_to_create_directory.txt)
+	\pages_lite\												(+10 files added)
+	\reports\													(+1 files added, temp_file_to_create_directory.txt)
+	\scripts_lite\												(+21 files added)
+	\temp\														(+1 files added, temp_file_to_create_directory.txt)
+		Add this folders for lite-server.
+
+	\nanodb.exe-source\											(26 files changed, 2 files deleted)
+		\start_compile.bat:
+			Line	13			:	start compile.bat %1 - start compile.bat with first command-line argument
+									Now is possible to run "start_compile.bat run"(to just run nanodb, with parameters, inside),
+									or "start_compile.bat compile" to just compile, without running,
+									or "start_compile.bat" (by default, to compile and run nanodb.exe, automatically);
+		
+		\compile.bat:
+			Lines	1	-	3	:	Add code to compare first command-line argument with string "run". If "run", then goto ":just_run"
+			Line	4			:	Add comment.
+			Lines	5	-	6	:	Set the current pathway to msbuild.exe in the variable %msbuild%
+			Line	8			:	Add comment.
+			Line	11			:	Use %msbuild% to compiling nanodb.exe
+			Line	14			:	Use %msbuild% to compiling nanodb.exe
+			Line	17			:	Use %msbuild% to compiling nanodb.exe
+			Line	20			:	Use %msbuild% to compiling nanodb.exe
+			Line	22			:	Use %msbuild% to compiling nanodb.exe
+			Lines	76	-	79	:	Write updated version.txt to "\pages_lite\"-folder too.
+			Lines	81	-	82	:	Add commented goto ":end", if no need to run. goto ":end", if compile argument specified (means compile only, without running).
+			Lines	85	-	86	:	Add ":just_run", to run nanodb with parameters, after compilation
+			Lines	88	-	98	:	Auto-run nanodb.exe, with parameters, after compilation. Add parameter lite_images_timeout1800000 to store temporary files not more than 30 minutes (1800000 milliseconds);
+			Lines	99	-	100	:	Add commented test command to run nanodb with allowReput and bypassValidation.
+									In this case there is possible to make posting without captcha, and re-adding the deleted posts.
+									But be careful! In this mode is growing the risk of wipes and spam, by using scripts and bots! This posts cann't be deleted and can be added again and again!
+			Lines	102	-	105	:	Add ":end", to just pause and close window, without running nanodb, after compilation.
+		
+		\Program.cs
+			Lines	16	-	80	:	Main.	Rewrite this method.
+			Line	17			:		Main.	Add try-catch.
+			Lines	18	-	19	:		Main.	Add default argument "bool lite_server = true" (true by default, Run "nanodb old" to disable it.) and commented default value = false.
+			Line	20			:		Main.	Add string large_POST_mode and set this in "1" (read large data from POST-request from TCP-stream, and uploadposts from parsed JSON).
+			Lines	21	-	23	:		Main.	Add string notif_mode and set this in "2" (use EAP - Event-based Asynchronous Pattern) + add comments.
+			Line	24			:		Main.	Add bool allowReput = false; bool bypassValidation		=	false; To enable this, just run nanodb with argument: "allowReput", and "bypassValidation"
+			Lines	25	-	63	:		Main.	parse arguments.
+												Add commented Console.Writeline at line 26, to show args values.
+												Add cycle to parse arguments, and set lite_server variable true or false by some keywords, in arrays string[]{"word1", "word2", "etc..."}
+												Use this two strings-arrays with keywords to enable-disable lite-server.
+			Lines	53	-	57	:		Main.	Add else if, to set UploadPosts mode. See changes in \Server\TcpClient.cs.
+			Lines	58	-	61	:		Main.	Add else if, "allowReput" to set allowReput = true, and else if "bypassValidation", to set bypassValidation = true mode. Add else if to set notif_mode mode. See changes in \Server\NotificationHandler.cs.
+			Line	62			:		Main.	Add else if, to set lite_images_timeout in milliseconds, to save temporary files in "download/created" and "download/generated"-folders not more than this timelimit, then auto-delete this files.
+			Line	72			:		Main.	Create instance of new PostDb(allowReput), with using predefined earlier or default value of bool allowReput;
+			Line	74			:		Main.	Run HttpServerBuilder(db).Build() with parameter lite_server (true/false), to enable or disable lite-server, large_POST_mode, notif_mode, allowReput and bypassValidation.
+			Lines	77	-	79	:		Main.	End try-catch. catch.
+			Line	80			:	Main.	End modifications of this method.
+
+		\Captcha\ByteStringExt.cs
+			Lines	27	-	47	:	Bytify.		Rewrite this method to fix throw exception, when byte.Parse try to parse some text after signature.	
+			Lines	29	-	32	:		Bytify.		Add comments and take signature value in sign_value, because sometimes, I saw posts with text, after signature.
+			Lines	34	-	44	:		Bytify.		Working with sign_value. Add try-catch, return 0 on catch.
+			Lines	47			:	Bytify.		End modifications of this method.
+
+		\Captcha\Captcha.cs
+			Line	54			:	Add public static bool bypassValidation = false; to turn this to true, from HttpServerBuilder.cs
+			Line	197			:	verify_captcha_hash. Unescape Captcha.captcha_downloading_url, because encodeURIComponent() used to store this in config-3.json.
+			Line	365			:	Just add test commented string with Console.WriteLine, to see hash and check is there possible any collisions in post hashes.
+			
+		\Captcha\PostSignatureExt.cs
+			Lines	25	-	26	:	Signature.	Set specified typization, because var, sometimes, is working incorrectly...
+		
+		\Database\FileUtil.cs
+			Lines	13	-	16	:	Append(string path, string @string).	Lock database file, while program writting string there, because sometimes there is a catch exception.
+
+		\Database\Post.cs
+			Lines	13	-	17	:	Add IClonable interface, to make Post IClonable.
+			Line	19			:	Add IClonable to the Post class.
+			Line	30			:	Add lock object _lock, to lock variables when post.date processing.
+			Lines	32	-	76	:	public DateTime date. 		Rewrite this method
+			Line	34			:		public DateTime date. 		Add comment
+			Line	36			:		public DateTime date. 		Add lock
+			Line	37			:		public DateTime date. 		Define defalt DateTime with value "01.01.0001 0:00:00"
+			Lines	39	-	64	:		public DateTime date. 		Try to extract datetime from post message, from [g][/g]-tag. Add comments. Make this compatible with date-time on Karasiq nanoboard.
+			Lines	65	-	71	:		public DateTime date. 		Add tryparse in try-catch.
+			Lines	73			:		public DateTime date. 		return extracted DateTime, or pre-defined - default value.
+			Line	74			:		public DateTime date. 		end lock
+			Line	76			:	public DateTime date. 		End modifications of this method.
+			Lines	93	-	103	:	Add method Clone to make deep-copy of Post, using IClonable interface. Now, this can be called as post.Clone();
+	
+		\Database\PostDb.cs
+			Lines	372, 458, 501, 502, 519, 607, 608, 625, 678, 693, 745 - add the param, Formatting.Indented, to write formatting JSON, but leave this commented.
+			Line	16			:	rewrite comment in comparer. This was been added to see how often this is running.
+			Lines	32	-	58	:	Add and change the block of following lines:
+			Line	32			:	Just use string "post_was_deleted", without encode this to base64.
+			Line	33			:	Define the string "post_is_reported", to add this text to reported posts (commented line).
+			Lines	34	-	40	:	Add tabs to the comments.
+			Lines	42	-	44	:	Make this dictionaries private. Add tabs to the coments.
+			Line	45			:	Make this dictionary private. Change in comment "deleted_forever" to "post_was_deleted_forever".
+			Lines	46	-	49	:	Make this dictionaries private. Make lock object private. Add tabs to the coments.
+			Line	48			:	Add public hash_DateTime to save and get DateTime of post by hash, and don't use that function post.date from Post.cs. Also this need to sort _refs and rewrite index-3.json, because from order of records there, depending the order of "Last Posts"
+			Line	51			:	Add dictionary _reported which contains list of reports by post hash. Make this private.
+			Lines	52			:	Add dictionary _GetReplies_cache_list to cache GetReplies results. Make this private.
+			Lines	53			:	Add public static bool allowReput = false; to turn this true, if need to allowReput.
+			Lines	54	-	58	:	Just add the comment with conditions of 4 cases posts in DataBase.
+			Line	60			:	PostDb. Add bool EnableAllowReput = false as parameter for creating instance of this, once.
+			Line	61			:	PostDb. set public static bool allowReput = EnableAllowReput; when instance of NDB.PostDb created in Program.cs, after parsing command-line arguments.
+			Line	97			:	Create empty dictionary _GetReplies_cache_list
+			Line	99			:	Create new dictionary _reported with empty list of reports.
+			Line	110			:	PostDb. Run PutPost with predefined earlier the allowReput value, for default posts, after initialization PostDb object.
+			Lines	169	-	196	:	AddDbRef. 		Rewrite this method.
+			Lines	171	-	175	:		AddDbRef. 		Return if r.hash already contains in DataBase, in _refs, or add this reference to _refs.
+			Line	177			:		AddDbRef.		Change r.replyTo!="deleted_forever" to !r.file.StartsWith("post_was_deleted_forever,")
+			Lines	179	-	180	:		AddDbRef. 		Replace (r.replyTo=="deleted_forever") r.file.StartsWith("post_was_deleted_forever,")
+			Lines	177	-	184	:		AddDbRef. 		Add to _deleted, if category/post/thread was been "deleted_once",
+														or add to _free, if post/category/thread was been "deleted_forever", and return.
+			Lines	186	-	195	:		AddDbRef. 		Add to list of replies and to _ordered, included "deleted_once"-posts.
+			Line	196			:	AddDbRef. 		End modifications of this method.
+			Lines	203	-	236	:	UpdateDbRef.	Rewrite this method.
+			Lines	205	-	207	:		UpdateDbRef.	Remove from _deleted, if not deleted.
+			Lines	208	-	216	:		UpdateDbRef.	For "deleted_forever", add this to _free, and remove from _deleted, if contains there.
+			Lines	208			:		UpdateDbRef. 		Replace (r.replyTo=="deleted_forever") r.file.StartsWith("post_was_deleted_forever,")
+			Line	217			:		UpdateDbRef. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Lines	217	-	233	:		UpdateDbRef.	If not "deleted_forever", add to _replies and _ordered, including "deleted_once".
+			Line	235			:		UpdateDbRef.	Update DbRef in _refs by hash, or add this.
+			Lines	236			:	UpdateDbRef.	End modifications of this method.
+			Lines	238	-	322	:	ReadRefs. 		Rewrite this method
+			Line	241			:		ReadRefs.		Just add comment.
+			Line	243			:		ReadRefs.		Add lock
+			Lines	265	-	266	:		ReadRefs.		Add temporary dictionary to save only unique diff values.
+			Lines	267	-	269	:		ReadRefs.		Don't add posts "deleted_forever" in _free and do not remove this from _refs.
+			Lines	273	-	276	:		ReadRefs.		Add only unique last diff values from temporary dictionary.
+			Line	278			:		ReadRefs.		Add comment.
+			Lines	284	-	319	:		ReadRefs.		Create folder "reports" if does not exists, else get list of files, and add reasons of reports in _reported.
+			Line	307			:		ReadRefs.		Add regexp to check is post hash hex value with 32 symbols or not, if yes - add, else - no.
+			Line	321			:		ReadRefs.		End lock, after Flush();
+			Line	322			:	ReadRefs.		End modifications of this method.
+			Line	323			:	ReadRefs_private.	Add this public method to don't make ReadRefs public,
+														but run this from Aggregator.cs, after PNG-Collect, and TcpServer.cs after UploadPost from JSON.
+														Now, ReadRefs can be runned as nbpack.NBPackMain.PostDatabase.ReadRefs_private();
+														After readRefs, Flush(); will be processed too;
+			Lines	340	-	346	:	Modify RangePresent method.
+												Add bool append_text to show deleted //and reported posts (commented),
+												and bool show_deleted to show deleted posts, and edit returned value.
+			Lines	348	-	386	:	Add RangePresent_string method, to return hashes of posts with_byte_length.
+										Add bool show_deleted, to append text in message of "deleted_once" posts.
+										Rewrite previous method at lines 352, 361, 379 - to show deleted posts.
+										Change text-param value from request - from "with_bytelength" to "hashes_with_bytelength".
+			Lines	388	-	402	:	Add method.		Update_GetReplies_cache, to add in _GetReplies_cache_list new post with hash when PutPost or ReputPost return true.
+			Lines	405	-	528	:	ReputPost.		Rewrite this method.
+			Line	405			:		ReputPost.		Just add comment.
+			Line	407			:		ReputPost.		Add try-catch. try
+			Line	408	-	409	:		ReputPost.		lock. Add comment about lock.
+			Lines	410	-	427	:		ReputPost.		Create new DbReference record, add comment about format of this,
+														create this if this does not exists, else check post message, try to repair this reference or and return.
+			Line	413			:		ReputPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment. Exclude "post_was_deleted_forever"-posts, because GetPost return null for this posts.
+			Lines	428	-	446	:		ReputPost.		Set properties r.length and r.deleted (if this not exists - false by default), and add r to DataBase.
+			Line	428			:		ReputPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Line	433			:		ReputPost.		If post was been delete_forever, and this is in _refs, use offset of this to write there, or Append data in the end of file, and use this offset than.
+			Lines	448	-	449	:		ReputPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comments.
+			Line	451			:		ReputPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Line	452			:		ReputPost. 		If "post_was_deleted_forever" not been overwritted, length not 0,
+														and there is null-bytes in all length of this, write data in offset of this post.
+														Else - append data to end of file, and use new offset.
+			Line	453			:		ReputPost. 		UpdateDbRef for "deleted_forever"-post, instead try to add it,
+														because AddDbRef not add refs, which is already contains in _refs, and "deleted_forever posts" contains in _refs, and in _free.
+			Lines	448	-	463	:		ReputPost.		Try to reput "deleted_forever" posts.
+			Lines	465	-	509	:		ReputPost.		Try to write post in empty space of "deleted_forever" posts, where space was been nulled by null-bytes.
+			Line	465			:		ReputPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Line	469			:		ReputPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Line	471			:		ReputPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Lines	475	-	484	:		ReputPost. 		Add comments.
+			Line	475			:		ReputPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Lines	488	-	490	:		ReputPost. 		Add comments.
+			Lines	491	-	493	:		ReputPost. 		extract filename from "post_was_deleted_forever", write post in this file, and save file for post-reference.
+			Lines	494	-	495	:		ReputPost. 		Do not null filename for "post_was_deleted_forever", and just set 0 in best.offset.
+			Lines	497	-	504	:		ReputPost. 		Add db reference and write diff-file.
+			Lines	510	-	522	:		ReputPost.		Update reference record, add it to DataBase, write differences in diff-file, and return true.
+			Line	523			:		ReputPost.		End lock.
+			Lines	524	-	527	:		ReputPost.		End try-catch. catch.
+			Line	528			:	ReputPost.		End modifications of this method.
+			Lines	532	-	635	:	PutPost.		Rewrite this method.
+			Line	532			:		PutPost.		Add comment about default parameters.
+			Line	534			:		PutPost.		Add try-catch. try.
+			Line	535			:		PutPost.		Change sleep-timeout to 1 millisecond, when PutPostBusy = true;
+			Lines	546	-	556	:		PutPost.		Don't skip all existing posts, not "deleted_once", and skip all existing posts,
+														including "deleted_once" and "deleted_forever",	if allowReput = false;
+														or try to reput it, by running ReputPost method.
+			Line	548			:		PutPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Line	551			:		PutPost. 		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Lines	589	-	615	:		PutPost. 		Add comments.
+			Lines	596	-	598	:		PutPost. 		extract filename from "post_was_deleted_forever", write post in this file, and save file for post-reference.
+			Lines	599	-	600	:		PutPost. 		Do not null filename for "post_was_deleted_forever", and just set 0 in best.offset.
+			Lines	602	-	610	:		PutPost. 		Add db reference and write diff-file.
+			Line	613			:		PutPost. 		Update_GetReplies_Cache, by adding new post there.
+			Lines	558	-	564	:		PutPost.		Add comments.
+			Lines	566	-	615	:		PutPost.		Try to write post in empty space of deleted_forever posts, where this space was been nulled by null-bytes.
+			Lines	617	-	626	:		PutPost.		Or just append in the end of file.
+			Lines	628	-	630	:		PutPost.		Turn off PutPostBusy, Update_GetReplies_cache, and return true;
+			Lines	631	-	634	:		PutPost.		End try-catch.
+			Line	632			:	PutPost.		End modifications of this method.
+			Lines	637	-	702	:	DeletePost.		Rewrite this method.
+			Line	644			:		DeletePost.		Add show Console.WriteLine, when post cann't be deleted.
+			Line	645			:		DeletePost.		Add comment.
+			Line	668			:		DeletePost.		Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Line	670			:		DeletePost.		Add "post_was_deleted_forever," to database filename to mark this post as "post_was_deleted_forever"
+			Line	673			:		DeletePost.		Do not null db-filename.
+			Lines	647	-	701	:		DeletePost.		When post "deleted_forever" after "deleted_once",
+														remove this from _rrefs (replies), remove from _deleted, from _ordered, from _cache,
+														add to _free, fill by null-bytes the space of this post in database file,
+														set post.length = 0, 
+														don't remove from _refs, and remove all reports for this post, if this exists.
+			Lines	687	-	701	:		DeletePost.		Else - just make post "deleted_once". Mark this as deleted, add to _deleted, and modify post.message in cache.
+			Line	702			:	DeletePost.		End modifications of this method.
+			Lines	704	-	813	:	Add methods:
+														UndeletePost (undelete "deleted_once" post),
+														ReportPost (to report the current post from lite-server),
+														GetReports (return hashes of reported posts, separated with comma),
+												and 	DeleteReportsForPostHash (to delete all reports).
+			Lines	815	-	868	:	GetPost.			Rewrite this method.
+			Line	820			:		GetPost.			Add bool appendText to append text to message "post_was_deleted" // or/and "post_is_reported" (commented).
+			Lines	823	-	835	:		GetPost.			Add figure brackets + test Console.WriteLines. if (!_refs.ContainsKey(hash) || _free.Contains(hash)) - return null, when post is deleted_forever.
+			Lines	482	-	844	:		GetPost.			Append text "post was deleted", for post.message, as text, //and "post_is_reported" for reported posts (commented)
+			Lines	846	-	859	:		GetPost.			Remove records from _cache if this exists there, and add _lock.
+			Lines	861	-	867	:		GetPost.			Return posts with appended text or not, if argument (bool)appendText true/false.
+			Line	868			:	GetPost.			End modifications of this method.
+			Lines	884,	907	:	GetLastNAnswers.	Add bool appendText = false(by default). Run GetPost with appendText value, to get post with appended text, or not.
+			Line	927			:	GetLastNAnswers.	return DateTime from hash_DateTime[a.hash] to don't run that method from Post.cs, or calculate it, add this, and then return from this.			
+			Lines	935	-	1077	:	GetReplies.			Rewrite this method.
+			Lines	935	-	941		:		GetReplies.			Add comment.
+			Line	942				:		GetReplies.			Add bool appendText as argument, with default value = false.
+			Line	944				:		GetReplies.			Add lock.
+			Lines	947	-	953		:		GetReplies.			Return result from cache _GetReplies_cache_list, if already exists.
+			Lines	955	-	957		:		GetReplies.			Return empty post if post not have any replies, or if this was been "deleted_forever".
+			Lines	959	-	964		:		GetReplies.			Or load posts with replies from _rrefs, and get this posts as array Post[].
+			Line	964				:		GetReplies.			Replace "deleted_forever" to "post_was_deleted_forever" in comment.
+			Lines	966	-	1000	:		GetReplies.			If this was been category, sort by date of last reply, and reverse the array with categories.
+			Line	978				:		GetReplies.			Add a.date to hash_DateTime[a.hash], if not found.
+			Line	981				:		GetReplies.			Return hash_DateTime[a.hash], when this already exists, to don't run again, that method Date in Post.cs.
+			Lines	1001	-	1031:		GetReplies.			Else, sort by date without reverse.
+			Line	1008			:		GetReplies.			Add a.date to hash_DateTime[a.hash], if not found.
+			Line	1011			:		GetReplies.			Return hash_DateTime[a.hash], when this already exists, to don't run again, that method Date in Post.cs.
+			Lines	1033	-	1066:		GetReplies.			Test code to show results (commented). Add lock there.
+			Lines	1068	-	1074:		GetReplies.			Add results in cache _GetReplies_cache_list if this does not exists there.
+			Line	1075			:		GetReplies.			return replies, sorted by date of each posts.
+			Line	1076			:		GetReplies.			End lock.
+			Line	1077			:	GetReplies.			End modifications of this method. Remove old commented code.
+			Line	1084	-	1087:	Flush.				Add four lines to read dictionary hash_DateTime from json-file, "datetime_by_hash.json",
+															sort _refs by dates in this dictionary, and re-write index-3.json according the order of sorted _refs.
+															Also, write datetime_by_hash.json from hash_DateTime, if this will have count over than readed.
+			Line	1119			:	Flush.				Add lock.
+			Line	1122			:	Flush.				End lock.
+			Lines	1137	-	1204:	DownloadPosts.		Rewrite this method.
+			Lines	1137			:		DownloadPosts.		Add optional parameters bool allowReput = false, and bool bypassValidation = false.
+			Lines	1193			:		DownloadPosts.		Use the values of this parameters for try to make PutPost.
+			Lines	1199			:		DownloadPosts.		Run ReadRefs and Flush() then, after DownloadPosts.
+			Line	1204			:	DownloadPosts.		Rewrite this method.
+			Lines	1206	-	1241:	UploadPosts.		End modifications of this method. 
+			Line	1208			:		UploadPosts.		Now this return array with two ints - accepted posts, and uploaded posts.
+																Add optional parameters bool allowReput = false and bool bypassValidation = false;
+			Line	1210			:		UploadPosts.		Show number of posts for uploading at beginning uploading this to Db from JSON-array.
+			Line	1214			:		UploadPosts.		Do not uploading, while downloading posts still is processing.
+			Lines	1220	-	1226:		UploadPosts.		Add int posts_added to increment this when bool added = PutPost is true, and do this in cycle. Use bypassValidation for PutPost (if specified, or default).
+			Lines	1227	-	1235:		UploadPosts.		Edit Console.WriteLine result to show statistics.
+			Line	1223			:		UploadPosts.		Use allowReput and bypassValidation values for PutPost, and this is predefined globally, or default.
+			Line	1236			:		UploadPosts.		Run ReadRefs and Flush() then, after UploadPosts.
+			Line	1240			:		UploadPosts.		Return array with two int - accepted posts and uploaded posts.
+			Line	1241			:	UploadPosts.		End modifications of this method. Remove old commented code.
+			Lines	1243	-	1266:	Add method bool UploadPost, to upload single post as JSON in POST-request,
+										by using javascripts retranslate.js, onAdd.js, and \pages\TEST_download-upload-posts.html
+										This method return bool (true/false) for each post,
+										and this is using in TcpClient.cs to UploadPosts one-by-one from TCP-stream
+										or from potential damaged JSON, cached in cache-file.
+										Add optional parameters allowReput and bypassValidation, there, and use this values for PutPost.
+										Now, with this method, retranslation is possible, by using TorNetwork.
+										Special method was been added in DbApiHandler.cs: see "upload-post",
+										URL for _instantRetranslation is "../api/upload-post/".
+										For example:
+											http://nboardn46ay6ycdi.onion/api/upload-post/
+											http://nboardn46ay6ycdi.onion.ly/api/upload-post/
+
+		\Database\PostsValidator.cs
+			Lines	18	-	20	:		FromB64.	If source string is empty - return string with error.		
+
+(-)		\PngTransport\copy_Aggregator.cs	- delete this unused file.
+
+(-)		\PngTransport\copy_WebClientX.cs	- delete this unused file.
+
+		\PngTransport\Aggregator.cs
+			Line	120			:	Run nbpack.NBPackMain.PostDatabase.ReadRefs_private(); to update DbRefs and Flush changes, after PNG-Collect, and adding posts in Database.
+			Line	136			:	set do_not_save_and_do_not_delete to true, by default, to don't delete any file from "./download/folder"
+			Line	138			:	Add private static bool	bypassValidation = false; or true, if this will be specified, in parameters to start Aggregator.
+			Lines	182	-	193	:	Just add try-catch.
+			Lines	199	-	210	:	Just add try-catch.
+			Lines	216	-	227	:	Just add try-catch.
+			Line	254			:	Turn this to false, only when need to delete_files, and when "delete_files"-flag specified in "PNG Collect"-request to "./api/png-collect".
+			Line	259			:	Set nbpack.NBPackMain.allowReput and nbpack.NBPackMain.bypassValidation = true;
+									if "allowReput" or "bypassValidation" strings was been specified as parameter to start Aggregator,
+									and was been appended in PngCreate in DbApiHandler.cs.
+			Lines	272	-	289	:	Don't comment this strings, but add description there. This block will not working, while do_not_save_and_do_not_delete = true;
+			Line	515			:	AddProxy.	change proxy_index>proxies.Count to proxy_index>=proxies.Count in condition, to fix IndexOutOfRangeException, when proxy list reading.
+			Line	707			:	Show URL-address of the picture, for which IP-logging is prevented. Change text.
+			Lines	794	-	896	:	DownloadPNG.	Rewrite this method.
+			Line	794			:		DownloadPNG.	Add optional parameter bool is_lite = false, to recognize requests on full-server and lite-server.
+			Line	818			:		DownloadPNG.	Add default pathway string download_to_folder, with value "download/created" (lite-server), and "containers" (full-server).
+			Line	821			:		DownloadPNG.	Create this folder if this does not exists.
+			Line	822			:		DownloadPNG.	Just add whitespaces in this condition.
+			Line	832			:		DownloadPNG.	Use download_to_folder to save file.
+			Line	853			:		DownloadPNG.	Use download_to_folder to save file.
+			Line	855			:		DownloadPNG.	Use download_to_folder to save file.
+			Line	862			:		DownloadPNG.	Use download_to_folder to save file.
+			Line	870			:		DownloadPNG.	Use Path.AltDirectorySeparatorChar.
+			Line	876	-	879	:		DownloadPNG.	Use download_to_folder to save file.
+			Line	896			:	DownloadPNG.	End modifications in this method.			
+			Lines	1122 - 1130	:	Just add try-catch, with return, when was been received invalid image-data.
+			
+		\PngTransport\NBPack.cs
+			Line	17			:	Add public static bool allowReput = false;
+			Line	19			:	Add lock object.
+			Line	111			:	ParseFile.	Show error when empty string, and return 0
+			Lines	163	-	390	:	Create.		Rewrite this method.
+			Lines	270	-	274	:		Create.		Comment test Console.WriteLine.
+			Line	290			:		Create.		Add string add_notif = "";
+			Lines	292	-	293	:		Create.		Add notif here: NServer.DbApiHandler.notifications_with_filename and don't push this in notification queue NServer.NotificationHandler.Instance.Messages
+			Line	300			:		Create.		Use "download/created/"-folder for lite-server, and "upload/"-folder for full-server. Recognize this by "address"-value.
+			Line	375			:		Create.		Add address to Pack method.
+			Line	377			:		Create.		Add address to Pack method.
+			Lines	384	-	389	:		Create.		Add some text for requests on lite-server, and return this do DbApiHandler, as string, to return this as HttpResponse. Don't add notifs.
+			Line	390			:	Create.		End modifications of this method.
+			Line	391			:	move public static bool bypassValidation = !captcha.Captcha.captcha_found; before parseFile.
+			Lines	392	-	432	:	ParseFile.	Rewrite this method.
+			Line	394			:		ParseFile.	Use lock.
+			Line	402			:		ParseFile.	run PutPost with predefined/changed global public values of allowReput and byPassValidation.
+			Line	430			:		ParseFile.	End lock.
+			Line	434			:	remove public static bool bypassValidation = !captcha.Captcha.captcha_found; because this moved in the top, before ParseFile.
+			Line	449			:		ParseFile.	//don't allow reput post again, from containers. Existing posts, "deleted_once", and "deleted_forever" not added in Database again.
+													This can be customized, and depending from command-line arguments, on running nanodb.exe with additional parameters.
+			Line	432			:	ParseFile.	End modifications of this method.
+			Lines	436	-	511	:	ParseFile.	Rewrite this second type-dependent method.
+			Line	438			:		ParseFile.	Add lock.
+			Line	449			:		ParseFile.	Run PutPost with predefined/changed values of global variables allowReput and bypassValidation.
+			Line	504			:		ParseFile.	Show the number of posts, added in database, after the parsing of the container.
+			Line	509			:		ParseFile.	End lock.
+			Line	511			:	ParseFile.	End modifications of this method.
+			Lines	513	-	544	:	Autoparse.		Rewrite this method.
+			Lines	515			:		Autoparse.		Add lock.
+			Lines	525			:		Autoparse.		Run PutPost with predefined/changed values of global variables allowReput and bypassValidation.
+			Lines	542			:		Autoparse.		End lock.
+			Lines	544			:	Autoparse.		End modifications of this method.
+			Lines	565	-	629	:	Pack.		Rewrite this method.
+			Line	565			:		Pack.		Add address, as optional parameter, to recognize requests on lite-server and full-server.
+			Lines	571	-	573	:		Pack.		return string add_notif to NServer.DbApiHandler.notifications_with_filename to return this as response, and don't push notifications.
+			Lines	581	-	582	:		Pack.		Add notifications and don't append this to NServer.DbApiHandler.notifications_with_filename.
+			Line	629			:	Pack.		End modifications of this method.
+
+		\PngTransport\Post.cs
+			Lines	13	-	20	:	Disable warnings CS0649, about null as default in JsonProperties. This warnings now don't showing for each compilation.
+
+		\Server\Configurator.cs
+			Lines	47	-	52	:	GetValue. 	Add commented Console.WriteLines, and figure brackets.
+			Lines	59	-	64	:	SetValue.	Add commented Console.WriteLine, and return if value = null.
+			Line	68			:	SetValue.	If skin was been changed, update public static string NServer.StylesHandler.currentSkin = ""; by running public static NServer.StylesHandler.Update_currentSkin();
+
+		\Server\DbApiHandler.cs
+			Line	28			:	DbApiHandler.	Add bool is_lite, to recognize requests on lite-server and full-server. This value true or false will be defined once, after create the instance.
+			Line	29			:	DbApiHandler.	Add parameter bool lite, to run line server. Add bool SetAllowReput = false and bool SetByPassValidation = false, as optional parameters.
+			Lines	32	-	158	:	DbApiHandler.	Run API for full server (lite == false) or API for lite-server (lite == true).
+			Line	33			:	DbApiHandler.	Set is_lite from bool lite, and set allowReput from SetAllowReput, bypassValidation from SetByPassValidation.
+													Do this once, for the current instance of DbApiHandler object, on creating this instance.
+			Line	84			:	DbApiHandler.	Change comment about default folder for ConvertToPNG method for full-server.
+			Line	112			:	DbApiHandler.	Add comment about for "add"
+			Lines	114	-	115	:	DbApiHandler.	Add comments about for "upload-posts", "upload-post".
+			Line	116			:	DbApiHandler.	Uncomment "addmany" for lite-server + add comment.
+			Line	117			:	DbApiHandler.	Comment "readd" for lite-server + add comment about using "add"+allowReput, instead of this.
+			Line	145			:	DbApiHandler.	Uncomment DownloadPNG for lite-server.
+			Line	151			:	DbApiHandler.	Uncomment PngCreate for lite-server.
+			Line	155			:	DbApiHandler.	Change comment about default folder for ConvertToPNG method for lite-server.
+			Line	157			:	DbApiHandler.	uncomment png-create-avail for lite-server.
+			Line	158			:	DbApiHandler.	set timer to delete files in "download/created" and "download/generated"-folders.
+			Line	159			:	DbApiHandler.	Add private static bool allowReput = false;	and private static bool bypassValidation = false;
+			Lines	160	-	179	:	param_GET_POST. Add this method, to return params, received from GET-query or POST-query. If ret, try to unescape encodeURIComponent (if used).
+			Line	209			:	DownloadPNG.	Use param_GET_POST.
+			Line	212			:	DownloadPNG.	Add is_lite, as parameter for obj_Aggregator.DownloadPNG(p, is_lite), do download PNG or/and files in different folders ("containers" for full-server, or "download/created" for lite-server);
+			Line	220			:	PngCollect.		Use param_GET_POST.
+			Line	224			:	PngCollect.		When allowReput or bypassValidation = true, add string "allowReput" or/and "bypassValidation",
+													as parameter in array with parameters, to send this array in Aggregator.
+			Lines	253	-	256	:	Run_nbpack_with_params.	Add spaces. Use param_GET_POST.
+			Line	290			:	Add public static string notifications_with_filename to return filename and hashes of packed posts, instead sending as notifications.
+			Line	291	-	318	:	PngCreate.			Rewrite this method.
+			Line	297			:		PngCreate.			Use param_GET_POST.
+			Line	303	-	306	:		PngCreate.			Use string "CreatePNG_on_lite_server" for address, if lite-server, or address, if full-server.
+			Line	315	-	317	:		PngCreate.			Add sleep(5000), then make response from notifications_with_filename, clear notifications_with_filename and return response.
+			Line	318			:	PngCreate.			End modifications of this method.
+			Line	319			:	Add public static Dictionary<string, DateTime> datetime_of_generated_images to save DateTimes of saved images, and delete this by timer-events.
+			Line	320	-	387	:	generate_PNG		Rewrite this method.
+			Line	320			:		generate_PNG		Add string pathway, as optional parameter with empty string, as default value. This string is predefined in ConvertToPNG method, before running generate_PNG.
+			Line	324			:		generate_PNG		Set pathway if optional parameter was not defined + add comment
+			Line	326			:		generate_PNG		define string fractalgen_result = ""; once.
+			Lines	335,	338	:		generate_PNG		use pathway as folder to save the generated fractals, and remove return HttpResponse for each case.
+			Line	341			:		generate_PNG		Remove return HttpResponse in this case.
+			Line	344			:		generate_PNG		last case for fractalgen - remove return HttpResponse in this case.
+			Lines	345	-	349	:		generate_PNG.		if some previous cases was triggered, and fractalgen_result not empty string, split this, and return result as clickable html-link, and return this link, as HttpResponse.
+			Line	350			:		generate_PNG.		Do not let to change the predefined pathway, and use it to generate random image.
+			Line	382			:		generate_PNG.		Start timer to delete temporary images, if the current image(s) was been generated.
+			Line	383			:		generate_PNG.		Add dataTime of generated images, into dictionary.
+			Lines	385	-	386	:		generate_PNG.		return result as two clickable HTML-links.
+			Line	387			:	generate_PNG		End modifications of this method.
+			Lines	389	-	478	:	ConvertToPNG.		Rewrite this method.
+			Lines	391	-	416	:		ConvertToPNG.		Comment old unused code, and leave only string dataURL = "";
+			Line	419			:		ConvertToPNG.		Use param_GET_POST.
+			Lines	421	-	422	:		ConvertToPNG.		Set pathway and create directory, if this does not exists. Use predefined pathways "download/generated" for lite-server, and "containers" for full-server.
+			Lines	429	-	433	:		ConvertToPNG.		Comment old code, and let to change foler only from request to full-server. For lite-server, use predefined pathway only.
+			Lines	437	-	438	:		ConvertToPNG.		Now, after pathway was been prededined, run generate_PNG with pathway, if need to generate_PNG (fractalgen or random image).
+			Line	440			:		ConvertToPNG.		Comment old unused code.
+			Lines	468	-	472	:		ConvertToPNG.		Save image in predefined pathway, and show filename in Console.WriteLine, and return two clickable HTML-links.
+			Lines	478			:	ConvertToPNG.		End modifications of this method.
+			Lines	480	-	537	:	GetPresentRange.	Rewrite this method.
+			Line	481			:		GetPresentRange.	Use GET or POST requests, as arguments.
+			Line	483			:		GetPresentRange.	Change Console.WriteLine text.
+			Line	484	-	493	:		GetPresentRange.	param_GET_POST from data of GET or POST request,
+															split this by "-", and set the values of variables.
+			Line	495	-	496	:		GetPresentRange.	return array with posts, or array with string (if only hashes to return).
+			Line	498	-	536	:		GetPresentRange.	Check values in array and return array with posts or array with hashes, according used arguments.
+															See source code to use arguments.
+			Line	537			:	GetPresentRange.	End modifications of this method.
+			Lines	539	-	547	:	ParamGet.		Rewrite this method.
+			Lines	541	-	545	:		ParamGet.		Get parameter "content" from GET-string, after splitting by '?', if was been accepted GET-request.
+			Lines	546			:		ParamGet.		Don't check HasValue, and run GetValue with default value to set it if not found. Try get parameter or set "content" as default. Only for full-server.
+			Line	547			:	ParamGet.		End modifications of this method.
+			Lines	549	-	590	:	ParamGet_lite.	Add this method to just get param by queries to lite-server. Disabled parameters from array cann't be changed from full-server, and cann't be received.
+			Lines	599	-	616	:	ParamSet.		Rewrite this method.
+			Lines	601	-	607	:		ParamSet.		Get parameter "content" from GET-string, after splitting by '?'. Show params (commented).
+			Lines	609	-	615	:		ParamSet.		Run SetValue if both not null, and return status OK. Else, return error.
+			Line	616			:	ParamSet.		End modifications of this method.
+			Lines	618	-	633	:	GetPostByHash.		Just use param_GET_POST.
+			Lines	635	-	661	:	GetLastNPosts.		Just use param_GET_POST. Add fast parameter (by default = false, to sort by date faster).
+			Lines	695	-	747	:	Search.		Change arguments to GET-POST, add try-catch, use param_GET_POST. Remove "post_was_deleted", //and "post_is_reported" (commented)
+														to decode base64. Return deleted //and reported posts too (commented).
+			Lines	749	-	757	:	GetReplies.			Just use param_GET_POST. Add appendText param there, to return post messages with appended text "post_was_deleted" //and "post_is_reported" (commented).
+			Lines	759	-	775	:	GetPosts.	Add try-catch, use param_GET_POST. Return status OK or BadRequest with exception.
+			Line	780			:	AddPost.		Use predefined values of allowReput and bypassValidation, to run PutPost.
+			Line	793			:	Download_Posts.	Just use param_GET_POST.
+			Line	796			:	Download_Posts.	Run _db.DownloadPosts with allowReput-value and bypassValidation-value, predefined/changed earlier.
+			Line	805	-	844	:	Upload_Posts.	Use JSON from GET or POST-requests. UnescapeDataString if GET. Comment old code. Use param_GET_POST.
+													Return result, if request contains result, and already parsed, and posts was been uploaded
+													(see TcpClient.cs modes and methods to working with large data of POST-requests).
+													Else - just upload posts from parsed JSON-array, and return result.
+													Run _db.UploadPosts with allowReput-value and bypassValidation-value, predefined/changed earlier. 
+			Line	846	-	865	:	Upload_Post.	Add this method to use this as handle for _instantRetranslation.
+													Add try-catch. Use JSON from GET or POST-requests. UnescapeDataString if GET (use param_GET_POST).
+													Try to add one post, and return result.
+													Run _db.UploadPost with allowReput-value and bypassValidation-value, predefined/changed earlier. 
+			Line	873			:	AddPosts.		Use predefined values of allowReput and bypassValidation, to run PutPost.
+			Line	886			:	ReAddPost.		Use predefined value of bypassValidation, and allowReput = true, anyway, to run PutPost.
+			Line	898			:	Add comment for DeletePost.
+			Lines	929	-	1018:	Add methods:
+													ReportPost (to report the posts from lite-server) and use param_GET_POST there, split long reasons, if specified;
+													GetReports (to get list of reports);
+													DeleteReportsForPostHash (to delete all reports);
+											and		UndeletePost (to undelete "deleted_once"-posts).
+
+		\Server\ErrorHandler.cs
+			Line	32			:	Handle.		Just change nboard version from 3.2 to 3.3
+		
+		\Server\FileHandler.cs
+			Lines	591	-	592	:	Handle.		Add {".nbc", "application/octet-stream"}	//add captcha.nbc extension do download captcha.
+			Line	630			:	Handle.		Exclude captcha from this condition.
+			Lines	647	-	649	:	Handle.		Replace links to images, to local link with relative pathway on the server. Add target="_blank".
+												Exclude files in "download/created" and "download/generated"-folders as from "Collect PNG-folder".
+												Use "download/"-prefix, if URL is /download (without backslash in the end). Replace all "\" to "/".
+			Line	656	-	659	:	Handle.		Add title tooltips, change ' to ", rename "All files" to "Show all files", and add link to download captcha.nbc in "/download"-folder.
+			Lines	672	-	681	:	Handle.		Return captcha.nbc as file to client as HttpResponse.
+			Line	688			:	Handle.		Add pathway to returned error.
+				Now, captcha.nbc available to downloading here: "./captcha.nbc", here "./download/captcha.nbc" and here is the link "./download/"
+
+		\Server\GetCaptchaTokenHandler.cs			
+			Lines	24	-	28	:	Handle.		Add commented Console.WriteLine. Return error when request.Content == null.
+			Lines	29			:	Handle.		Just add spaces.
+			Line	31			:	Handle.		Just for test, add commented "Captcha.IsCaptchaValid = true", to skip slow verification the hash of captcha-pack file.
+			Lines	32			:	Handle.		Just add spaces.
+			Lines	29			:	Handle.		Just add spaces.
+			Lines	46			:	Handle.		Append hidden div with text to response, when bypassValidation is enabled.
+
+		\Server\HttpConnection.cs
+			Lines	36	-	46	:	Response.	Add figure brackets, to write another commands there, and test.
+												Add commented skip null requests, but comment this,
+												because something was been wrong, when was been re-writted NotificationHandler.cs.
+												Now, all is ok without this, skip null-requests.
+												P.S. Uncomment this but add Console.WriteLine() there.
+		
+		\Server\HttpRequest.cs	
+			Line	20			:	Add new variable "Host". This was used to recognize (by port) the queries to server and lite-server.
+									(Maybe this not need, because another handle writted for lite-server in TcpClient.cs and HttpServer.cs).
+			Line	35			:	split more (4) to make array, where Host is contains.
+			Line	37			:	Change 2 to 3, when host contains in array.
+			Lines	43	-	45	:	add tabs, get host.
+			Line	49			:	Add comment to do not change this.
+			Line	66			:	Add commented Console.WriteLine.
+
+		\Server\HttpServer.cs	
+			Lines	19	-	22	:	Add tabs. Add bool variable "lite_server" with default port for lite-server.
+									Default value - false for full-server, and true for lite-server.
+			Lines	24	-	33	:	HttpServer. Add parameter NDB.PostDb db, run TcpServer with this, add optional parameters allowReput bypassValidation = false,
+									Add bool enable_lite_server = false,
+										And enable lite-server if this true.
+										Run OnConnectionAdded_lite for lite-server.
+									Add argument "large_POST_mode" with default value "0".
+									"0" - no need to UploadPost post-by-post, from large data of POST-request, and load this request full (OutOfMemoryExcepton for large JSON-data)
+									"1" - UploadPost post-by-post from parsed JSON, while reading TCP-stream of request.
+									"2" - cache result to the file, and upload then, from JSON in the file.
+									Command-line arguments to initialize this modes:
+										"nanodb.exe large_POST_mode0",
+										"nanodb.exe old large_POST_mode1",
+										"nanodb.exe lite large_POST_mode0". + "allowReput" and "bypassValidation"strins can be used as command-line arguments.
+										See changes in Program.cs, and compile.bat
+									Run TcpServer with db, lite_server, "large_POST_mode", "allowReput", and "bypassValidation" too.
+			Lines	50	-	60	:	OnConnectionAdded. 	Add commented Console.WriteLine. Add figure brackets. Run process with is_lite_server = false.
+			Lines	62	-	72	:	Add method OnConnectionAdded_lite. Add commented Console.WriteLine. Add figure brackets. Run process with is_lite_server = true.
+			Lines	74	-	158	:	Process.	Rewrite this method.
+			Line	74			:		Process.	Add bool is_lite_server as parameter.
+			Line	76			:		Process.	Add try-catch. try.
+			Lines	77	-	91	:		Process.	Add commented test-code - to display not often requests on lite-server, to see is this really working now.
+			Lines	93	-	97	:		Process.	Handle root directory. Include there request.Address.Contains("captcha.nbc") to let download captcha.nbc.
+			Lines	99	-	107	:		Process.	Split request.Address by '/', and extract endPoint.
+			Line	108			:		Process.	Change endpoint for "download/generated", and "download/created"-folders.
+			Line	109	-	130	:		Process.	else if lite-server, replace endpoints to API-handlers for API-requests to lite-server, because not all entpoints allowed for this in DbApiHandler.cs. Also replace "containers"-endpoint to make this private and available only from full-server.
+			Line	131			:		Process.	Add "/images", when client try to loading "/favicon.ico".
+													Now favicon.ico loading from "/images/favicon.ico", without show API-commands in the reply-error.
+			Lines	132	-	135	:		Process.	Load the page, by handler, if ok.
+			Lines	136	-	148	:		Process.	Load the page, by handler, if "/shutdown", write request to the log, and shutdown. (test)
+			Lines	149	-	153	:		Process.	Else - unknown endpoint.
+			Lines	154	-	157	:		Process.	End try-catch. Catch.
+			Line	158			:	Process.	End modifications of this method.
+			
+		\Server\HttpServerBuilder.cs
+			Line	11			:	Build.		add "using captcha;" to set value of Captcha.bypassValidation.
+			Line	27			:	Build.		Add optional parameters: bool enable_lite_server = false as parameter, large_POST_mode = "0", and bool allowReput = false, with bool bypassValidation = false;
+			Line	33			:	Build.		Create new HttpServer with specified db, enable_lite_server, specified large_POST_mode, and specified allowReput and bypassValidation;
+			Line	36			:	Build.		Run DbApiHandler with specified or default allowReput or/and bypassValidation-value;
+			Line	39			:	Build.		Set Captcha.bypassValidation = bypassValidation;
+			Line	44			:	Build.		Add argument "notif_mode" to run NotificationHandler.
+			Line	46			:	Build.		Add "reports"-handler for full-server, to get access to files "reported_post_hash.txt"
+			Lines	48	-	52	:	Build.		Add file-handlers for folders "containers", "download", "download/generated", "download/created", "upload", to download files from this folders.
+			Lines	61	-	79	:	Build.		Add handlers for lite-server.
+			Line	66			:	Build.		Run second instanse of DbApiHandler for api-lite with specified or default allowReput or/and bypassValidation-values.
+			Line	81			:	Build.		Comment shutdown handler, and shutdown in HttpServer. Process. With loging of shutdown-request.
+
+		\Server\NotificationHandler.cs
+			Short changes:
+				Add two different modes, and leave this compatible with old code (node 0).
+					Run nanodb with argument "notif_mode0", "notif_mode1" or "notif_mode2" to set this param.
+					0 - old mode,
+					1 - wait HttpResponse from runInterval(),
+					2 - enable async-await, using IAsyncResult with BeginInvoke, and wait HttpResponse from async_method()
+			
+			Line	11			:	Add using System.Timers to set and run timers.
+			Lines	17	-	21	:	Add comments about "notif_mode"-modes.
+			Line	26			:	NotificationHandler.	Add string set_mode, as argument for NotificationHandler. Now this runned from HttpServerBuilder.cs with this argument.
+			Lines	28	-	29	:	NotificationHandler.	Show set_mode value (commented), and set this in string mode.
+			Line	30			:	NotificationHandler.	Add comment.
+			Lines	31	-	34	:	NotificationHandler.	Run timer1, if mode not "0"; Second test timer2 - commented.
+			Lines	37	-	99	:	Handle.		Rewrite this method. 
+			Lines	39	-	45	:		Handle.		Leave old code, without commented while cycle, and try-catch.
+													This is return empty response for each requests, if notifs not exists in Queue<string> Messages.
+													Too many requests is opened, so this is not default mode, now.
+			Lines	46	-	98	:		Handle.		Add code for modes 1 or 2. This will return notification, when this exists in Queue<string> Messages,
+													or wait for this in one thread. If another thread will be started (another request sent),
+													in previous thread will be return empty response, then .Interrupt() it or/and .Abort(), and working only with one thread.
+			Lines	101	-	158	:	Add variables and methods to run timer1, and make thread.Resume() for Suspended thread, after running OnTimedEvent every time.
+			Lines	133	-	145	:	Try to resume suspended thread. Disable warnings, about thread.Resume() is deprecated, by adding pragma lines.
+			Lines	160	-	179	:	Add variables and methods to run timer2, and add some test message in Queue<string> Messages (test code, commented).
+			Lines	181	-	192	:	Add HTTP_Response, to store HttpResponse in thread, before return.
+									Add List<Thread> threads to add there threads, runned in Handle,
+									Add List<Thread> threads2 to add there threads, runned in async_method(),
+									Add bool was_resumed, to let program know is thread resumed or not,
+									Add bool use_async_await, to use mode 2 or not,
+									Add object _lock, to lock all variables in locked code.
+			Lines	195	-	239	:	Add methods to realise EAP (Event-based Asynchronous Pattern) - async-await, using IAsyncResult with BeginInvoke.
+									async_method will wait long_time_method, and this will wait result from recursive method - Wait_Notifications, if mode = "2".
+			Lines	242	-	258	:	Add long-time method Wait_Notifications(), to return notifications, if this already exists, or wait for this, and check this recursive.
+									Use System.Threading.Thread.CurrentThread.Suspend(); there, and .Resume() it by timeout of timer1, OnTimedEvent.
+									Threads to resume, are depends from mode, and contains in List<Thread>threads, and List<Thread>threads2.
+									Using infinity while cycle, because recursive call this function return throw StackOverFlowException.
+			Line	260			:	Add	public int need_stop = 0; to increment this when new request accepted, and new thread will be started,
+									to return empty response for previous thread, .Interrupt() this or/and .Abort(),
+									then decrement this variable, and working only with one current thread.
+									This need to limit the number of runned threads, if so many requests are sent for "/notif"
+			Line	264	-	269	:	Change comment.
+		
+		\Server\SolveCaptchaAndAddPostHandler.cs
+			Line	42			:	Add commented Console.WriteLine.
+			Lines	43	-	52	:	Add comments. Add try-catch. Show exceptio on catch.
+			Line	54			:	Add comment, about prevent hash collisions for different posts.
+			Line	56			:	Run PutPost with allowReput = false, and bypassValidation = false (full validation).
+			Line	64			:	Edit response text.
+
+		\Server\StylesHandler.cs
+			Line	24			:	Add public static string currentSkin = ""; with current skin value there.
+			Line	36			:	Update current skin once, when instanse of StylesHandler is created by running this from HttpServerBuilder.cs
+			Lines	39	-	47	:		Update_currentSkin.	Add public static void Update_currentSkin() to update current skin from Configurator.cs, when skin will be changed.
+			Line	40			:		Update_currentSkin.	get skin or try to set default value "" there, if this not defined. Add commented Console.WriteLine to show skin-value;
+			Line	41			:		Update_currentSkin.	Build string with styles-folder. Use default skin, if None style was been selected or if there is empty string.
+			Line	42	-	46	:		Update_currentSkin.	Check if files with styles exists there, and if something is wrong, then set default skin, and update this value.
+										For example, when skin = null, or "blahblah_not_found_or_empty_folder".
+			Line	50	-	52	:		Handle.	Don't get skin-value from config-3.json, every time for each request, and working with defined public static string currentSkin.
+										Use default folder /skins/ if this string is empty or have the value "None".
+
+		\Server\TcpServer.cs
+			Line	10			:	using NDB;			//to run _db.UploadPost(post_in_JSON) here.
+			Lines	19	-	43	:	Add tabs between comments.
+									Add "_server_lite" and "_isRunning_lite".
+									Extract value of "no_tcp_delay" once to compare with this, not for each iteration.
+									Add ConnectionAdded_lite.
+									Add variables and modes to working with large JSON data from POST-requests on "/api/upload-posts/" to solve OutOfMemoryException.
+										Mode0 			- disable auto-uploading to test OutOfMemoryException.
+										Mode1 (default)	- upload posts post-by-post, from Tcp-stream, by using UploadPost (PostDb.cs).
+										Mode2 			- Save large POST-request to file, and upload posts then, from this cache file, and delete this cache-file then.
+										Mode3 			- Save large POST-request to file, and upload posts then, from this cache file, but don't delete cache-file to save JSON with posts, and regenerate filename.
+			Line	38			:	Add Upload_Posts_From_File_With_JSON_Cache = false. This will be true, if was been cached request on "/api/upload-posts/".
+			Line	40			:	Add filename and filepath for temporary file with unique filename (unix timestamp added),
+									to save incoming posts, as JSON, if mode2 or mode3 enabled,
+									and JSON is caching from large data of POST-request.
+			Line	41			:	private NDB.PostDb _db, but do not create new PostDb() there, and use already created.
+			Line	42			:	public static bool allowReput = false; public	static bool bypassValidation = false;
+									to turn this to true, if need to make allowReput posts and bypassValidation of the incoming posts.
+			Line	43			:	Add lock object.
+			Line	44			:	Add public	static do_not_delete_cache_file = false; if mode3 enabled, and if need to save cached files with posts in JSON, and do not delete it.
+			Lines	45	-	87	:	TcpServer.	Rewrite this method.
+			Line	45			:		TcpServer.	Add  NDB.PostDb db, bool enable_lite_server = false as parameter to run or not run lite-server.
+													Add large_POST_mode = "0". Default value in Program.cs.
+													Add optional parameters bool setAllowReput = false, and bool setByPassValidation = false.
+			Lines	47	-	57	:		TcpServer.	Set UploadPost-mode according large_POST_mode value. If mode3 enabled, do_not_delete_cache_file = true.
+			Lines	59			:		TcpServer.	Set allowReput = setAllowReput; bypassValidation = setByPassValidation; from specified or default optional parameters.
+			Lines	60			:		TcpServer.	Set lite_server. Add commented Console.WriteLine to show "lite_server" and "large_POST_mode".
+			Lines	62			:		TcpServer.	set current instance of db for _db, to be able to run UploadPost-method.
+			Lines	63	-	65	:		TcpServer.	Run lite-server too, if true;
+			Lines	73	-	76	:		TcpServer.	Run lite-server too, if true;
+			Lines	82	-	84	:		TcpServer.	Run lite-server too, if true;
+			Lines	87			:	TcpServer.	End modifications of this method.
+			Lines	88	-	100	:	Run.		Add commented Console.WriteLine. Start lite-server together with full-server, or just full-server.
+			Lines	102	-	115	:	Stop.		Add commented Console.WriteLine. Stop lite-server together with full-server, or just full-server.
+			Lines	117	-	189	:	LoopClients.	Listen full server or run another loop to listen two servers together in one infinity loop,
+													and connect clients to different servers.
+			Line	191	-	212	:	Save_Large_data_From_POST_Request.		Add this method to cache large data from requests...
+			Line	214	-	281	:	Upload_Posts_from_JSON_string.			Add this method to parse JSON string and upload posts post-by-post, by using _db.UploadPost(post_in_JSON, bypassValidation).
+			Line	217			:	Upload_Posts_from_JSON_string.			Add line to cut POST headers from second request, cached and appended in the same file.
+			Line	243			:	Upload_Posts_from_JSON_string.			Run _db.UploadPost(post_in_JSON, allowReput, bypassValidation); with three predefined globally parameters (_db, allowReput, and bypassValidation);
+			Line	283	-	375	:	Upload_Posts_From_Saved_File.			Add this method to UploadPosts from large POST-request, saved in cache-file.
+			Line	286			:	Upload_Posts_From_Saved_File.			Add optional parameter bool do_not_delete_cache_file = false there.
+			Line	373	-	374	:	Upload_Posts_From_Saved_File.			Do not delete cached file, if mode3, and do_not_delete_cache_file == true,
+																			and just regenerate filename for new cache-file,
+																			run _db.ReadRefs_private(); after uploading posts,
+																			and return it with readData.
+			Line	377	-	476	:	Add status variables "data_still_writting" and "Network_stream_writting_error".
+									Add callback-function for stream.BeginWrite: async_callback
+									Add method Write_bytes_in_TCPSocket_block_by_block to write large data as response, in socket block-by-block.
+									Now, is possible to all posts in JSON by link: http://127.0.0.1:7346/api/prange/0-post_count , where post_count - number of posts on the board.
+									Without this functions there was been empty response, because there is a catch in HandleClient,
+									when program try to write byte[] bu, with large response.
+			
+			Lines	478	-	693	:	HandleClient.		Rewrite this method.
+									Switch clients beetwen lite-server and full-server.
+									Upload posts block-by-block, and post-by-post while reading TCP-NetworkStream to string,
+									or write large data from POST-request to cache-file, and upload posts from JSON in this cache-file, then.
+									Write response in stream block-by-block, to be able to load response with all posts in JSON.
+
+	\pages\														(+2 file added, 6 files changed)
+		\show_reports.html	- add this file to show-reports on full-server for admin.
+		
+		\Upload_posts_from_JSON_file.html	- add this file, to upload posts on remote API from JSON-files, for example from cached files of large data from POST-request.
+												Now is possible to upload all DataBase to remote server, only by sending the one POST-request.
+
+		\convert-to-PNG.html
+			Line	5			:	Display links as block, not as inline-block, because there will be two links.
+			Lines	8	 -	9	:	Show dataURL in textarea, without encodeURIComponent.
+			Line	13			:	Add target="_blank" to link of GET-query, to open this in another tab.
+			Line	33			:	Change id for textarea with dataURL. Because now this is not encoded with encodeURIComponent.
+			Lines	52	-	60	:	Add second link, to open image in new window, because Google Chrome sometimes show error in console:
+									"Not allowed to navigate top frame to data URL: data:image/blahblah..."
+			Lines	66	-	68	:	Use encodeURIComponent only for GET-query, and add dataURL in textarea without encodeURIComponent.
+			Line	86			:	change id for textarea with dataURL, because this not encoded now.
+			Line	96			:	Send dataURL without encoding for POST-query.
+			Lines	135	-	155	:	Add function to open image in new window, because Google Chrome sometimes show that error in console.log.
+
+		\index.html
+			Line	62			:	Change nanoboard version from 3.2 to 3.3. Same for pages_lite/index.html
+			Line	100			:	Run shutdown server after confirm this action.
+			Lines	107	 -	116	:	Add div with link to "show_reports.html". By default this not displayed, and will be displayed, if reports exists on the server.
+			Line	816 		:	comment test console.log
+			Line	832 		:	var nlp = parseInt(getlp.value) || 0; if this was been undefined.
+			Lines	943	 -	953 :	Comment old GET-request, and write new. Add commented POST-request at line 953, just for test.
+			Lines	1193 - 1208 :	Add script to show previous div, if reports already exists on the server, in "reports"-folder.
+			Line	1210		:	Run this script onload the page.
+			Lines	1212 - 1221 :	Add the script to confirm and run shutdown of the server.		
+			
+		\Open_container.html
+			Lines	100	-	130	:	Add two links to open the full image in new tab, and download this image from "/containers/"-folder as image.
+
+		\params.html
+			Lines	172, 221, 357	:	Add commented GET-query with encodeURIComponent
+			Lines	170	-	178		:	Add commented console.log, to show skin value, comment line 171, and add comment, add commented longer timeout and comment.
+										Now futaba-skin not auto updated, when None-skin selected.
+			Line	239				:	Add in title tooltip, the info about old password "nano", and posts in containers.
+			Line	292				:	Add cases "case 'captcha_pack_file': case 'original_captcha_sha256': case 'captcha_url': " to show title tooltip with hashes of captcha-pack file.
+			Line	302				:	use decodeURIComponent(val) for this values;
+			Line	356				:	use encodeURIComponent(val) for received "captcha_url"-value;
+			Line	360	-	372		:	Rewrite ternary operator to else-if construction. Use decodeURIComponent() for received value of "captcha_url".
+			Line	430				:	Change nanoboard version from 3.2 to 3.3. Same for pages_lite/params.html 
+
+		\TEST_download-upload-posts.html
+			Lines	38	-	39	:	Add two variables with current_api and remote_api (+ comments). Rewrite all static links with using this variables.
+			Line	44			:	use current_api and remote_api
+			Lines	46	-	52	:	Comment POST-request to download posts.
+			Lines	54	-	61	:	Comment GET-request to download posts.
+			Lines	63	-	84	:	Comment 3 ways to upload posts.
+			Lines	90	-	103	:	Add commented test get-queries, to get different number of posts from /api/prange/
+			Lines	105	-	119	:	Download all posts, and try to upload it. Line 116 - Try to upload to current_api (test).
+			Lines	123	-	176	:	Rewrite the comments.
+		
+			Warning! To test this all...
+				Just run full-server with empty database, on the port 7348,
+				then run "collect PNG", and add posts to database,
+				then run another nanodb on port 7346, with empty database,
+				and then run http://127.0.0.1:7346/pages/TEST_download-upload-posts.html
+				Posts can be downloaded in empty database, from nanodb, which was been runned on port 7348 (remote_api by default),
+				and this can be remote server.
+				Also, posts can be uploaded there as JSON, so no need any BitMessage instant-retranslation.
+				Update:
+					After adding block-by-block writting to NetworkStream, in TcpClient,
+					now is possible to loading all posts and upload this all.
+					Now nanoboard can be p2p board, if DHT and peer-exchange, can be injected.
+
+		\version.txt 			- 	regenerated, after compilation, \pages_lite\version.txt 	- 	was been regenerated too.
+	
+	\scripts\													(11 files changed, 1 deleted)
+(-)		\karasiq-queue.jpg		-	Delete this file.
+
+		\api.js
+			Line	35			:	Add pushNotification(r, 2000); with result response, after delete post on full-server.
+
+		\checkver.js
+			Lines	85	-	86	:	Comment GET-query, uncomment POST-query.
+			Lines	101	-	102	:	Comment GET-query, uncomment POST-query.
+		
+		\init.js	
+			Lines	23	-	24	:	Check "post was deleted", not base64 encoded.
+			Lines	43	-	44	:	Check "post was deleted", not base64 encoded.
+			Lines	55	-	103	:	rename places to places_on_server, because places already defined in params.js
+									Add commented console.log to updatePlacesBar_once function, and updatePlacesBar function.
+									Add comments.
+									Change title tooltip.
+									Change timeout from 2000 to 5000 seconds.
+			Lines	149	-	150	:	Add title for link to update post-count onclick.
+			Lines	181	-	183	:	Add commented GET-request with encodeURIComponent. Send POST-request without encodeURIComponent.
+			Lines	187			:	Remove encodeURIComponent in commented POST-request when png-collect is running.
+			Line	271	-	369	:	Add code from notifyAboutNotifications in one line, to show hashes of packed posts, and links to saved container, after receive response on /api/png-create/ request.
+		
+		\last.js
+			Lines	60	-	61	:	comment request to /api/pcount and add request to /api/count to show deleted posts.
+			Lines	105	-	109	:	Add additional parameters to request, to see deleted and and reported posts on full-server.
+			Lines	129	-	130	:	skip nulls.
+			Lines	132	-	134	:	check "post was deleted" without base64 encoding.
+
+		\nanoclient.js
+			Short changes:
+				Check "post was deleted" without base64 encoding this string,
+				if post was been "deleted_once" (message = "post_was_deleted"+base64_encoded_message).
+				Add "Undelete-button" for "deleted_once"-posts. Now this posts can be undeleted.
+				Replies for this posts is available. Content of this posts is available in the source-code of this posts.
+				Small fixes.
+			
+			Full changes:
+			Lines	444	-	447	:	add function replace_deleted_once to remove "post_was_deleted" //and "post_is_reported" (commented)
+			Lines	452	-	453	:	skip null posts.
+			Line	515			:	open preview, when write-post form opened.
+			Line	549			:	hide "undelete"-button, when "deleted_once"-post deleted again.
+			Line	551			:	add "_" in id for "undo"-button.
+			Lines	554	-	556	:	show "undelete"-button, after click on "undo"-button.
+			Line	564			:	remove "undelete"-button, after click on "undo"-button.
+			Lines	566	-	569	:	Check "post was deleted" without base64 encoding.
+			Lines	573	-	574	:	Check "post was deleted" without base64 encoding.
+			Lines	577	-	578	:	Add "post was deleted" without base64 decoding from base64.
+			Lines	580			:	Hide "Undo"-button.
+			Lines	582	-	617	:	Append "Undelete"-button.
+			Line	619			:	Change notification text, and disable this notification (commented). Now, notification will contains reply from '../api/delete/'. api.js, line 35.
+			Lines	625	-	648	:	post_content is post_message or "post was deleted", if this "deleted_once". //Also replace "post_was_reported" text (commented).
+			Line	675			:	add replace_deleted_once, if post "deleted_once".
+			Lines	815	-	816	:	Check "post was deleted" without base64 encoding.
+			Lines	818	-	854	:	Append "Undelete"-button.
+			Lines	856	-	867	:	Try to find post.hash in "array_with_hashes_of_reported_ports",
+										change background to "lightcoral", and append the links to reports for reported posts.
+			Lines	947	-	949	:	Add comment. Comment old request. Add request with appendText = true, to get marked "deleted_once" and "reported" posts.
+			Lines	978	-	982	:	Comment old requests. Add requests with appendText = true, to get marked "deleted_once" and "reported" posts.
+			Line	984			:	Add comment.
+			Line	987			:	Don't reverse replies.
+			Lines	991	-	992	:	Check "post was deleted" without base64 encoding.
+			Line	1001		:	Don't set opacity for all posts, if one was been "deleted_once".
+			Lines	1013 -	1014:	Comment old request. Add request with appendText = true, to get marked "deleted_once" and "reported" posts.
+			Lines	1026 -	1027:	Comment old request. Add request with appendText = true, to get marked "deleted_once" and "reported" posts.
+		
+		\on_add.js
+			Lines	6 	-	18	:	httpPost. Add return if (_instantRetranslation === 'false'). Else, console.log the part of JSON, and send post to transport URL.
+	
+		\params.js
+			Line	4			:	change _postWasDeletedMarker from "post was deleted" to "post_was_deleted"
+			Lines	18	-	21	:	Comment default empty spam_filter, and set as default the array with three words (to show the format of this array);
+			Lines	47	-	58	:	Add encodeURIComponent for default parameter if GET-request, comment it. Change GET to POST, and try to set default param, if param-value not found.
+			Line	118			:	tryGetParam. spam_filter. use JSON.stringify array as default value. Add decodeURIComponent for result value.
+			Line	171			:	Add commented get-query.
+			Line	243			:	Add commented get-query.
+			Line	295			:	Add commented get-query.
+			Lines	316	-	318	:	Add commented console.log, and get-query.
+		
+		\post.js
+			Line	270			:	Add space just to make this file not indexed by '/search'
+
+		\reply.js
+			Line	409			:	Add space just to make this file not indexed by '/search'
+			Lines	554	-	562	:	Add function b64EncodeUnicode(str) to get base64 encoded string here. Add this for lite-server too.
+			Line	581			:	Add commented get-query $.get('../pow', pst)
+			Line	609			:	comment console.log to show postStr.
+			Lines	657	-	711	:	Try to send post without pow and captcha to ('../api/add/'+hashReplyTo, base64encoded_postcontent),
+									when bypassValidation enabled, and text received in reply of invalid captcha.
+									Else, try to using captcha, if this valid, even when bypassValidation enabled.
+									Add this option for lite-server too.
+			Line	729			:	Change nanoboard version from 3.2 to 3.3. Same for scripts_lite/reply.js
+
+		\retranslate.js
+			Lines	23	-	38	:	Add function test_retranslate(); This can be runned in console of the browser, by input this, and confirm execution.
+									Result in the server Console.Write, after try the program to make PutPost of retranslated post.
+		
+		\search.js	
+			Lines	118	-	119	:	Check "post was deleted", not base64 encoded.
+			Lines	174	-	175	:	Add commented get-query.
 
 Code commented. See source code.
 

@@ -51,7 +51,7 @@ namespace captcha
 		public static string original_captcha_file_sha256_hash = "0732888283037E2B17FFF361EAB73BEC26F7D2505CDB98C83C80EC14B9680413";
 		public static string captcha_downloading_url = "http://some_url_to_download_captcha/";	//This value can be customized in config-3.json, without hardcoding this.
 
-		public static bool captcha_checked = false;
+		public static bool captcha_checked = false;		public static bool bypassValidation = false;
 		public static bool IsCaptchaValid = false;
 		public static bool captcha_found = false;
 
@@ -194,7 +194,7 @@ namespace captcha
 		
 		public static bool verify_captcha_hash(){
             _packFile = Configurator.Instance.GetValue("captcha_pack_file", captcha_file);
-			captcha_downloading_url = Configurator.Instance.GetValue("captcha_url", captcha_downloading_url);
+			captcha_downloading_url = Uri.UnescapeDataString(Configurator.Instance.GetValue("captcha_url", captcha_downloading_url));
 			
 			string captcha_file_hash = "";
 			if(!File.Exists(_packFile)){
@@ -362,6 +362,7 @@ namespace captcha
                 hash = ComputeHash(xpost + trash);
             }
 
+//			Console.WriteLine("Catcha.cs. AddPow. trash: "+trash+", hash: "+BitConverter.ToString(hash).Replace("-", ""));
             return post + trash;
         }
     }

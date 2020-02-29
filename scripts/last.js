@@ -57,7 +57,8 @@ function showLast(N, from_index){
 	
 	//console.log('from_index', from_index, 'N', N);
     
-    $.get('../api/pcount')
+//    $.get('../api/pcount')
+    $.get('../api/count')
       .done(function(cnt){
         if(from_index===false){
 			cnt = parseInt(cnt);
@@ -101,7 +102,11 @@ function showLast(N, from_index){
 
 		//console.log('from_index', from_index, 'N', N, 'cnt', cnt);
     
-        $.get('../api/prange/'+from_index+'-'+N)					//start_index = cnt-N || 0 - not negative.
+//        $.get('../api/prange/'+from_index+'-'+N+'-'+'true')					//start_index = cnt-N || 0 - not negative.	//last parameter appendText = true, to append text info if post was been reported.
+//        $.get('../api/prange/'+from_index+'-'+N+'-'+'false')					//start_index = cnt-N || 0 - not negative.	//last parameter appendText = true, to append text info if post was been reported.
+
+        $.get('../api/prange/'+from_index+'-'+N+'-'+'append_text'+'-'+'show_deleted')	//start_index = cnt-N || 0 - not negative.	//last parameter appendText = true, to append text info if post was been reported.
+
           .done(function(arr){
             active_tab("lastli")
             arr = JSON.parse(arr);
@@ -121,9 +126,12 @@ function showLast(N, from_index){
             } else {return;}
             for (var i = arr.length - 1; i >= 0; i--) {
 //3.0
+				if(arr[i]==null){continue;} //skip null, if post was been deleted.
+				
               var p = addPost(arr[i], function(d) { d.appendTo($('#thread')); }, false);
-			  
-				if (arr[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+				
+//				if (arr[i].message === 'cG9zdCB3YXMgZGVsZXRlZA=='){
+				if ((arr[i].message).substring(0, 16) === 'post_was_deleted'){
 					p.css({ opacity: _deletedOpacity});
 				}
 //3.1

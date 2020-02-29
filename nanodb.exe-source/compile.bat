@@ -1,16 +1,25 @@
+if "%1" EQU "run" goto just_run
+
+echo "Wait for compilation process...";
+:: Set pathway with msbuild.exe into variable %msbuild%
+set fdir=%WINDIR%\Microsoft.NET\Framework
+set msbuild=%fdir%\v4.0.30319\msbuild.exe
+
+:: Compilation:
+
 ::Without adding pathway to path
-::I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /p:Configuration=Release nanodb.csproj
+::%msbuild% /p:Configuration=Release nanodb.csproj
 
 ::x86 and x64
-::I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /p:OutputPath="../x64/" /p:IntermediateOutputPath="../x86/" /property:Configuration=Release nanodb.csproj
+::%msbuild% /p:OutputPath="../x64/" /p:IntermediateOutputPath="../x86/" /property:Configuration=Release nanodb.csproj
 
 ::x86 only, in the main folder. Ready to start.
-I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /p:IntermediateOutputPath="../" /property:Configuration=Release nanodb.csproj
+%msbuild% /p:IntermediateOutputPath="../" /property:Configuration=Release nanodb.csproj
 
 ::x64 only, in the main folder. Ready to start.
-::I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe /p:OutputPath="../" /property:Configuration=Release nanodb.csproj
+::%msbuild% /p:OutputPath="../" /property:Configuration=Release nanodb.csproj
 
-::I:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe nanodb.csproj
+::%msbuild% nanodb.csproj
 
 
 
@@ -64,6 +73,33 @@ del "../pages/version.txt"
 ::Write date and time - with LF and without CRLF in the end:
 set /p ="%DOW% %Mon%  %Day% %TIME:~0,-3% EST %YEAR%!\n!"<nul >> "../pages/version.txt"
 
+::Delete previous file if exists
+del "../pages_lite/version.txt"
+::Write date and time - with LF and without CRLF in the end:
+set /p ="%DOW% %Mon%  %Day% %TIME:~0,-3% EST %YEAR%!\n!"<nul >> "../pages_lite/version.txt"
+
+:: if no need to running, after compilation
+::	goto end
+if "%1" EQU "compile" goto end
+
+:just_run
+	echo "Just running..."
+
+:: go to parent directory
+cd ".."
+::    And run compiled nanodb.exe with command-line arguments:
+::  Run without lite-server and without auto-parsing JSON from large data of POST-requests to /api/upload-posts/
+::"nanodb.exe" old large_POST_mode0 notif_mode0
+
+::  Run this with lite-server and with auto-parsing JSON from large data of POST-requests to /api/upload-posts/ and UploadPosts by reading JSON from tcp-stream.
+::"nanodb.exe" lite large_POST_mode1 notif_mode1
+
+::  Run nanodb.exe with lite-serever (make this public), and enable auto-parsing JSON after write this in cache-file (writting in file is faster, because client can be disconnected).
+nanodb.exe public large_POST_mode2 notif_mode2 lite_images_timeout1800000
+::TEST
+::nanodb.exe public large_POST_mode1 notif_mode2 lite_images_timeout1800000 bypassValidation allowReput
+
 ::don't close window, after all
-pause
-exit
+:end
+	pause
+	exit

@@ -29,7 +29,7 @@ namespace NServer
         {
             return new HttpResponse(
                 _statusLine, 
-                ("<big><strong>" + _statusLine + "</strong></big><br/>" + _description + "<br/><small><i>nboard-3.2</i></small>"),
+                ("<big><strong>" + _statusLine + "</strong></big><br/>" + _description + "<br/><small><i>nboard-3.3</i></small>"),
                 MimeType.Html);
         }
     }

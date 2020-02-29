@@ -55,7 +55,8 @@ function no_need_update(){
 	updates_available = false;
 	currentUnixTime = Math.floor(new Date().getTime()/1000).toString();		//set current unix timestamp to this variable, defined in params.js
 	last_update = currentUnixTime;											//set this in this variable
-	$.post('../api/paramset/'+'last_update', last_update);					//and in the field "last_update" in config-3.json
+	$.get('../api/paramset/'+'last_update', encodeURIComponent(last_update));					//and in the field "last_update" in config-3.json
+//	$.post('../api/paramset/'+'last_update', last_update);					//and in the field "last_update" in config-3.json
 	//After this do not check updates,
 	//within "check_updates_every_hours" hours.
 //	console.log("version.txt === that version.txt. No need updates.");
@@ -81,6 +82,7 @@ function checkVersion(online) {												//online switch to true after long in
 	              .done(function(rv_remote) {																	//rv_remote - repoVersion in remote repositary
 					if(rv_remote!=larv){																		//if this versions not equals
 						setTimeout(function(){
+//							$.get('../api/paramset/'+'last_another_repo_version', encodeURIComponent(encodeURIComponent(rv_remote)));	//update encoded loaded verion in config-3.json
 							$.post('../api/paramset/'+'last_another_repo_version', encodeURIComponent(rv_remote));	//update encoded loaded verion in config-3.json
 						},300);
 					}
@@ -96,6 +98,7 @@ function checkVersion(online) {												//online switch to true after long in
 			return;		  
         })
 		.fail(function(){
+//			$.get('../api/paramset/'+'last_another_repo_version', "first_start");	//for first start - write this.
 			$.post('../api/paramset/'+'last_another_repo_version', "first_start");	//for first start - write this.
 			setTimeout(function(){checkVersion(true);},2000);						//and check online
 		});

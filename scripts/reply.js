@@ -406,7 +406,7 @@ function check_base64_in_tags(text, bb_code){//bb_code = 'img', 'xmg', 'file', o
 						?	'['																		//this is index of next founded '['
 						:	']'																		//for 'img' and 'xmg' this is index of next founded ']'
 					,
-					tag_indexes[i]+1																//search from next index, after previous index.
+					tag_indexes[i]+1																// search from next index, after previous index.
 				);
 			//console.log('first_index_base64', first_index_base64, 'last_index', last_index);
 			
@@ -551,6 +551,16 @@ function get_token(pst){
 		}
 	});
 
+function b64EncodeUnicode(str) {
+    // first we use encodeURIComponent to get percent-encoded UTF-8,
+    // then we convert the percent encodings into raw bytes which
+    // can be fed into btoa.
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+        function toSolidBytes(match, p1) {
+            return String.fromCharCode('0x' + p1);
+    }));
+}
+
 function generate_captcha(replyto_hash_and_post) {
 
 	//console.log('replyto_hash_and_post: '+replyto_hash_and_post);
@@ -568,6 +578,7 @@ function generate_captcha(replyto_hash_and_post) {
 		var form = $(this).parent().parent();
 		form.hide();
 	}
+//	$.get('../pow', pst)
 	$.post('../pow', pst)
 		.done(function(token){
 			if (pow_modal_cancelled === true){ return; }	//if powModal closed - don't generate get captcha.
@@ -595,7 +606,7 @@ function generate_captcha(replyto_hash_and_post) {
 							}
 							$.post('../solve/' + token, Base64.encode(answer))
 								.done(function(postStr){
-									console.log('answer success. postStr = '+postStr+' JSON_parsed: '+JSON.parse(postStr));
+//									console.log('answer success. postStr = '+postStr+' JSON_parsed: '+JSON.parse(postStr));
 									form.remove();
 									mockSendPostToDb(JSON.parse(postStr));
 									captchaModal.remove();
@@ -645,28 +656,58 @@ function generate_captcha(replyto_hash_and_post) {
 		})
 		.fail(function(response){
 			console.log('response.responseText', response.responseText, 'response.statusText', response.statusText);
-			waitPowModal.remove();
-			var captchaModal = $('<div>');
-			captchaModal.addClass('captcha_modal');
-			captchaModal.append('<img class="captcha_image" src="../images/error.png" style="width: 64px; height:64px"><br/>');
-			captchaModal.append(
-				'<div class="captcha_answer" style="width: 256px; height: 100px">'+
-				(
-					(response.statusText==='error')
-						? '<br>'+"Error: captcha file not found with filename from \"Settings\"or was been damaged. "
-						: response.responseText.replace('\n', '<br>')
-				)+	
-			'</div><br/>');
-			captchaModal.append($('<button>').text('Cancel').addClass('reply-button btn btn-danger')
-				.click(
-					function(){
-						captchaModal.remove();
-						form.show();
+			if((response.responseText).indexOf('bypassValidation = true, accepting posts without solved captcha enabled, but posts will be without pow and sign!')!=-1){
+																				//if bypassValidation enabled, and this text contains in response...
+																				//Now, need to try to send post without pow and sign...
+				console.log("Try to send post without captcha sign, and pow, if bypassValidation enabled...");
+				//console.log("replyto_hash_and_post", replyto_hash_and_post);
+				var replyto_hash = replyto_hash_and_post.substring(0, 32);
+				var post_text = replyto_hash_and_post.substring(32);
+				var base64_encoded_post = b64EncodeUnicode(post_text);
+				$.post('../api/add/'+replyto_hash, base64_encoded_post)
+				.done(
+					function(bypassResponse){
+						waitPowModal.remove();
+						//console.log('answer success. postStr = '+bypassResponse+' JSON_parsed: '+JSON.parse(bypassResponse));
+							form.remove();
+							mockSendPostToDb(JSON.parse(bypassResponse));
+							setTimeout(
+								function(){
+									$("body").find(".reply-div").remove();
+								}
+								,1000
+							);
+						}
+				).fail(
+					function(bypassResponse){
+						console.log('bypassResponse', bypassResponse);
 					}
-				)
-			);
-			$('body').append(captchaModal);
-			$('.captcha_answer').focus();
+				);
+			}
+			else{
+				waitPowModal.remove();
+				var captchaModal = $('<div>');
+				captchaModal.addClass('captcha_modal');
+				captchaModal.append('<img class="captcha_image" src="../images/error.png" style="width: 64px; height:64px"><br/>');
+				captchaModal.append(
+					'<div class="captcha_answer" style="width: 256px; height: 100px">'+
+					(
+						(response.statusText==='error')
+							? '<br>'+"Error: captcha file not found with filename from \"Settings\"or was been damaged. "
+							: response.responseText.replace('\n', '<br>')
+					)+	
+				'</div><br/>');
+				captchaModal.append($('<button>').text('Cancel').addClass('reply-button btn btn-danger')
+					.click(
+						function(){
+							captchaModal.remove();
+							form.show();
+						}
+					)
+				);
+				$('body').append(captchaModal);
+				$('.captcha_answer').focus();
+			}
 		});
 }
 
@@ -685,7 +726,7 @@ function addReplyForm(id) {	// это хэш поста к которому от
     .insertAfter($('#' + id))
     .css('margin-left', parseInt($('#' + id).css('margin-left')) + _treeOffsetPx + 'px')
     .append($('<div>').addClass('reply')
-      .append($('<textarea oninput="check_base64(this);" onclick="check_base64(this);">').val('[g]' + new Date().toUTCString() + ', client: 3.2[/g]\n'))
+      .append($('<textarea oninput="check_base64(this);" onclick="check_base64(this);">').val('[g]' + new Date().toUTCString() + ', client: 3.3[/g]\n'))
       .append($('<br>'))
       .append($('<button>')
         .addClass('reply-button btn btn-danger ')

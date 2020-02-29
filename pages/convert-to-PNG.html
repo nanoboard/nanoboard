@@ -2,15 +2,15 @@
 	Select custom picture (jpeg, jpg, gif, bmp, png): 
 	<input id="select_image" type="file" accept="image/jpeg,image/jpg,image/gif,image/bmp,image/png">
 	<br>
-	dataURL: <div id="dataURL" style="display: inline-block;"></div>
+	dataURL: <div id="dataURL" style="display: block;"></div>
 	<br>
 	<br>
-	encodeURIComponent(dataURL):<br>
-	<textarea id="dataURL_with_encoded_URI" cols="50" rows="5"></textarea>
+	dataURL-string:<br>
+	<textarea id="dataURL_string" cols="50" rows="5"></textarea>
 	
 	<!-- GET-query -->
 	<br><br>SEND, using GET-query (lagging for big pictures):<br>
-	<a id="send_encodeURIComponent_dataURL" href="" onclick="">Make PNG from this picture.</a>
+	<a id="send_encodeURIComponent_dataURL" href="" onclick="" target="_blank">Make PNG from this picture.</a>
 	<!-- for big files, GET-query with dataURL is lagging, because URL have bytelength limit.-->
 	
 	<!-- USING POST QUERY -->
@@ -30,7 +30,7 @@
 <script>
 var file = document.getElementById('select_image');
 var link = document.getElementById('dataURL');
-var textarea = document.getElementById('dataURL_with_encoded_URI');
+var textarea = document.getElementById('dataURL_string');
 var convert_link = document.getElementById('send_encodeURIComponent_dataURL');
 var result_div = document.getElementById('result');
 var folder_input = document.getElementById('folder');
@@ -49,16 +49,23 @@ file.addEventListener('change', function(evt){
 			var dataURL = "";
 
 			dataURL = e.target.result;
-			link.innerHTML = '<a href="'+dataURL+'" target="_blank">'+dataURL.substring(0, 40)+'...'+dataURL.substring(dataURL.length-40, dataURL.length)+'</a>';
+			link.innerHTML = '- (this link is draggable in new tab) <a id="image_as_dataURL" href="'+dataURL+'" target="_blank">'+dataURL.substring(0, 40)+'...'+dataURL.substring(dataURL.length-40, dataURL.length)+'</a>'+
+							//sometimes, dataURL not opening in Google Chrome, so need to open new window, and add dataURL in <img> or <iframe>
+							'<br>- or open it - <a id="dataURL_in_new_window"'+
+								//'href="'+dataURL+'"'+															//this link still draggable in new tab, and dataURL contains in href.
+								'href="javascript:void(0);"'+													//or this dataURL can be not contains in href.
+								'onclick="open_dataURL_in_new_window(\''+dataURL+'\');">'+		//open image in new tab of the browser.
+									'in new window.'+
+							'</a>'
+			;
 			
 			//console.log('image size = '+e.loaded+'bytes');
 			//URL have byte-length limit.	For Google Chrome this is 2MB maximum.
 			if(e.loaded <= 640*1024){	//set this limit as 640KBytes
 				//GET-query
-				var encodedURIComponent_dataURL = encodeURIComponent(dataURL)
-				convert_link.href = '/api/convert-to-PNG/'+encodedURIComponent_dataURL;
+				convert_link.href = '/api/convert-to-PNG/'+encodeURIComponent(dataURL);		//use encodeURIComponent for to tell dataURL in GET-request
 				convert_link.removeAttribute('onclick');
-				textarea.value = encodedURIComponent_dataURL;
+				textarea.value = dataURL;
 				textarea.title = "";				
 			}else{
 				convert_link.href = 'javascript:void(0)';
@@ -76,7 +83,7 @@ file.addEventListener('change', function(evt){
 
 //XHR POST query
 function send(){
-	var dataURL_with_encoded_URI = textarea.value;
+	var dataURL_string = textarea.value;
 	var xhr = new XMLHttpRequest();
 	xhr.open("POST", '/api/convert-to-PNG/', true);
 	xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
@@ -86,7 +93,7 @@ function send(){
 			result_div.innerHTML = xhr.response;	//append responce to result_div.
 		}
 	}
-	xhr.send(dataURL_with_encoded_URI);
+	xhr.send(dataURL_string);
 }
 
 function change_fractalgen(){
@@ -125,5 +132,26 @@ function generate_PNG(){
 	xhr.send(generate_PNG_params);																				//without encoding
 	//xhr.send(encodeURIComponent(generate_PNG_params));														//encodeURIComponent for parameters
 }
+
+/**
+ * Display a base64 URL inside an iframe in another window.
+ */
+function open_dataURL_in_new_window(base64URL){
+	
+//	var string = doc.output('datauristring');
+//	var iframe = 	"<iframe width='100%' height='100%' src='" + string + "'></iframe>"
+
+//	var iframe = 	'<iframe src="' + base64URL  + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>';
+
+	var iframe = 	//'<br><br>dataURL as text:<br><textarea style="width: 100%" rows="3">'+base64URL+'</textarea>'+
+					'<br><br>Image is draggable in new tab:<br><img src="'+base64URL+'" />'
+	;
+
+	var win = window.open();
+	win.document.open();
+	win.document.write(iframe);
+	win.document.close();	
+}
+
 
 </script>

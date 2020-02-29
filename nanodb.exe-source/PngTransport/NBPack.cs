@@ -14,9 +14,9 @@ using System.Drawing.Imaging;		//ImageFormat.Png to save bmp as PNG...
 namespace nbpack
 {
     public class NBPackMain
-    {
+    {	public static bool allowReput = false;		//true if need to allow reput posts (deleted forever or damaged/corrupted posts will re-added in the database).
         public static NDB.PostDb PostDatabase;
-
+		private static object _lock = new object();
         public static void Main_(string[] args)
         {
             if (!Directory.Exists("upload"))
@@ -108,7 +108,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 		//int.Parse and Int32.Parse working bad for me.		See issue: https://github.com/nanoboard/nanoboard/issues/5
 		//So this function was been writed, to make this code more independent...
         public static int parse_number(string string_number)//this function return (int)number from (string)"number". Negative numbers supporting too.
-        {
+        {	if(string_number=="" || string_number == null){Console.WriteLine("NbPack.cs. parse_number. string_number is empty or null: (string_number == \"\"): "+string_number+", (string_number == null): "+(string_number == null)); return 0;}
 			string test = (new Regex(@"\D")).Replace(string_number, "");
             int test_length = test.Length;
             int number = 0;
@@ -267,11 +267,11 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 					);
 					take = 50;														//from_last_posts posts to taking
 				}
-				Console.WriteLine("start_post_number = "+start_post_number+", (count - take) = "+(count - take)+
-				"\n( (start_post_number!=-1) ? start_post_number : (count - take) )"+( (start_post_number!=-1) ? start_post_number : (count - take) )+
-				"\n(Math.Max( ( (start_post_number!=-1) ? start_post_number : (count - take) ), 0))"+Math.Max( ( (start_post_number!=-1) ? start_post_number : (count - take) ), 0)+
-				"\ntake = "+take
-				);
+//				Console.WriteLine("start_post_number = "+start_post_number+", (count - take) = "+(count - take)+
+//				"\n( (start_post_number!=-1) ? start_post_number : (count - take) )"+( (start_post_number!=-1) ? start_post_number : (count - take) )+
+//				"\n(Math.Max( ( (start_post_number!=-1) ? start_post_number : (count - take) ), 0))"+Math.Max( ( (start_post_number!=-1) ? start_post_number : (count - take) ), 0)+
+//				"\ntake = "+take
+//				);
 				var last50s = PostDatabase.RangePresent(Math.Max( ( (start_post_number!=-1) ? start_post_number : (count - take) ), 0), take);		//take last 50 posts
 				list = last50s.ToList();														//push this to list.			
 			}else{																			//if queue hashes defined
@@ -287,17 +287,17 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
             var files = Directory.GetFiles("containers", "*.png").ToList();
             files.AddRange(Directory.GetFiles("containers", "*.jpg"));
             files.AddRange(Directory.GetFiles("containers", "*.jpeg"));
-
+			string add_notif = "";
             if (files.Count == 0)
-            {
-                NServer.NotificationHandler.Instance.Messages.Enqueue("Your containers dir is empty! Add container(s)");
+            {                add_notif = ((address == "CreatePNG_on_lite_server")?address+". ":"")+"Your containers dir is empty! Add container(s)"; NServer.DbApiHandler.notifications_with_filename += add_notif+"|||"; //NServer.NotificationHandler.Instance.Messages.Enqueue("Your containers dir is empty! Add container(s)"); //add notif from response.
+//                NServer.NotificationHandler.Instance.Messages.Enqueue("Your containers dir is empty! Add container(s)");
                 return;
             }
 
             var r = new Random();
 
             var file = files[r.Next(files.Count)];
-            var name = "upload/" + Guid.NewGuid().ToString() + ".png";
+            var name = ( (address == "CreatePNG_on_lite_server") ? "download/created/" : "upload/" )+ Guid.NewGuid().ToString() + ".png";
 
 		//begin calculate capacity			
 			Image bmp = null;
@@ -372,26 +372,26 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 
 			//pack from file or from specified dataURL
 			if(dataURL=="No_dataURL_specified_for_source_image."){
-				Pack(list.ToArray(), file, key, name);
+				Pack(list.ToArray(), file, key, name, address);
 			}else{
-				Pack(list.ToArray(), dataURL, key, name);
+				Pack(list.ToArray(), dataURL, key, name, address);
 			}
 			
 			List<string> packed_posts_hashes = new List<string>();
             foreach (var p in list)
             {
 				packed_posts_hashes.Add(p.hash);
-            }
+            }string add_text = ((address == "CreatePNG_on_lite_server")?address+". ":"");
+			if(add_text!=""){NServer.DbApiHandler.datetime_of_generated_images[name] = DateTime.Now; NServer.DbApiHandler.timer_to_delete.Start();} //if this is request on lite-server
+			add_notif = add_text+"Saved PNG to /"	+	name; /* NServer.NotificationHandler.Instance.Messages.Enqueue(add_notif+"|||"); //notifs will be added, from splitted response, by using pushNotification()*/ NServer.DbApiHandler.notifications_with_filename += add_notif+"|||";
+			add_notif = add_text+"Hashes of posts, packed into "+name+": "	+ JsonConvert.SerializeObject(packed_posts_hashes); /*NServer.NotificationHandler.Instance.Messages.Enqueue(add_notif+"|||"); //do not add notif */ NServer.DbApiHandler.notifications_with_filename += add_notif+"|||";
 			
-			NServer.NotificationHandler.Instance.Messages.Enqueue("Saved PNG to /"	+	name);
-			NServer.NotificationHandler.Instance.Messages.Enqueue("Hashes of posts, packed into "+name+": "	+ JsonConvert.SerializeObject(packed_posts_hashes));
-
-			return;
+			return; //return HttpResponse for request on /api/png-create, in DbApiHandler.cs. Method PngCreate.
         }
-
+		public static bool bypassValidation = !captcha.Captcha.captcha_found;
         public static void ParseFile(string address, string key, string filename, bool save_files=false)		//filename - is pathway for container file.
         {
-			//Console.WriteLine("ParseFile: save_files = "+save_files);
+			lock(_lock){//Console.WriteLine("ParseFile: save_files = "+save_files);
             var posts = Unpack(filename, key);											//here catch for some files.
 
             GC.Collect();
@@ -399,7 +399,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
             {
                 foreach (var p in posts)
                 {
-                    bool added = PostDatabase.PutPost(p);
+                    bool added = PostDatabase.PutPost(p, allowReput, bypassValidation);
 
                     if (added)
                     {
@@ -427,15 +427,15 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 					Console.WriteLine("NBPack.cs: ParseFile(pathway). Try to delete file - catch: "+e.Message);	//from here is error message for some files.
 					//System.Threading.Thread.Sleep(10);
 				}
-			}
+			}}
 			return;
         }
 		
-		public static bool bypassValidation = !captcha.Captcha.captcha_found;
+
 
         public static void ParseFile(string address, string key, Image container)				//here Image from RAM
         {
-            var posts = Unpack(container, key);													//here can be catch for some Images
+            lock(_lock){var posts = Unpack(container, key);													//here can be catch for some Images
 
             GC.Collect();
             try
@@ -446,7 +446,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 					//if(bypassValidation){ Console.WriteLine("Captcha file not found. bypassValidation = "+bypassValidation+"now..."); }
                     bool added = false;
 					try{
-						added = PostDatabase.PutPost(p, true, bypassValidation);
+						added = PostDatabase.PutPost(p, allowReput, bypassValidation);	//don't allow reput post again.
 					}catch(Exception ex){
 						Console.WriteLine("Try to PutPost: "+ex);
 					}
@@ -501,18 +501,18 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 						Console.WriteLine("Try to add notification: "+ex);	//sometimes error: srcIndex
 					}
 */
-                }
+                }Console.WriteLine(posts_added+" new posts added to database");//, bypassValidation = "+bypassValidation);
             }
             catch (Exception e)
             {
                 Console.WriteLine("NBPack.cs: ParseFile(Image RAM) - try to add posts: "+e.Message);	//here catch "OutOfMemoryException" for notifs.
-            }
+            }}
 			return;
         }
 
         private static void AutoParse(string address, string key)
         {
-            var files = Directory.GetFiles("download");
+            lock(_lock){var files = Directory.GetFiles("download");
 
             foreach (var f in files)
             {
@@ -522,7 +522,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
                 {
                     foreach (var p in posts)
                     {
-                        PostDatabase.PutPost(p);
+                        PostDatabase.PutPost(p, allowReput, bypassValidation);
                     }
                 }
                 catch (Exception e)
@@ -539,7 +539,7 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
                 {
                     Console.WriteLine(e.Message);
                 }
-            }
+            }}
 			return;
         }
 
@@ -562,15 +562,15 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 			return;
         }
 
-        private static void Pack(NDB.Post[] posts, string templatePath, string key, string outputPath)
+        private static void Pack(NDB.Post[] posts, string templatePath, string key, string outputPath, string address = "")
         {
             var @set = new HashSet<string>();
 
             Validate(posts);
             var nposts = new List<NanoPost>();
-
-            NServer.NotificationHandler.Instance.Messages.Enqueue("Showing posts that will go to the container:");
-
+			string add_notif = ((address == "CreatePNG_on_lite_server")?address+". ":"")+"Showing posts that will go to the container:";
+            //NServer.NotificationHandler.Instance.Messages.Enqueue(add_notif);	//do not add notif, and add this from response.
+			NServer.DbApiHandler.notifications_with_filename += add_notif + "|||";
             foreach (var p in posts)
             {
                 var mess = Encoding.UTF8.GetString(Convert.FromBase64String(p.message));
@@ -578,8 +578,8 @@ Sample JSON (note that message contains utf-8 BYTES converted to base64 string)
 
                 if (!@set.Contains(hash))
                 {
-                    @set.Add(hash);
-                    NServer.NotificationHandler.Instance.Messages.Enqueue(mess);
+                    @set.Add(hash); /*add_notif = ((address == "CreatePNG_on_lite_server")?address+". ":"")+mess; //do not define this, because nothing to do with this. 
+                    NServer.NotificationHandler.Instance.Messages.Enqueue(add_notif); //do not add notif, and add this from response*/			/* NServer.DbApiHandler.notifications_with_filename += add_notif + "|||";// don't add posts-content - to returned string */
                 }
 
                 nposts.Add(new NanoPost(p.replyto + mess));

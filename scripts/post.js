@@ -267,7 +267,7 @@ function detectURLs(text) {
 			var start_index = 0;												//increment start_index to search substrings, from this start_index
 			
 			for(j=0; j<matches.length; j++){									//for each url in array
-				var next_url_index = text.indexOf(matches[j], start_index);		//search this url in text from start_index.
+				var next_url_index = text.indexOf(matches[j], start_index);		// search this url in text from start_index.
 				if(next_url_index==-1){											//if this this url not found
 					continue;													//continue find next url
 				}																//else...

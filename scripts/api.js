@@ -32,6 +32,7 @@ function deletePostFromDb(hash) {
 //  $.get('../api/delete/' + hash)//;
   .done(function(r){
 	console.log('delete post from db - response: ', r);
+	pushNotification(r, 2000);
 	notifyAboutPostCount(true);
   });
 }

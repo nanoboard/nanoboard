@@ -10,11 +10,13 @@ namespace nbpack
 {
     class Post
     {
+#pragma warning disable 0649
         [JsonProperty("hash")]
         public string hash;
         [JsonProperty("message")]
         public string message;
         [JsonProperty("replyTo")]
         public string replyto;
+#pragma warning restore 0649
     }
 }

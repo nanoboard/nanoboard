@@ -1,0 +1,256 @@
+<html>
+  <meta charset="utf-8">
+
+<script src='../scripts/jquery.min.js'> </script>
+<script src='../scripts/base64.js'> </script>
+<script src='../scripts/params.js'> </script>
+<script src='../scripts/post.js'> </script>
+<script src='../scripts/nanoclient.js'> </script>
+<script src='../scripts/notif.js'> </script>
+
+<link rel='stylesheet' type='text/css' href='../styles/bootstrap.min.css'>
+<link rel='stylesheet' type='text/css' href='../styles/nano.css'>
+<link rel='stylesheet' type='text/css' href='../styles/notif.css'>
+
+<div id="result"></div>
+
+<style>
+.border_div{
+	margin: 5px;
+	padding: 5px;
+	background-color: #ffe6fb;
+	border: 1px solid black;
+}
+.input_params{
+	padding-left: 50px;
+}
+.post{
+	margin: 15px;
+	padding: 15px;
+	max-width: 100%;
+	/*
+	background-color: #ffe6fb;
+	border: 1px solid black;
+	*/
+}
+
+</style>
+<script>
+
+function get_hashes_of_reported_posts(){
+	$.get('../api/get_reports/')
+	.done(function(hashes_of_reported_ports){
+        console.log("reply received");
+		hashes_of_reported_ports = hashes_of_reported_ports.substring(0, hashes_of_reported_ports.length-1);
+		console.log("hashes_of_reported_ports", hashes_of_reported_ports);
+
+//		$.get('../api/getposts/'+hashes_of_reported_ports)
+		$.post('../api/getposts/', hashes_of_reported_ports)
+		.done(function(replies){
+			result_string = "";
+			
+			var result = document.getElementById("result");
+			result.innerHTML = "";
+                //console.log("reply received");		//show this.
+				var posts = JSON.parse(replies);		//parse posts
+				for(post_number=1;post_number<=posts.length;post_number++){
+					if(posts[post_number-1] == null){
+						continue;
+					}
+
+					var current_message = escapeTags(Base64.decode(replace_deleted_once(posts[post_number-1].message)));
+					current_message = detect_files(current_message);			//replace files to links
+					current_message = replace_local_quotes(current_message);			//format nanopost.
+					current_message = applyFormatting(current_message);			//format nanopost.
+
+					//console.log('current_message.length', current_message.length);		//sometimes "NSERROR OUT OF MEMORY"...
+					
+					var deleted = ((posts[post_number-1].message).substring(0, 16) === 'post was deleted');
+					result.innerHTML += '<div class="post" id="'+posts[post_number-1].hash+'" style="opacity: '+((deleted)?'0.5;':'none;')+
+										'" id="'+posts[post_number-1].hash+'">'+
+										(
+											(deleted)
+												? '<button id="undelete_'+posts[post_number-1].hash+'" onclick="undelete_deleted_post((this.id).substring(9, (this.id).length));">Undelete</button>'
+												: ''
+										)+
+										'<font color="green"><b>Post:</b></font> №'+post_number+'; '+
+										"<b>Date (client 3.1):</b> "+posts[post_number-1].date+"; "+
+										"<b>Post hash:</b> "+posts[post_number-1].hash+"; "+
+										'<b>ReplyTo:</b> '+posts[post_number-1].replyTo+
+										'<hr style="display:block;">'+current_message+'<hr style="display:block;">'+
+										'Show reports for post: <a href="javascript:void(0)" onclick="show_reports_list(\''+posts[post_number-1].hash+'\');">'+posts[post_number-1].hash+'</a><br>'+
+										'<div id="reports_list'+posts[post_number-1].hash+'" style="background-color: Khaki;"></div>'+
+										"</div>";
+				}
+            })
+            ;//end of post query
+    })
+}
+
+get_hashes_of_reported_posts();
+
+
+function show_reports_list(post_hash){
+	var post = document.getElementById(post_hash);
+	var reports_list = null;
+	for (var i = 0; i < post.childNodes.length; i++) {
+		if ((post.childNodes[i]).id == "reports_list"+post_hash) {
+			reports_list = post.childNodes[i];
+			break;
+		}        
+	}
+	
+	$.get('../reports/'+post_hash+'.txt')
+	.done(function(reports){
+		
+		reports_list.innerHTML = '<a href="../reports/'+post_hash+'.txt" target="_blank">Reports:</a>';
+		reports_list.innerHTML += '<br>';
+		reports_list.innerHTML += '<pre>'+reports+'</pre>';
+		reports_list.innerHTML += '<a href="javascript:void(0)" onclick="delete_reports(\''+post_hash+'\');">DELETE REPORTS FOR THIS POST: '+post_hash+'</a><br>';
+		reports_list.innerHTML	+=	'<div style="height: 35px; width: inherit;" title="DELETE THIS POST: '+post_hash+'">'+
+									'<input type="button" style="position: relative; left: 20px;" onmouseover="t(this)" onclick="delete_post(\''+post_hash+'\');" value="x" id="my-button">'+
+									'</div>'
+		;
+	})
+}
+
+var flag = 1;
+function t(N){
+	setTimeout(
+		function(){
+			if (flag == 1) N.style.left = "250px";
+			if (flag == 2) N.style.left = "100px";
+			if (flag == 3) N.style.left = "200px";
+			flag = flag + 1;
+			if (flag == 4) flag = 1;
+		},250
+	);
+}
+
+function delete_post(post_hash){
+	alert(
+		'Ну вот ты и попался, мочерок!\n'+
+		'Что? Хотел зауринировать этот вот пост мочерастией мочерской, да?\n\n'+
+		'А ВОТ ХУЙ ТЕБЕ, ХУЙ ТЕБЕЕЕЕЕ!!!'
+	);
+		
+	var confirm_delete = confirm(
+								'Ладно, не будем смеяться над ущербными дегенератами.\n'+
+								'Чё, реально так хочешь замочерировать пост с хэшем: '+post_hash+'?\n\n'+
+								'Вместо того, чтобы сейчас же - отменить свою мочерацию\n'+
+								'и удалить нафиг, эти сраные репорты\n'+
+								'всевозможных стукачей с мочана???'
+	);
+	
+	if(confirm_delete){
+		pushNotification(
+			'А знаешь ли ты знаешь о том, что преступная мочерация<br>'+
+			'(в любой форме, кстати) - нарушает такой<br>'+
+			'ОСНОВОПОЛАГАЮЩИЙ ПРИНЦИП МЕЖДУНАРОДНОГО ПРАВА,<br>'+
+			'как Cтатья 19 "Всеобщей декларации ООН о правах человека"?<br>'+
+			'Поэтому, ты можешь - РАЗМОЧЕРИРОВАТЬ ПОСТ и разудалить его!!!<br>'+
+			'По крайней мере, у тебя была такая возможность...'
+			,30000
+		);
+	}
+	else{
+		pushNotification(
+			'Ну вот и славненько, и даже правильно.<br>'+
+			'<b>Всю наноборду никто не замочерирует!</b>',
+			10000
+		);
+	}
+	
+	if(confirm_delete){
+		$.get('../api/delete/'+post_hash)
+		.done(function(reply){
+			var post = document.getElementById(post_hash);
+			var result = null;
+			for (var i = 0; i < post.childNodes.length; i++) {
+				if ((post.childNodes[i]).id == "reports_list"+post_hash) {
+					result = post.childNodes[i];
+					break;
+				}        
+			}
+			//console.log("result", result);
+		
+			result.innerHTML = '<b>Result of deletion:</b><br>';
+			result.innerHTML += '<pre id="deletion_result">'+reply+'</pre>';
+			result.innerHTML += '<button id="undelete_'+post_hash+'" onclick="undelete_deleted_post((this.id).substring(9, (this.id).length));">Undelete</button>';
+			result.innerHTML += '<br><a href="javascript:void(0)" id="delete_forever_'+post_hash+'" onclick="delete_post(\''+post_hash+'\');">DELETE THIS POST FOREFER: '+post_hash+'</a><br>';
+			result.innerHTML += '<a href="javascript:void(0)" id="delete_reports_'+post_hash+'" onclick="delete_reports(\''+post_hash+'\');">DELETE REPORTS FOR THIS POST: '+post_hash+'</a><br><br><br>';
+
+			if(reply.indexOf('was been deleted forever.')!==-1){
+				$('#undelete_'+post_hash).hide();
+				$('#delete_forever_'+post_hash).hide();
+				$('#delete_reports_'+post_hash).hide();
+			
+				setTimeout(
+					function(){
+						var post = document.getElementById(post_hash);
+						post.parentNode.removeChild(post);
+					},
+					5000
+				);
+			}
+		
+		});
+	}
+}
+function delete_reports(post_hash){
+	$.get('../api/delete_reports/'+post_hash)
+	.done(function(reply){
+		var post = document.getElementById(post_hash);
+		var result = null;
+		for (var i = 0; i < post.childNodes.length; i++) {
+			if ((post.childNodes[i]).id == "reports_list"+post_hash) {
+				result = post.childNodes[i];
+				break;
+			}        
+		}
+//		console.log("result", result);
+		result.innerHTML = '<b>Result of deletion:</b><br>';
+		result.innerHTML = '<pre>'+reply+'</pre>';
+
+		setTimeout(
+			function(){
+				post.parentNode.removeChild(post);
+			},
+			5000
+		);
+
+	})
+}
+
+function undelete_deleted_post(post_hash){
+	var really_undelete = 	confirm(
+									'Do you really want to restore the post\n'+
+									'(hash = '+post_hash+')?\n'
+							)
+	;
+	if(really_undelete){
+		console.log('Try to undelete post on full-server...');
+		$.get('../api/undelete_post/' + post_hash)
+		.done(
+			function(arr){
+				console.log("Done!");
+				$('#undelete_'+post_hash).remove();
+				$('#deletion_result').html("Post was been undeleted.");
+				$('#delete_forever_'+post_hash).hide();
+				var confirm_delete_reports = confirm("Delete reports for this post?");
+				if(confirm_delete_reports==true){
+					delete_reports(post_hash);
+				}
+				setTimeout(
+					function(){
+						var post = document.getElementById(post_hash);
+						post.parentNode.removeChild(post);
+					},
+					5000
+				);
+			}
+		)
+	}
+}
+</script>
+</html>

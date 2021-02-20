@@ -1,0 +1,16 @@
+#		Global git auto-CRLF variants:
+#	
+#	core.autocrlf=true:      core.autocrlf=input:     core.autocrlf=false:
+#	                                             
+#	        repo                     repo                     repo
+#	      ^      V                 ^      V                 ^      V
+#	     /        \               /        \               /        \
+#	crlf->lf    lf->crlf     crlf->lf       \             /          \      
+#	   /            \           /            \           /            \
+#	
+
+#Here,
+#This
+*	-text
+#is the same as
+#git config --global core.autocrlf false
